@@ -1,0 +1,232 @@
+<UserControl x:Class="ErneyTranslateTool.Views.Tabs.AboutTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:ErneyTranslateTool.Views.Tabs"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{DynamicResource BackgroundBrush}">
+
+    <UserControl.Resources>
+        <Style x:Key="AboutTitleStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style x:Key="AboutContentStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,0,0,15"/>
+        </Style>
+
+        <Style x:Key="LinkButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource PrimaryHoverBrush}"/>
+                    <Setter Property="TextDecorations" Value="Underline"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="40">
+        <StackPanel MaxWidth="700">
+            <!-- Заголовок и логотип -->
+            <StackPanel HorizontalAlignment="Center" Margin="0,0,0,30">
+                <TextBlock Text="🌐" FontSize="72" HorizontalAlignment="Center"/>
+                <TextBlock Text="Erney's Translate Tool" 
+                          FontSize="32" 
+                          FontWeight="Bold"
+                          Foreground="{DynamicResource TextPrimaryBrush}"
+                          HorizontalAlignment="Center"
+                          Margin="0,10,0,0"/>
+                <TextBlock Text="Версия 1.0.0" 
+                          Foreground="{DynamicResource TextSecondaryBrush}"
+                          HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Описание -->
+            <GroupBox Header="О программе" 
+                     Style="{DynamicResource DarkGroupBoxStyle}"
+                     Margin="0,0,0,20">
+                <StackPanel Margin="10">
+                    <TextBlock Style="{StaticResource AboutContentStyle}">
+                        Erney's Translate Tool — это удобный инструмент для мгновенного перевода текста с экрана.
+                        Просто выделите область с текстом, и программа автоматически распознает и переведёт его.
+                    </TextBlock>
+                    <TextBlock Style="{StaticResource AboutContentStyle}">
+                        Программа идеально подходит для перевода текста в играх, приложениях, на веб-сайтах
+                        и в любых других местах, где стандартные методы копирования недоступны.
+                    </TextBlock>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Возможности -->
+            <GroupBox Header="Возможности" 
+                     Style="{DynamicResource DarkGroupBoxStyle}"
+                     Margin="0,0,0,20">
+                <StackPanel Margin="10">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Распознавание текста (OCR) с любого участка экрана" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Перевод через Google Translate, DeepL, Yandex" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Оверлей для отображения перевода поверх приложений" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Горячие клавиши для быстрого доступа" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="История переводов с поиском и фильтрацией" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Кэширование переводов для ускорения работы" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Тёмная тема оформления" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                        <TextBlock Text="✓" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,10,0" FontWeight="Bold"/>
+                        <TextBlock Text="Поддержка множества языков" 
+                                  Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Горячие клавиши -->
+            <GroupBox Header="Горячие клавиши по умолчанию" 
+                     Style="{DynamicResource DarkGroupBoxStyle}"
+                     Margin="0,0,0,20">
+                <Grid Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Захват области:" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Ctrl + Alt + Z" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Перевод:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Ctrl + Alt + X" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Показать/скрыть оверлей:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,0"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Ctrl + Alt + O" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Скрыть оверлей:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,10,0,0"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="Escape" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                </Grid>
+            </GroupBox>
+
+            <!-- Системные требования -->
+            <GroupBox Header="Системные требования" 
+                     Style="{DynamicResource DarkGroupBoxStyle}"
+                     Margin="0,0,0,20">
+                <StackPanel Margin="10">
+                    <TextBlock Style="{StaticResource AboutContentStyle}">
+                        <Run FontWeight="Bold">ОС:</Run> Windows 10/11 (x64)<LineBreak/>
+                        <Run FontWeight="Bold">.NET:</Run> .NET 8.0 Runtime<LineBreak/>
+                        <Run FontWeight="Bold">Память:</Run> 512 МБ ОЗУ<LineBreak/>
+                        <Run FontWeight="Bold">Место на диске:</Run> 100 МБ
+                    </TextBlock>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Технологии -->
+            <GroupBox Header="Используемые технологии" 
+                     Style="{DynamicResource DarkGroupBoxStyle}"
+                     Margin="0,0,0,20">
+                <StackPanel Margin="10">
+                    <TextBlock Style="{StaticResource AboutContentStyle}">
+                        <Run FontWeight="Bold">Язык:</Run> C# .NET 8<LineBreak/>
+                        <Run FontWeight="Bold">Фреймворк:</Run> WPF (Windows Presentation Foundation)<LineBreak/>
+                        <Run FontWeight="Bold">Паттерн:</Run> MVVM<LineBreak/>
+                        <Run FontWeight="Bold">OCR:</Run> Tesseract OCR / Windows.Media.OCR<LineBreak/>
+                        <Run FontWeight="Bold">Перевод:</Run> Google Translate API / DeepL API / Yandex Translate API
+                    </TextBlock>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Предупреждение -->
+            <Border Background="#3D3D1A1A"
+                   BorderBrush="#FFD32F2F"
+                   BorderThickness="1"
+                   CornerRadius="5"
+                   Padding="15"
+                   Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="⚠ Важное предупреждение"
+                              FontSize="16"
+                              FontWeight="Bold"
+                              Foreground="#FFFFB74D"
+                              Margin="0,0,0,10"/>
+                    <TextBlock Style="{StaticResource AboutContentStyle}" Margin="0">
+                        Использование программы в онлайн-играх с античит-системами может привести к блокировке аккаунта.
+                        Автор не несёт ответственности за возможные последствия использования программы в играх.
+                        Используйте на свой страх и риск!
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Контакты и ссылки -->
+            <GroupBox Header="Контакты и поддержка" 
+                     Style="{DynamicResource DarkGroupBoxStyle}">
+                <StackPanel Margin="10">
+                    <TextBlock Style="{StaticResource AboutContentStyle}">
+                        Если у вас возникли вопросы, предложения или вы обнаружили ошибку, пожалуйста, свяжитесь с нами.
+                    </TextBlock>
+                    
+                    <StackPanel Margin="0,10,0,0">
+                        <Button Content="📧 Написать разработчику"
+                               Style="{StaticResource LinkButtonStyle}"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,0,5"/>
+                        <Button Content="📄 Документация"
+                               Style="{StaticResource LinkButtonStyle}"
+                               HorizontalAlignment="Left"
+                               Margin="0,0,0,5"/>
+                        <Button Content="🐛 Сообщить об ошибке"
+                               Style="{StaticResource LinkButtonStyle}"
+                               HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Копирайт -->
+            <TextBlock Text="© 2024 Erney's Translate Tool. Все права защищены."
+                      Foreground="{DynamicResource TextSecondaryBrush}"
+                      HorizontalAlignment="Center"
+                      Margin="0,30,0,0"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
