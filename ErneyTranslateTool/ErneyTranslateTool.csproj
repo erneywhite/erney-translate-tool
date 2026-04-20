@@ -35,8 +35,4 @@
     <Resource Include="Resources\Icons\*.ico" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Page Include="**\*.xaml" SubType="Designer" Generator="MSBuild:Compile" />
-  </ItemGroup>
-
 </Project>
