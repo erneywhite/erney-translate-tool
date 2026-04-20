@@ -293,8 +293,6 @@ ErneyTranslateTool/
 
 - 📧 **Email:** support@erney.monster
 - 🐛 **Баг-трекер:** [GitHub Issues](https://github.com/erneywhite/erney-translate-tool/issues)
-- 📄 **Документация:** [Wiki](https://github.com/erneywhite/erney-translate-tool/wiki)
-- 💬 **Обсуждения:** [GitHub Discussions](https://github.com/erneywhite/erney-translate-tool/discussions)
 
 ---
 
@@ -319,7 +317,7 @@ ErneyTranslateTool/
 
 ## 📝 История версий
 
-### Версия 1.0.0 (2024)
+### Версия 1.0.0 (2026)
 
 - ✨ Первый стабильный релиз
 - 🖼️ Захват области экрана
