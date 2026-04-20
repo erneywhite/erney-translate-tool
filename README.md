@@ -291,16 +291,16 @@ ErneyTranslateTool/
 
 Если у вас возникли вопросы, предложения или вы обнаружили ошибку:
 
-- 📧 **Email:** support@erney-translate.tool
-- 🐛 **Баг-трекер:** [GitHub Issues](https://github.com/erney/translate-tool/issues)
-- 📄 **Документация:** [Wiki](https://github.com/erney/translate-tool/wiki)
-- 💬 **Обсуждения:** [GitHub Discussions](https://github.com/erney/translate-tool/discussions)
+- 📧 **Email:** support@erney.monster
+- 🐛 **Баг-трекер:** [GitHub Issues](https://github.com/erneywhite/erney-translate-tool/issues)
+- 📄 **Документация:** [Wiki](https://github.com/erneywhite/erney-translate-tool/wiki)
+- 💬 **Обсуждения:** [GitHub Discussions](https://github.com/erneywhite/erney-translate-tool/discussions)
 
 ---
 
 ## 📄 Лицензия
 
-© 2024 Erney's Translate Tool. Все права защищены.
+© 2026 Erney's Translate Tool. Все права защищены.
 
 Программа предоставляется "как есть", без каких-либо гарантий. Автор не несёт ответственности за любые последствия использования программы.
 
