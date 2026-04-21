@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows.Input;
 using ErneyTranslateTool.Models;
-using ErneyTranslateTool.Repositories;
+using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Data;
 
 namespace ErneyTranslateTool.ViewModels
 {
