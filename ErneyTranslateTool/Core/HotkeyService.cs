@@ -5,184 +5,91 @@ using System.Windows;
 using System.Windows.Interop;
 using Serilog;
 
-namespace ErneyTranslateTool.Core;
-
-/// <summary>
-/// Global hotkey registration service using Windows RegisterHotKey API.
-/// </summary>
-public class HotkeyService : IDisposable
+namespace ErneyTranslateTool.Core
 {
-    private readonly ILogger _logger;
-    private readonly Dictionary<int, HotkeyEntry> _registeredHotkeys = new();
-    private HwndSource? _hwndSource;
-    private int _nextId = 1;
-    private bool _disposed;
-
-    /// <summary>
-    /// Event raised when a registered hotkey is pressed.
-    /// </summary>
-    public event EventHandler<HotkeyPressedEventArgs>? HotkeyPressed;
-
-    /// <summary>
-    /// Initialize hotkey service.
-    /// </summary>
-    public HotkeyService(ILogger logger)
+    public class HotkeyService : IDisposable
     {
-        _logger = logger;
-    }
+        [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    /// <summary>
-    /// Initialize with window handle for message processing.
-    /// </summary>
-    /// <param name="window">WPF window to hook into.</param>
-    public void Initialize(Window window)
-    {
-        var helper = new WindowInteropHelper(window);
-        _hwndSource = HwndSource.FromHwnd(helper.Handle);
-        _hwndSource?.AddHook(WndProc);
-        _logger.Debug("Hotkey service initialized");
-    }
+        private const int WM_HOTKEY = 0x0312;
 
-    /// <summary>
-    /// Register a global hotkey.
-    /// </summary>
-    /// <param name="modifier">Modifier keys (Ctrl, Alt, Shift, Win).</param>
-    /// <param name="key">Virtual key code.</param>
-    /// <param name="action">Action to execute when hotkey is pressed.</param>
-    /// <returns>Hotkey ID or -1 if registration failed.</returns>
-    public int RegisterHotkey(ModifierKeys modifier, Key key, Action action)
-    {
-        if (_hwndSource == null)
+        private HwndSource? _hwndSource;
+        private readonly Dictionary<int, Action> _hotkeys = new();
+        private readonly Dictionary<string, int> _hotkeyIds = new();
+        private int _nextId = 9000;
+        private bool _disposed;
+
+        // Модификаторы Win32
+        public const int MOD_ALT = 0x0001;
+        public const int MOD_CONTROL = 0x0002;
+        public const int MOD_SHIFT = 0x0004;
+        public const int MOD_WIN = 0x0008;
+
+        public void Initialize(Window window)
         {
-            _logger.Error("Hotkey service not initialized");
-            return -1;
+            var handle = new WindowInteropHelper(window).Handle;
+            _hwndSource = HwndSource.FromHwnd(handle);
+            _hwndSource?.AddHook(WndProc);
         }
 
-        var id = _nextId++;
-        var virtualKey = KeyInterop.VirtualKeyFromKey(key);
-
-        if (!RegisterHotKey(_hwndSource.Handle, id, (uint)modifier, (uint)virtualKey))
+        public bool RegisterHotkey(string id, int modifiers, int vk, Action callback)
         {
-            var error = Marshal.GetLastWin32Error();
-            _logger.Error("Failed to register hotkey {Modifier}+{Key}, error: {Error}", 
-                modifier, key, error);
-            return -1;
-        }
-
-        _registeredHotkeys[id] = new HotkeyEntry
-        {
-            Id = id,
-            Modifier = modifier,
-            Key = key,
-            Action = action
-        };
-
-        _logger.Information("Hotkey registered: {Modifier}+{Key} (ID: {Id})", 
-            modifier, key, id);
-        return id;
-    }
-
-    /// <summary>
-    /// Unregister a hotkey.
-    /// </summary>
-    /// <param name="id">Hotkey ID to unregister.</param>
-    public void UnregisterHotkey(int id)
-    {
-        if (_hwndSource == null || !_registeredHotkeys.ContainsKey(id))
-            return;
-
-        if (UnregisterHotKey(_hwndSource.Handle, id))
-        {
-            _registeredHotkeys.Remove(id);
-            _logger.Debug("Hotkey unregistered: {Id}", id);
-        }
-        else
-        {
-            _logger.Warning("Failed to unregister hotkey: {Id}", id);
-        }
-    }
-
-    /// <summary>
-    /// Unregister all hotkeys.
-    /// </summary>
-    public void UnregisterAll()
-    {
-        foreach (var id in _registeredHotkeys.Keys.ToList())
-        {
-            UnregisterHotkey(id);
-        }
-    }
-
-    /// <summary>
-    /// Window procedure hook for hotkey messages.
-    /// </summary>
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        const int WM_HOTKEY = 0x0312;
-
-        if (msg == WM_HOTKEY)
-        {
-            var hotkeyId = wParam.ToInt32();
-            
-            if (_registeredHotkeys.TryGetValue(hotkeyId, out var entry))
+            if (_hwndSource == null)
             {
-                _logger.Debug("Hotkey pressed: {Id}", hotkeyId);
-                
-                try
-                {
-                    entry.Action();
-                    HotkeyPressed?.Invoke(this, new HotkeyPressedEventArgs
-                    {
-                        HotkeyId = hotkeyId,
-                        Modifier = entry.Modifier,
-                        Key = entry.Key
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Error executing hotkey action");
-                }
+                Log.Warning("HotkeyService не инициализирован");
+                return false;
+            }
 
+            if (_hotkeyIds.ContainsKey(id))
+                UnregisterHotkey(id);
+
+            int hotkeyId = _nextId++;
+            if (RegisterHotKey(_hwndSource.Handle, hotkeyId, modifiers, vk))
+            {
+                _hotkeys[hotkeyId] = callback;
+                _hotkeyIds[id] = hotkeyId;
+                Log.Debug("Зарегистрирован хоткей {Id}: mod={Mod} vk={Vk}", id, modifiers, vk);
+                return true;
+            }
+
+            Log.Warning("Не удалось зарегистрировать хоткей {Id}", id);
+            return false;
+        }
+
+        public void UnregisterHotkey(string id)
+        {
+            if (_hwndSource == null || !_hotkeyIds.TryGetValue(id, out int hotkeyId)) return;
+            UnregisterHotKey(_hwndSource.Handle, hotkeyId);
+            _hotkeys.Remove(hotkeyId);
+            _hotkeyIds.Remove(id);
+        }
+
+        public void UnregisterAll()
+        {
+            if (_hwndSource == null) return;
+            foreach (var id in _hotkeyIds.Values)
+                UnregisterHotKey(_hwndSource.Handle, id);
+            _hotkeys.Clear();
+            _hotkeyIds.Clear();
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_HOTKEY && _hotkeys.TryGetValue(wParam.ToInt32(), out var callback))
+            {
+                callback();
                 handled = true;
             }
+            return IntPtr.Zero;
         }
 
-        return IntPtr.Zero;
-    }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-    private class HotkeyEntry
-    {
-        public int Id { get; set; }
-        public ModifierKeys Modifier { get; set; }
-        public Key Key { get; set; }
-        public Action Action { get; set; } = null!;
-    }
-
-    /// <summary>
-    /// Dispose and unregister all hotkeys.
-    /// </summary>
-    public void Dispose()
-    {
-        if (!_disposed)
+        public void Dispose()
         {
+            if (_disposed) return;
             UnregisterAll();
+            _hwndSource?.RemoveHook(WndProc);
             _disposed = true;
         }
     }
-}
-
-/// <summary>
-/// Event args for hotkey pressed event.
-/// </summary>
-public class HotkeyPressedEventArgs : EventArgs
-{
-    public int HotkeyId { get; set; }
-    public ModifierKeys Modifier { get; set; }
-    public Key Key { get; set; }
 }
