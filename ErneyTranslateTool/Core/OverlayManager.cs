@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using ErneyTranslateTool.Models;
+using ErneyTranslateTool.Views;
 using Serilog;
 
 namespace ErneyTranslateTool.Core
