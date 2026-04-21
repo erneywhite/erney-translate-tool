@@ -2,8 +2,9 @@ using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using ErneyTranslateTool.Services;
-using ErneyTranslateTool.Repositories;
+using ErneyTranslateTool.Models;
+using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
 using ErneyTranslateTool.Core;
 
