@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows;
 using ErneyTranslateTool.Data;
+using ErneyTranslateTool.Models;
 using ErneyTranslateTool.Views;
 
 namespace ErneyTranslateTool.Core
@@ -24,20 +26,15 @@ namespace ErneyTranslateTool.Core
 
         public bool IsVisible => _overlayWindow?.IsVisible ?? false;
 
-        public void ShowTranslation(string text, Rect targetRect)
+        /// <summary>
+        /// Draw a translation label on top of every detected region.
+        /// </summary>
+        public void ShowRegions(IReadOnlyList<TranslationRegion> regions, Rect targetRect)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                if (_overlayWindow == null || !_overlayWindow.IsLoaded)
-                {
-                    _overlayWindow = new OverlayWindow();
-                    _overlayWindow.Show();
-                }
-                else if (!_overlayWindow.IsVisible)
-                {
-                    _overlayWindow.Show();
-                }
-                _overlayWindow.SetTranslation(text, targetRect, _settings.Config);
+                EnsureWindow();
+                _overlayWindow!.SetRegions(regions, targetRect, _settings.Config);
             });
         }
 
@@ -53,6 +50,19 @@ namespace ErneyTranslateTool.Core
             Application.Current.Dispatcher.Invoke(() =>
                 _overlayWindow?.UpdateBounds(
                     new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)));
+        }
+
+        private void EnsureWindow()
+        {
+            if (_overlayWindow == null || !_overlayWindow.IsLoaded)
+            {
+                _overlayWindow = new OverlayWindow();
+                _overlayWindow.Show();
+            }
+            else if (!_overlayWindow.IsVisible)
+            {
+                _overlayWindow.Show();
+            }
         }
 
         public void Dispose()

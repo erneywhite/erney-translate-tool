@@ -126,32 +126,23 @@ public class TranslationEngine : IDisposable
             bitmap.Dispose();
 
             var regions = _ocr.ProcessFrame(bytes);
-            if (regions.Count == 0)
-                return;
+            _logger.Debug("Frame: OCR -> {Count} regions", regions.Count);
+            if (regions.Count == 0) return;
 
             var translated = await _translation.TranslateRegionsAsync(
                 regions, _settings.Config.TargetLanguage);
+            _logger.Debug("Frame: Translation -> {Count} regions", translated.Count);
+            if (translated.Count == 0) return;
 
-            if (translated.Count == 0)
-                return;
-
-            var sb = new StringBuilder();
-            foreach (var r in translated)
+            if (!GetWindowRect(TargetWindowHandle, out var rect))
             {
-                if (!string.IsNullOrWhiteSpace(r.TranslatedText))
-                    sb.AppendLine(r.TranslatedText);
-            }
-            var combined = sb.ToString().Trim();
-            if (string.IsNullOrEmpty(combined))
+                _logger.Warning("Frame: GetWindowRect failed for handle {Handle}", TargetWindowHandle);
                 return;
-
-            // Anchor overlay to the top-left of the captured window.
-            if (GetWindowRect(TargetWindowHandle, out var rect))
-            {
-                var winRect = new System.Windows.Rect(
-                    rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
-                _overlay.ShowTranslation(combined, winRect);
             }
+
+            var winRect = new System.Windows.Rect(
+                rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+            _overlay.ShowRegions(translated, winRect);
         }
         catch (Exception ex)
         {

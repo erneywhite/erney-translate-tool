@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using ErneyTranslateTool.Models;
 
@@ -13,69 +15,80 @@ public partial class OverlayWindow : Window
     }
 
     /// <summary>
-    /// Update translation text and reposition over the target window.
-    /// Anchors to the top-right of the target so a maximized game still
-    /// keeps the overlay on screen.
+    /// Resize/reposition the overlay to cover the target window, then draw a
+    /// translated label on top of every detected region. Each region keeps the
+    /// position OCR reported (image pixels relative to the captured window).
     /// </summary>
-    public void SetTranslation(string text, Rect targetRect, AppConfig cfg)
+    public void SetRegions(IReadOnlyList<TranslationRegion> regions, Rect targetWindowRect, AppConfig cfg)
     {
-        ApplyStyle(cfg);
+        // Cover the target window so absolute Canvas coords line up with OCR pixels.
+        Left = targetWindowRect.Left;
+        Top = targetWindowRect.Top;
+        Width = Math.Max(1, targetWindowRect.Width);
+        Height = Math.Max(1, targetWindowRect.Height);
 
-        TranslationText.Text = text ?? string.Empty;
-        TranslationBorder.Visibility = string.IsNullOrWhiteSpace(text)
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        RegionCanvas.Children.Clear();
+        if (regions.Count == 0) return;
 
-        if (string.IsNullOrWhiteSpace(text)) return;
+        var bgColor = ParseColor(cfg.BackgroundColor, Color.FromRgb(0x1A, 0x1A, 0x1A));
+        bgColor.A = (byte)Math.Clamp(cfg.OverlayOpacity * 255, 60, 255);
+        var bgBrush = new SolidColorBrush(bgColor);
+        bgBrush.Freeze();
 
-        // Force layout pass so ActualWidth/Height are valid.
-        UpdateLayout();
+        var fgBrush = new SolidColorBrush(ParseColor(cfg.TextColor, Colors.White));
+        fgBrush.Freeze();
 
-        const double margin = 12;
-        const double titleBarOffset = 32; // skip game window title bar area
+        var fontFamily = !string.IsNullOrWhiteSpace(cfg.OverlayFontFamily)
+            ? new FontFamily(cfg.OverlayFontFamily)
+            : new FontFamily("Segoe UI");
 
-        var width = ActualWidth > 0 ? ActualWidth : 400;
-        var x = targetRect.Right - width - margin;
-        if (x < targetRect.Left + margin) x = targetRect.Left + margin;
-        var y = targetRect.Top + titleBarOffset;
+        var manualMode = string.Equals(cfg.FontSizeMode, "Manual", StringComparison.OrdinalIgnoreCase);
 
-        Left = x;
-        Top = y;
+        foreach (var r in regions)
+        {
+            if (string.IsNullOrWhiteSpace(r.TranslatedText)) continue;
+            if (r.Bounds.Width <= 0 || r.Bounds.Height <= 0) continue;
+
+            var fontSize = manualMode && cfg.ManualFontSize >= 8
+                ? cfg.ManualFontSize
+                : Math.Max(11, r.Bounds.Height * 0.7);
+
+            var border = new Border
+            {
+                Background = bgBrush,
+                CornerRadius = new CornerRadius(3),
+                Padding = new Thickness(4, 2, 4, 2),
+                SnapsToDevicePixels = true
+            };
+            border.Child = new TextBlock
+            {
+                Text = r.TranslatedText,
+                Foreground = fgBrush,
+                FontFamily = fontFamily,
+                FontSize = fontSize,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = Math.Max(160, r.Bounds.Width * 1.6)
+            };
+
+            Canvas.SetLeft(border, r.Bounds.X);
+            Canvas.SetTop(border, r.Bounds.Y);
+            RegionCanvas.Children.Add(border);
+        }
     }
 
+    /// <summary>Re-anchor to a moved/resized target window without re-rendering regions.</summary>
     public void UpdateBounds(Rect windowRect)
     {
-        // Re-anchor to top-right; called when target window moves/resizes.
-        if (Visibility != Visibility.Visible) return;
-        const double margin = 12;
-        const double titleBarOffset = 32;
-        var width = ActualWidth > 0 ? ActualWidth : 400;
-        var x = windowRect.Right - width - margin;
-        if (x < windowRect.Left + margin) x = windowRect.Left + margin;
-        Left = x;
-        Top = windowRect.Top + titleBarOffset;
+        Left = windowRect.Left;
+        Top = windowRect.Top;
+        Width = Math.Max(1, windowRect.Width);
+        Height = Math.Max(1, windowRect.Height);
     }
 
-    private void ApplyStyle(AppConfig cfg)
+    private static Color ParseColor(string hex, Color fallback)
     {
-        try
-        {
-            var bg = (Color)ColorConverter.ConvertFromString(cfg.BackgroundColor);
-            bg.A = (byte)Math.Clamp(cfg.OverlayOpacity * 255, 0, 255);
-            TranslationBorder.Background = new SolidColorBrush(bg);
-
-            var fg = (Color)ColorConverter.ConvertFromString(cfg.TextColor);
-            TranslationText.Foreground = new SolidColorBrush(fg);
-
-            if (!string.IsNullOrWhiteSpace(cfg.OverlayFontFamily))
-                TranslationText.FontFamily = new FontFamily(cfg.OverlayFontFamily);
-
-            var size = cfg.ManualFontSize >= 8 ? cfg.ManualFontSize : 16;
-            TranslationText.FontSize = size;
-        }
-        catch
-        {
-            // Bad hex in settings — keep defaults.
-        }
+        if (string.IsNullOrWhiteSpace(hex)) return fallback;
+        try { return (Color)ColorConverter.ConvertFromString(hex); }
+        catch { return fallback; }
     }
 }
