@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using ErneyTranslateTool.Models;
 
@@ -14,19 +16,46 @@ public partial class OverlayWindow : Window
     // when the same text gets re-detected frame after frame.
     private const double SnapGrid = 4.0;
 
+    // Click-through flags.
+    private const int GWL_EXSTYLE = -20;
+    private const uint WS_EX_LAYERED = 0x00080000;
+    private const uint WS_EX_TRANSPARENT = 0x00000020;
+    private const uint WS_EX_TOOLWINDOW = 0x00000080;
+    private const uint WS_EX_NOACTIVATE = 0x08000000;
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+    [DllImport("user32.dll")]
+    private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
     private string _lastFingerprint = string.Empty;
+    // Sticky positions keyed by original (source) text. If OCR re-detects the
+    // same English string in a spot that still overlaps the previous box, we
+    // keep the previous rect instead of the freshly-jittered one.
+    private Dictionary<string, Rect> _lastByOriginal = new(StringComparer.Ordinal);
 
     public OverlayWindow()
     {
         InitializeComponent();
+        SourceInitialized += OnSourceInitialized;
+    }
+
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        // WPF-level IsHitTestVisible only disables input inside WPF; the window
+        // itself still swallows mouse events. WS_EX_TRANSPARENT makes Windows
+        // route clicks straight to whatever is underneath the overlay.
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var style = GetWindowLong(hwnd, GWL_EXSTYLE);
+        SetWindowLong(hwnd, GWL_EXSTYLE,
+            style | (int)(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE));
     }
 
     /// <summary>
     /// Resize/reposition the overlay to cover the target window, then draw a
     /// translated label on top of every detected region. Positions are snapped
-    /// to a grid and the whole render is skipped if the set of regions is
-    /// identical to the previous frame — that prevents the visible jitter
-    /// the user reported when the source text isn't actually changing.
+    /// to a grid and existing regions stick to their previous spot while OCR
+    /// rediscovers them at slightly different pixels.
     /// </summary>
     public void SetRegions(IReadOnlyList<TranslationRegion> regions, Rect targetWindowRect, AppConfig cfg)
     {
@@ -35,25 +64,42 @@ public partial class OverlayWindow : Window
         Width = Math.Max(1, targetWindowRect.Width);
         Height = Math.Max(1, targetWindowRect.Height);
 
-        // Snap + filter; build a fingerprint so we can short-circuit identical frames.
-        var snapped = new List<(double X, double Y, double W, double H, string Text)>();
+        // Snap + apply sticky positioning against last frame.
+        var next = new Dictionary<string, Rect>(StringComparer.Ordinal);
+        var snapped = new List<SnappedRegion>();
+
         foreach (var r in regions)
         {
             if (string.IsNullOrWhiteSpace(r.TranslatedText)) continue;
             if (r.Bounds.Width <= 0 || r.Bounds.Height <= 0) continue;
-            snapped.Add((
+
+            var rect = new Rect(
                 Snap(r.Bounds.X),
                 Snap(r.Bounds.Y),
                 Snap(r.Bounds.Width),
-                Snap(r.Bounds.Height),
-                r.TranslatedText));
+                Snap(r.Bounds.Height));
+
+            if (_lastByOriginal.TryGetValue(r.OriginalText, out var prev)
+                && RectsOverlap(prev, rect))
+            {
+                // Stick to previous position — kills re-segmentation jitter.
+                rect = prev;
+            }
+
+            var key = r.OriginalText;
+            if (!next.ContainsKey(key)) next[key] = rect;
+            snapped.Add(new SnappedRegion(rect, r.TranslatedText));
         }
 
         var fingerprint = string.Join("|",
-            snapped.Select(s => $"{s.X}:{s.Y}:{s.W}:{s.H}:{s.Text}"));
+            snapped.Select(s => $"{s.Rect.X}:{s.Rect.Y}:{s.Rect.Width}:{s.Rect.Height}:{s.Text}"));
         if (fingerprint == _lastFingerprint && RegionCanvas.Children.Count > 0)
+        {
+            _lastByOriginal = next;
             return;
+        }
         _lastFingerprint = fingerprint;
+        _lastByOriginal = next;
 
         RegionCanvas.Children.Clear();
         if (snapped.Count == 0) return;
@@ -76,17 +122,15 @@ public partial class OverlayWindow : Window
         {
             var fontSize = manualMode && cfg.ManualFontSize >= 8
                 ? cfg.ManualFontSize
-                : Math.Max(11, s.H * 0.7);
+                : Math.Max(11, s.Rect.Height * 0.7);
 
-            // Cover the original text completely: at least as big as the source rect.
-            // Translation can spill out a bit horizontally if Russian needs more room.
             var border = new Border
             {
                 Background = bgBrush,
                 CornerRadius = new CornerRadius(2),
                 Padding = new Thickness(4, 1, 4, 1),
-                MinWidth = s.W,
-                MinHeight = s.H,
+                MinWidth = s.Rect.Width,
+                MinHeight = s.Rect.Height,
                 SnapsToDevicePixels = true
             };
             border.Child = new TextBlock
@@ -96,17 +140,16 @@ public partial class OverlayWindow : Window
                 FontFamily = fontFamily,
                 FontSize = fontSize,
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = Math.Max(120, s.W * 1.4),
+                MaxWidth = Math.Max(120, s.Rect.Width * 1.4),
                 VerticalAlignment = VerticalAlignment.Center
             };
 
-            Canvas.SetLeft(border, s.X);
-            Canvas.SetTop(border, s.Y);
+            Canvas.SetLeft(border, s.Rect.X);
+            Canvas.SetTop(border, s.Rect.Y);
             RegionCanvas.Children.Add(border);
         }
     }
 
-    /// <summary>Re-anchor to a moved/resized target window without re-rendering regions.</summary>
     public void UpdateBounds(Rect windowRect)
     {
         Left = windowRect.Left;
@@ -117,10 +160,19 @@ public partial class OverlayWindow : Window
 
     private static double Snap(double v) => Math.Round(v / SnapGrid) * SnapGrid;
 
+    private static bool RectsOverlap(Rect a, Rect b)
+    {
+        var ix = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
+        var iy = Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top);
+        return ix > 0 && iy > 0;
+    }
+
     private static Color ParseColor(string hex, Color fallback)
     {
         if (string.IsNullOrWhiteSpace(hex)) return fallback;
         try { return (Color)ColorConverter.ConvertFromString(hex); }
         catch { return fallback; }
     }
+
+    private readonly record struct SnappedRegion(Rect Rect, string Text);
 }
