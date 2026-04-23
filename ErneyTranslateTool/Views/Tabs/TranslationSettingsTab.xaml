@@ -195,6 +195,18 @@
                             </ItemsControl>
                         </Border>
                     </StackPanel>
+
+                    <!-- Paddle specific help -->
+                    <StackPanel Visibility="{Binding IsPaddle, Converter={StaticResource BoolToVis}}">
+                        <TextBlock TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8">
+                            PaddleOCR — нейросетевой движок, заметно точнее Tesseract на стилизованных
+                            и мелких шрифтах. На 1080p один кадр обрабатывается ~1-2 сек (вдвое медленнее
+                            Tesseract). При первом выборе языка модель (~10-20 МБ) скачается с интернета
+                            и закэшируется — дальше работает офлайн.
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
 

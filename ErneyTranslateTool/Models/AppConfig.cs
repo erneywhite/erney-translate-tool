@@ -153,4 +153,11 @@ public class AppConfig
     /// tessdata_best (4-5x larger but markedly better quality).
     /// </summary>
     public bool UseBestTessdata { get; set; } = true;
+
+    /// <summary>
+    /// PaddleOCR language family ("en", "ja", "zh", "ko"). PaddleOCR uses
+    /// short codes mapped to its bundled model families, not Tesseract's
+    /// 3-letter codes — kept as a separate field for clarity.
+    /// </summary>
+    public string PaddleLanguage { get; set; } = "en";
 }

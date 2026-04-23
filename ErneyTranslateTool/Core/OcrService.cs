@@ -17,6 +17,7 @@ public class OcrService : IDisposable
 {
     public const string EngineWindows = "WindowsOcr";
     public const string EngineTesseract = "Tesseract";
+    public const string EnginePaddle = "PaddleOCR";
 
     private readonly ILogger _logger;
     private readonly AppSettings _settings;
@@ -47,6 +48,13 @@ public class OcrService : IDisposable
             if (engine == EngineWindows)
             {
                 _backend = new WindowsOcrBackend(_logger, _settings.Config.SourceLanguage);
+            }
+            else if (engine == EnginePaddle)
+            {
+                _backend = new PaddleOcrBackend(_logger,
+                    string.IsNullOrWhiteSpace(_settings.Config.PaddleLanguage)
+                        ? "en"
+                        : _settings.Config.PaddleLanguage);
             }
             else
             {
