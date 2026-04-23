@@ -30,7 +30,11 @@ public class TessdataManager
         SeedFromBundled();
     }
 
-    /// <summary>Copy bundled tessdata files into the user dir on first run.</summary>
+    /// <summary>
+    /// Copy bundled tessdata files into the user dir, refreshing any installed
+    /// file whose size differs from the bundled one (e.g. fast → best upgrade
+    /// after an app update).
+    /// </summary>
     private void SeedFromBundled()
     {
         try
@@ -42,10 +46,13 @@ public class TessdataManager
             foreach (var src in Directory.GetFiles(bundledDir, "*.traineddata"))
             {
                 var dst = Path.Combine(TessdataPath, Path.GetFileName(src));
-                if (!File.Exists(dst))
+                var srcLen = new FileInfo(src).Length;
+                var needCopy = !File.Exists(dst) || new FileInfo(dst).Length != srcLen;
+                if (needCopy)
                 {
-                    File.Copy(src, dst);
-                    _logger.Information("Seeded tessdata: {File}", Path.GetFileName(src));
+                    File.Copy(src, dst, overwrite: true);
+                    _logger.Information("Seeded tessdata: {File} ({Bytes} bytes)",
+                        Path.GetFileName(src), srcLen);
                 }
             }
         }

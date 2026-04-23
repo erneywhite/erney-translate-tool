@@ -113,8 +113,14 @@ public class TesseractOcrBackend : IOcrBackend
                 if (string.IsNullOrEmpty(text)) continue;
                 if (OcrTextHelpers.IsEntirelyCyrillic(text)) continue;
 
+                // Filter out OCR noise: Tesseract loves to hallucinate on
+                // textures, decorative borders, jewelry etc. and emit short
+                // garbage strings ("Дж", "&", "от В до е 4"...) that
+                // translators happily turn into nonsense.
+                if (!IsLikelyText(text)) continue;
+
                 var conf = iter.GetConfidence(PageIteratorLevel.TextLine);
-                if (conf < 30) continue; // very loose — noise filtering only
+                if (conf < 65) continue;
 
                 kept++;
                 // Bounding box is in the upscaled coordinate space — divide
@@ -140,6 +146,34 @@ public class TesseractOcrBackend : IOcrBackend
             _logger.Error(ex, "Tesseract processing failed");
         }
         return regions;
+    }
+
+    /// <summary>
+    /// Reject single-letter and mostly-symbol detections, plus strings whose
+    /// longest run of letters is too short to plausibly be a real word.
+    /// </summary>
+    private static bool IsLikelyText(string text)
+    {
+        // Need at least three letters total.
+        int letters = 0, longestRun = 0, currentRun = 0;
+        foreach (var c in text)
+        {
+            if (char.IsLetter(c))
+            {
+                letters++;
+                currentRun++;
+                if (currentRun > longestRun) longestRun = currentRun;
+            }
+            else
+            {
+                currentRun = 0;
+            }
+        }
+        if (letters < 3) return false;
+        // Require at least one contiguous letter run of length 3+ (filters
+        // things like "от В до е 4" — letters but not real words).
+        if (longestRun < 3) return false;
+        return true;
     }
 
     public void Dispose()

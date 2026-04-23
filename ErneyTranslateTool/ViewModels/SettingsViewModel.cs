@@ -42,7 +42,7 @@ public class SettingsViewModel : BaseViewModel
     private OcrLanguageOption? _selectedOcrLanguage;
     private string _saveStatus = string.Empty;
     private int _saveStatusToken;
-    private bool _useBestTessdata;
+    private bool _useBestTessdata = true;
 
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
@@ -285,6 +285,7 @@ public class SettingsViewModel : BaseViewModel
         ToggleOverlayHotkey = c.ToggleOverlayHotkey;
 
         SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EngineTesseract : c.OcrEngine;
+        UseBestTessdata = c.UseBestTessdata;
     }
 
     public void RefreshOcrLanguages()
@@ -428,6 +429,7 @@ public class SettingsViewModel : BaseViewModel
             if (IsTesseract) c.TesseractLanguage = SelectedOcrLanguage.Tag;
             else c.SourceLanguage = SelectedOcrLanguage.Tag;
         }
+        c.UseBestTessdata = UseBestTessdata;
         c.OverlayFontFamily = OverlayFontFamily;
         c.OverlayOpacity = OverlayOpacity;
         c.BackgroundColor = BackgroundColor;
