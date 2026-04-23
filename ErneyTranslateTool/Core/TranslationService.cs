@@ -216,10 +216,7 @@ public class TranslationService : IDisposable
                 text,
                 null, // Auto-detect source
                 targetLanguage,
-                new TranslateTextOptions
-                {
-                    TagHandling = TagHandling.Html, // Preserve any formatting
-                },
+                null,
                 ct);
 
             _consecutiveFailures = 0;

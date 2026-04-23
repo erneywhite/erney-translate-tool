@@ -3,257 +3,101 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:ErneyTranslateTool.Views.Tabs"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
-
-    <UserControl.Resources>
-        <Style x:Key="SettingsGroupBoxStyle" TargetType="GroupBox" BasedOn="{StaticResource {x:Type GroupBox}}">
-            <Setter Property="Margin" Value="0,0,0,15"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <Style x:Key="SettingsLabelStyle" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <Style x:Key="SettingsDescriptionStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
-    </UserControl.Resources>
-
-    <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                  HorizontalScrollBarVisibility="Disabled"
-                  Padding="20">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
         <StackPanel>
-            <TextBlock Text="Настройки оверлея" 
-                      FontSize="24" 
-                      FontWeight="Bold"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      Margin="0,0,0,20"/>
+            <TextBlock Text="Настройки оверлея"
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Margin="0,0,0,20"/>
 
-            <TextBlock Text="Оверлей — это полупрозрачное окно, которое отображает перевод поверх других приложений." 
-                      Style="{StaticResource SettingsDescriptionStyle}"
-                      TextWrapping="Wrap"
-                      Margin="0,0,0,20"/>
-
-            <!-- Секция: Позиция -->
-            <GroupBox Header="Позиция оверлея" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
-                    <TextBlock Text="Выберите расположение окна перевода:" Style="{StaticResource SettingsDescriptionStyle}"/>
-
-                    <WrapPanel Margin="0,10,0,0">
-                        <RadioButton Content="Верхний левый" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=TopLeft}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                        <RadioButton Content="Верхний центр" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=TopCenter}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                        <RadioButton Content="Верхний правый" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=TopRight}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                        <RadioButton Content="Нижний левый" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=BottomLeft}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                        <RadioButton Content="Нижний центр" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=BottomCenter}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                        <RadioButton Content="Нижний правый" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=BottomRight}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                        <RadioButton Content="Центр экрана" 
-                                    GroupName="OverlayPosition"
-                                    IsChecked="{Binding OverlayPosition, Converter={StaticResource StringToEnumConverter}, ConverterParameter=Center}"
-                                    Foreground="{DynamicResource TextPrimaryBrush}"
-                                    Margin="0,0,20,10"/>
-                    </WrapPanel>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Секция: Внешний вид -->
-            <GroupBox Header="Внешний вид" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
-                    <Grid Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="100"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Прозрачность -->
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Прозрачность:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <Grid Grid.Row="0" Grid.Column="1" Margin="0,0,10,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="50"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Grid.Column="0" 
-                                   Minimum="0.1" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
-                                   Value="{Binding OverlayOpacity, UpdateSourceTrigger=PropertyChanged}"
-                                   Style="{DynamicResource DarkSliderStyle}"/>
-                            <TextBlock Grid.Column="1" 
-                                      Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
-                                      VerticalAlignment="Center"
-                                      HorizontalAlignment="Right"
-                                      Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        </Grid>
-
-                        <!-- Размер шрифта -->
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Размер шрифта:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,10,5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="50"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider Grid.Column="0" 
-                                   Minimum="8" Maximum="48" TickFrequency="1" IsSnapToTickEnabled="True"
-                                   Value="{Binding OverlayFontSize, UpdateSourceTrigger=PropertyChanged}"
-                                   Style="{DynamicResource DarkSliderStyle}"/>
-                            <TextBlock Grid.Column="1" 
-                                      Text="{Binding OverlayFontSize}"
-                                      VerticalAlignment="Center"
-                                      HorizontalAlignment="Right"
-                                      Foreground="{DynamicResource TextPrimaryBrush}"/>
-                        </Grid>
-
-                        <!-- Шрифт -->
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Шрифт:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                 Text="{Binding OverlayFontFamily}"
-                                 Style="{DynamicResource DarkComboBoxStyle}"
-                                 Margin="0,0,0,5">
-                            <ComboBoxItem Content="Segoe UI"/>
-                            <ComboBoxItem Content="Arial"/>
-                            <ComboBoxItem Content="Calibri"/>
-                            <ComboBoxItem Content="Consolas"/>
-                            <ComboBoxItem Content="Times New Roman"/>
-                            <ComboBoxItem Content="Verdana"/>
-                        </ComboBox>
-
-                        <!-- Цвет фона -->
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Цвет фона:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <Grid Grid.Row="3" Grid.Column="1" Margin="0,0,10,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" 
-                                    Text="{Binding OverlayBackgroundColor, UpdateSourceTrigger=PropertyChanged}"
-                                    Style="{DynamicResource DarkTextBoxStyle}"/>
-                            <Border Grid.Column="1" 
-                                   Width="30" Height="30" 
-                                   Margin="10,0,0,0"
-                                   BorderBrush="{DynamicResource BorderBrush}"
-                                   BorderThickness="1"
-                                   Background="{Binding OverlayBackgroundColor}"/>
-                        </Grid>
-
-                        <!-- Цвет текста -->
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Цвет текста:" Style="{StaticResource SettingsLabelStyle}" Margin="0,10,0,0"/>
-                        <Grid Grid.Row="4" Grid.Column="1" Margin="0,10,10,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" 
-                                    Text="{Binding OverlayTextColor, UpdateSourceTrigger=PropertyChanged}"
-                                    Style="{DynamicResource DarkTextBoxStyle}"/>
-                            <Border Grid.Column="1" 
-                                   Width="30" Height="30" 
-                                   Margin="10,0,0,0"
-                                   BorderBrush="{DynamicResource BorderBrush}"
-                                   BorderThickness="1"
-                                   Background="{Binding OverlayTextColor}"/>
-                        </Grid>
-                    </Grid>
-
-                    <!-- Предпросмотр -->
-                    <Border Margin="0,15,0,0"
-                           Padding="15"
-                           Background="{Binding OverlayBackgroundColor}"
-                           BorderBrush="{DynamicResource BorderBrush}"
-                           BorderThickness="1"
-                           CornerRadius="5">
-                        <TextBlock Text="Предпросмотр оверлея"
-                                  FontFamily="{Binding OverlayFontFamily}"
-                                  FontSize="{Binding OverlayFontSize}"
-                                  Foreground="{Binding OverlayTextColor}"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
-                    </Border>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Секция: Поведение -->
-            <GroupBox Header="Поведение" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
-                    <CheckBox Content="Всегда поверх других окон"
-                             IsChecked="{Binding OverlayAlwaysOnTop}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
-                             Margin="0,0,0,10"/>
-
-                    <CheckBox Content="Пропускать клики (клик проходит сквозь оверлей)"
-                             IsChecked="{Binding OverlayClickThrough}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"/>
-
-                    <TextBlock Text="При включении этой опции клики мыши будут проходить сквозь оверлей к приложению под ним."
-                              Style="{StaticResource SettingsDescriptionStyle}"
-                              TextWrapping="Wrap"
-                              Margin="0,5,0,0"/>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Секция: Горячие клавиши оверлея -->
-            <GroupBox Header="Горячие клавиши оверлея" Style="{StaticResource SettingsGroupBoxStyle}">
-                <Grid Margin="0,0,0,10">
+            <GroupBox Header="Внешний вид" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <Grid Margin="5">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="180"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="60"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Показать/скрыть оверлей:" Style="{StaticResource SettingsLabelStyle}"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" 
-                            Text="{Binding ToggleOverlayHotkey, UpdateSourceTrigger=PropertyChanged}"
-                            Style="{DynamicResource DarkTextBoxStyle}"
-                            Margin="0,0,0,10"
-                            ToolTip="Нажмите для записи новой комбинации"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Шрифт:"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
+                              ItemsSource="{Binding SystemFonts}"
+                              SelectedItem="{Binding OverlayFontFamily}"
+                              Margin="0,0,0,8"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Скрыть оверлей:" Style="{StaticResource SettingsLabelStyle}"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" 
-                            Text="{Binding HideOverlayHotkey, UpdateSourceTrigger=PropertyChanged}"
-                            Style="{DynamicResource DarkTextBoxStyle}"
-                            ToolTip="Нажмите для записи новой комбинации"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Режим размера шрифта:"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                              ItemsSource="{Binding FontSizeModes}"
+                              SelectedItem="{Binding FontSizeMode}"
+                              Margin="0,0,0,8"/>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Размер шрифта (вручную):"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <Slider Grid.Row="2" Grid.Column="1"
+                            Minimum="8" Maximum="32"
+                            Value="{Binding ManualFontSize}"
+                            Margin="0,0,8,8"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2"
+                               Text="{Binding ManualFontSize, StringFormat={}{0:F0}}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Прозрачность фона:"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <Slider Grid.Row="3" Grid.Column="1"
+                            Minimum="0.6" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                            Value="{Binding OverlayOpacity}"
+                            Margin="0,0,8,8"/>
+                    <TextBlock Grid.Row="3" Grid.Column="2"
+                               Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Цвет фона (HEX):"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
+                             Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="Consolas"
+                             Margin="0,0,0,8"/>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Цвет текста (HEX):"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2"
+                             Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}"
+                             FontFamily="Consolas"/>
                 </Grid>
             </GroupBox>
+
+            <GroupBox Header="Предпросмотр" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <Border Background="{Binding BackgroundColor}"
+                        Padding="12" CornerRadius="4"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1">
+                    <TextBlock Text="Пример переведённого текста"
+                               Foreground="{Binding TextColor}"
+                               FontFamily="{Binding OverlayFontFamily}"
+                               FontSize="{Binding ManualFontSize}"/>
+                </Border>
+            </GroupBox>
+
+            <Button Content="Сохранить настройки"
+                    Command="{Binding SaveCommand}"
+                    Padding="20,10" FontWeight="SemiBold"
+                    Background="{DynamicResource PrimaryBrush}"
+                    Foreground="{DynamicResource PrimaryForegroundBrush}"
+                    HorizontalAlignment="Left"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

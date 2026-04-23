@@ -95,7 +95,9 @@ public class HistoryRepository : IDisposable
             cmd.Parameters.AddWithValue("@windowTitle", windowTitle);
             cmd.ExecuteNonQuery();
 
-            _currentSessionId = (int)cmd.LastInsertRowId;
+            using var idCmd = _connection.CreateCommand();
+            idCmd.CommandText = "SELECT last_insert_rowid()";
+            _currentSessionId = Convert.ToInt32(idCmd.ExecuteScalar());
             _logger.Information("New session started: {Id} for window: {Title}", 
                 _currentSessionId, windowTitle);
             return _currentSessionId;

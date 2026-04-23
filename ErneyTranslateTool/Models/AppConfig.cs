@@ -92,4 +92,19 @@ public class AppConfig
     /// Statistics: total cache misses.
     /// </summary>
     public int CacheMisses { get; set; } = 0;
+
+    /// <summary>
+    /// Hotkey for toggling translation on/off (default "Ctrl+Shift+T").
+    /// </summary>
+    public string ToggleTranslationHotkey { get; set; } = "Ctrl+Shift+T";
+
+    /// <summary>
+    /// Hotkey for toggling overlay visibility (default "Ctrl+Shift+H").
+    /// </summary>
+    public string ToggleOverlayHotkey { get; set; } = "Ctrl+Shift+H";
+
+    /// <summary>
+    /// Source OCR language tag (e.g. "en-US"). Empty = auto.
+    /// </summary>
+    public string SourceLanguage { get; set; } = string.Empty;
 }

@@ -3,259 +3,92 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:ErneyTranslateTool.Views.Tabs"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900"
              Background="{DynamicResource BackgroundBrush}">
-
-    <UserControl.Resources>
-        <Style x:Key="HistoryDataGridStyle" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
-            <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="RowBackground" Value="{DynamicResource BackgroundBrush}"/>
-            <Setter Property="AlternatingRowBackground" Value="{DynamicResource AlternateRowBrush}"/>
-            <Setter Property="SelectionUnit" Value="FullRow"/>
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="IsReadOnly" Value="True"/>
-            <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="CanUserDeleteRows" Value="False"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-        </Style>
-
-        <Style x:Key="HistoryColumnHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="{DynamicResource HeaderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
-        </Style>
-
-        <Style x:Key="FilterTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Padding" Value="8,5"/>
-        </Style>
-    </UserControl.Resources>
-
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Заголовок -->
-        <Grid Grid.Row="0" Margin="0,0,0,20">
+        <Grid Grid.Row="0" Margin="0,0,0,15">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="История переводов"
-                          FontSize="24"
-                          FontWeight="Bold"
-                          Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <TextBlock Text="{Binding TotalItems, StringFormat='Всего записей: {0}'}"
-                          Foreground="{DynamicResource TextSecondaryBrush}"
-                          Margin="0,5,0,0"/>
-            </StackPanel>
-
+            <TextBlock Grid.Column="0" Text="История переводов"
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="Экспорт CSV"
-                       Command="{Binding ExportHistoryCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Margin="0,0,10,0"/>
-                <Button Content="Очистить всё"
-                       Command="{Binding ClearHistoryCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"/>
+                <Button Content="Обновить" Command="{Binding RefreshCommand}"
+                        Padding="12,6" Margin="0,0,8,0"/>
+                <Button Content="Экспорт сессии" Command="{Binding ExportSessionCommand}"
+                        Padding="12,6" Margin="0,0,8,0"/>
+                <Button Content="Очистить историю" Command="{Binding ClearHistoryCommand}"
+                        Padding="12,6"/>
             </StackPanel>
         </Grid>
 
-        <!-- Фильтры -->
-        <GroupBox Grid.Row="1"
-                 Header="Фильтры и поиск"
-                 Style="{DynamicResource DarkGroupBoxStyle}"
-                 Margin="0,0,0,15">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Поиск -->
-                <TextBox Grid.Column="0"
-                        Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
-                        Style="{StaticResource FilterTextBoxStyle}"
-                        Margin="0,0,15,0"
-                        ToolTip="Поиск по тексту перевода"/>
-
-                <!-- Фильтр: с языка -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,15,0">
-                    <TextBlock Text="С языка:"
-                              VerticalAlignment="Center"
-                              Margin="0,0,8,0"
-                              Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <ComboBox Width="120"
-                             ItemsSource="{Binding SourceLanguageFilters}"
-                             SelectedItem="{Binding FilterSourceLanguage}"
-                             Style="{DynamicResource DarkComboBoxStyle}"/>
-                </StackPanel>
-
-                <!-- Фильтр: на язык -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,15,0">
-                    <TextBlock Text="На язык:"
-                              VerticalAlignment="Center"
-                              Margin="0,0,8,0"
-                              Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <ComboBox Width="120"
-                             ItemsSource="{Binding TargetLanguageFilters}"
-                             SelectedItem="{Binding FilterTargetLanguage}"
-                             Style="{DynamicResource DarkComboBoxStyle}"/>
-                </StackPanel>
-
-                <!-- Фильтр: от даты -->
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="0,0,15,0">
-                    <TextBlock Text="От:"
-                              VerticalAlignment="Center"
-                              Margin="0,0,8,0"
-                              Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <DatePicker Width="120"
-                               SelectedDate="{Binding FilterFromDate}"
-                               Style="{DynamicResource DarkDatePickerStyle}"/>
-                </StackPanel>
-
-                <!-- Фильтр: до даты + сброс -->
-                <StackPanel Grid.Column="4" Orientation="Horizontal">
-                    <TextBlock Text="До:"
-                              VerticalAlignment="Center"
-                              Margin="0,0,8,0"
-                              Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <DatePicker Width="120"
-                               SelectedDate="{Binding FilterToDate}"
-                               Style="{DynamicResource DarkDatePickerStyle}"/>
-                    <Button Content="✕"
-                           Command="{Binding ClearFiltersCommand}"
-                           Style="{DynamicResource DarkButtonStyle}"
-                           Padding="10,5"
-                           Margin="10,0,0,0"
-                           ToolTip="Очистить фильтры"/>
-                </StackPanel>
-            </Grid>
-        </GroupBox>
-
-        <!-- Таблица истории -->
-        <DataGrid Grid.Row="2"
-                 ItemsSource="{Binding HistoryItems}"
-                 SelectedItem="{Binding SelectedItem}"
-                 Style="{StaticResource HistoryDataGridStyle}"
-                 ColumnHeaderStyle="{StaticResource HistoryColumnHeaderStyle}"
-                 SelectionMode="Single"
-                 IsSynchronizedWithCurrentItem="True">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Дата"
-                                  Binding="{Binding Timestamp, StringFormat={}{0:dd.MM.yyyy HH:mm}}"
-                                  Width="130"/>
-                <DataGridTextColumn Header="С языка"
-                                  Binding="{Binding SourceLanguage}"
-                                  Width="80"/>
-                <DataGridTextColumn Header="На язык"
-                                  Binding="{Binding TargetLanguage}"
-                                  Width="80"/>
-                <DataGridTextColumn Header="Исходный текст"
-                                  Binding="{Binding SourceText}"
-                                  Width="250"/>
-                <DataGridTextColumn Header="Перевод"
-                                  Binding="{Binding TranslatedText}"
-                                  Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <!-- Панель действий и пагинация -->
-        <Grid Grid.Row="3" Margin="0,15,0,0">
+        <Grid Grid.Row="1" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
-            <!-- Кнопки действий -->
-            <StackPanel Grid.Column="0" Orientation="Horizontal">
-                <Button Content="Копировать оригинал"
-                       Command="{Binding CopySourceTextCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Margin="0,0,10,0"/>
-                <Button Content="Копировать перевод"
-                       Command="{Binding CopyTranslatedTextCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Margin="0,0,10,0"/>
-                <Button Content="Удалить"
-                       Command="{Binding DeleteItemCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"/>
-            </StackPanel>
-
-            <!-- Пагинация -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="⏮"
-                       Command="{Binding GoToFirstPageCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Padding="10,5"
-                       Margin="0,0,5,0"
-                       ToolTip="Первая страница"/>
-                <Button Content="◀"
-                       Command="{Binding GoToPreviousPageCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Padding="10,5"
-                       Margin="0,0,5,0"
-                       ToolTip="Предыдущая страница"/>
-                <TextBlock VerticalAlignment="Center"
-                          Foreground="{DynamicResource TextPrimaryBrush}"
-                          Margin="0,0,15,0">
-                    <TextBlock.Text>
-                        <MultiBinding StringFormat="Стр. {0} из {1}">
-                            <Binding Path="CurrentPage"/>
-                            <Binding Path="TotalPages"/>
-                        </MultiBinding>
-                    </TextBlock.Text>
-                </TextBlock>
-                <Button Content="▶"
-                       Command="{Binding GoToNextPageCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Padding="10,5"
-                       Margin="0,0,5,0"
-                       ToolTip="Следующая страница"/>
-                <Button Content="⏭"
-                       Command="{Binding GoToLastPageCommand}"
-                       Style="{DynamicResource DarkButtonStyle}"
-                       Padding="10,5"
-                       ToolTip="Последняя страница"/>
-            </StackPanel>
+            <TextBox Grid.Column="0"
+                     Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="0,0,8,0"/>
+            <Button Grid.Column="1" Content="Поиск" Command="{Binding SearchCommand}"
+                    Padding="12,6"/>
         </Grid>
 
-        <!-- Индикатор загрузки -->
-        <Border Grid.Row="2"
-               Background="{DynamicResource BackgroundBrush}"
-               Opacity="0.8"
-               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <ProgressBar IsIndeterminate="True"
-                            Width="200"
-                            Height="10"
-                            Style="{DynamicResource DarkProgressBarStyle}"/>
-                <TextBlock Text="Загрузка истории..."
-                          Foreground="{DynamicResource TextPrimaryBrush}"
-                          Margin="0,10,0,0"
-                          HorizontalAlignment="Center"/>
-            </StackPanel>
-        </Border>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Sessions}"
+                     SelectedItem="{Binding SelectedSession}"
+                     Background="{DynamicResource InputBackgroundBrush}"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     BorderBrush="{DynamicResource BorderBrush}"
+                     Margin="0,0,10,0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="2">
+                            <TextBlock Text="{Binding WindowTitle}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding StartTime, StringFormat={}{0:dd.MM.yyyy HH:mm}}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontSize="11"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <DataGrid Grid.Column="1"
+                      ItemsSource="{Binding SessionEntries}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      CanUserAddRows="False"
+                      Background="{DynamicResource BackgroundBrush}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      RowBackground="{DynamicResource BackgroundBrush}"
+                      AlternatingRowBackground="{DynamicResource AlternateRowBrush}"
+                      BorderBrush="{DynamicResource BorderBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Время" Width="120"
+                                        Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"/>
+                    <DataGridTextColumn Header="Язык" Width="60"
+                                        Binding="{Binding SourceLanguage}"/>
+                    <DataGridTextColumn Header="Оригинал" Width="*"
+                                        Binding="{Binding OriginalText}"/>
+                    <DataGridTextColumn Header="Перевод" Width="*"
+                                        Binding="{Binding TranslatedText}"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
     </Grid>
 </UserControl>

@@ -7,7 +7,7 @@ using Serilog;
 
 namespace ErneyTranslateTool.Core
 {
-    public class OverlayManager : IOverlayManager
+    public class OverlayManager : IDisposable
     {
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
         [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hWnd);

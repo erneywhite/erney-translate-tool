@@ -2,13 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
-using System.Windows.Media.Imaging;
 using Windows.Globalization;
+using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
+using Windows.Storage.Streams;
 using ErneyTranslateTool.Models;
 using Serilog;
 
@@ -149,39 +151,49 @@ public class OcrService : IDisposable
 
         try
         {
-            // Convert bytes to bitmap
-            using var ms = new MemoryStream(imageBytes);
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.StreamSource = ms;
-            bitmap.DecodePixelWidth = 1920; // Limit size for performance
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            // Perform OCR
-            var result = _ocrEngine.RecognizeAsync(bitmap).GetAwaiter().GetResult();
-
-            // Process each line
-            foreach (var line in result.Lines)
+            // Convert bytes to SoftwareBitmap (required by WinRT OcrEngine)
+            SoftwareBitmap softwareBitmap;
+            using (var stream = new InMemoryRandomAccessStream())
             {
-                var text = line.Text.Trim();
-                if (string.IsNullOrEmpty(text))
-                    continue;
+                stream.WriteAsync(imageBytes.AsBuffer()).AsTask().GetAwaiter().GetResult();
+                stream.Seek(0);
+                var decoder = BitmapDecoder.CreateAsync(stream).AsTask().GetAwaiter().GetResult();
+                softwareBitmap = decoder.GetSoftwareBitmapAsync(
+                    BitmapPixelFormat.Bgra8,
+                    BitmapAlphaMode.Premultiplied).AsTask().GetAwaiter().GetResult();
+            }
 
-                // Skip if text is entirely Cyrillic (Russian)
-                if (IsEntirelyCyrillic(text))
+            using (softwareBitmap)
+            {
+                var result = _ocrEngine.RecognizeAsync(softwareBitmap).AsTask().GetAwaiter().GetResult();
+
+                foreach (var line in result.Lines)
                 {
-                    _logger.Debug("Skipping Cyrillic text: {Text}", text);
-                    continue;
-                }
+                    var text = line.Text.Trim();
+                    if (string.IsNullOrEmpty(text))
+                        continue;
 
-                // Calculate bounding box
-                var bounds = new Rect(
-                    line.BoundingRect.X,
-                    line.BoundingRect.Y,
-                    line.BoundingRect.Width,
-                    line.BoundingRect.Height);
+                    if (IsEntirelyCyrillic(text))
+                    {
+                        _logger.Debug("Skipping Cyrillic text: {Text}", text);
+                        continue;
+                    }
+
+                    if (line.Words.Count == 0)
+                        continue;
+
+                    // OcrLine has no BoundingRect — compute from word bounds.
+                    double minX = double.MaxValue, minY = double.MaxValue;
+                    double maxX = 0, maxY = 0;
+                    foreach (var w in line.Words)
+                    {
+                        var r = w.BoundingRect;
+                        if (r.X < minX) minX = r.X;
+                        if (r.Y < minY) minY = r.Y;
+                        if (r.X + r.Width > maxX) maxX = r.X + r.Width;
+                        if (r.Y + r.Height > maxY) maxY = r.Y + r.Height;
+                    }
+                    var bounds = new Rect(minX, minY, maxX - minX, maxY - minY);
 
                 // Generate hash for change detection
                 var hash = ComputeRegionHash(imageBytes, bounds);
@@ -211,17 +223,18 @@ public class OcrService : IDisposable
                 _previousFrameHashes[regionKey] = hash;
             }
 
-            // Clean old hashes (keep only recent positions)
-            if (_previousFrameHashes.Count > 100)
-            {
-                var keysToRemove = _previousFrameHashes.Keys.Take(50).ToList();
-                foreach (var key in keysToRemove)
+                // Clean old hashes (keep only recent positions)
+                if (_previousFrameHashes.Count > 100)
                 {
-                    _previousFrameHashes.Remove(key);
+                    var keysToRemove = _previousFrameHashes.Keys.Take(50).ToList();
+                    foreach (var key in keysToRemove)
+                    {
+                        _previousFrameHashes.Remove(key);
+                    }
                 }
-            }
 
-            _logger.Debug("OCR detected {Count} regions", regions.Count);
+                _logger.Debug("OCR detected {Count} regions", regions.Count);
+            }
         }
         catch (Exception ex)
         {
