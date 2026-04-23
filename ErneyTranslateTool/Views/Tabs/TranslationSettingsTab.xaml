@@ -6,6 +6,10 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
         <StackPanel>
             <TextBlock Text="Настройки перевода"
@@ -13,32 +17,58 @@
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,20"/>
 
-            <GroupBox Header="DeepL API" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="Сервис перевода" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock TextWrapping="Wrap"
+                    <TextBlock Text="Выбери сервис:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding Providers}"
+                              SelectedValue="{Binding SelectedProvider}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
+                              Margin="0,0,0,10"/>
+
+                    <TextBlock Text="{Binding ProviderHelpText}"
+                               TextWrapping="Wrap"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,0,0,10">
-                        Бесплатный ключ DeepL API: 500 000 символов в месяц, карта не требуется.
-                        Регистрация: https://www.deepl.com/pro-api (Sign up for free).
-                        Ключ заканчивается на ":fx".
-                    </TextBlock>
+                               Margin="0,0,0,10"/>
 
-                    <TextBlock Text="API-ключ DeepL:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                    <Grid Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
+                    <!-- DeepL fields -->
+                    <StackPanel Visibility="{Binding IsDeepL, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="API-ключ DeepL:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding DeepLApiKey, UpdateSourceTrigger=PropertyChanged}"
                                  FontFamily="Consolas"/>
-                        <Button Grid.Column="1"
-                                Content="Проверить ключ"
-                                Command="{Binding TestApiCommand}"
-                                Padding="12,6" Margin="10,0,0,0"/>
-                    </Grid>
+                    </StackPanel>
 
-                    <TextBlock Text="{Binding TestApiStatus}"
+                    <!-- MyMemory fields -->
+                    <StackPanel Visibility="{Binding IsMyMemory, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Email (необязательно — увеличивает лимит до 50 000 симв./день):"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding MyMemoryEmail, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+
+                    <!-- GoogleFree — no input -->
+                    <StackPanel Visibility="{Binding IsGoogleFree, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="Никаких настроек не требуется — нажми «Проверить» чтобы убедиться что endpoint доступен."
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <!-- LibreTranslate fields -->
+                    <StackPanel Visibility="{Binding IsLibre, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="URL инстанса:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding LibreUrl, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas"
+                                 Margin="0,0,0,8"/>
+                        <TextBlock Text="API-ключ (если требуется):" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding LibreApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas"/>
+                    </StackPanel>
+
+                    <Button Content="Проверить соединение"
+                            Command="{Binding TestProviderCommand}"
+                            Padding="14,8" HorizontalAlignment="Left"
+                            Margin="0,12,0,8"/>
+
+                    <TextBlock Text="{Binding TestStatus}"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
@@ -64,9 +94,9 @@
                     <TextBlock TextWrapping="Wrap"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,10,0,0">
-                        Для распознавания японского/китайского/корейского установите соответствующий
+                        Для распознавания японского/китайского/корейского установи соответствующий
                         языковой пакет: Параметры Windows → Время и язык → Язык и регион → Добавить язык.
-                        Включите опцию «Распознавание рукописного ввода» — она содержит OCR.
+                        Включи опцию «Распознавание рукописного ввода» — она содержит OCR.
                     </TextBlock>
                 </StackPanel>
             </GroupBox>

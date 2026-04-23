@@ -67,7 +67,7 @@ public class TranslationEngine : IDisposable
         {
             if (!_translation.Initialize())
             {
-                StatusUpdated?.Invoke(this, "Не настроен ключ DeepL API");
+                StatusUpdated?.Invoke(this, "Сервис перевода не настроен — проверьте вкладку «Настройки перевода»");
                 return;
             }
         }
