@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -36,11 +37,13 @@ public class SettingsViewModel : BaseViewModel
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
     private string _installedOcrLanguages = string.Empty;
+    private OcrLanguageOption? _selectedOcrLanguage;
 
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
     public ObservableCollection<string> SystemFonts { get; }
     public ObservableCollection<string> FontSizeModes { get; } = new() { "Auto", "Manual" };
+    public ObservableCollection<OcrLanguageOption> OcrLanguages { get; } = new();
 
     public SettingsViewModel(
         AppSettings appSettings,
@@ -61,9 +64,10 @@ public class SettingsViewModel : BaseViewModel
 
         TestProviderCommand = new RelayCommand(async _ => await TestProviderAsync(), _ => !_isTesting);
         SaveCommand = new RelayCommand(_ => Save());
+        OpenWindowsLanguageSettingsCommand = new RelayCommand(_ => OpenWindowsLanguageSettings());
 
-        LoadFromConfig();
         RefreshOcrLanguages();
+        LoadFromConfig();
     }
 
     public string SelectedProvider
@@ -200,8 +204,15 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _installedOcrLanguages, value);
     }
 
+    public OcrLanguageOption? SelectedOcrLanguage
+    {
+        get => _selectedOcrLanguage;
+        set => SetProperty(ref _selectedOcrLanguage, value);
+    }
+
     public ICommand TestProviderCommand { get; }
     public ICommand SaveCommand { get; }
+    public ICommand OpenWindowsLanguageSettingsCommand { get; }
 
     private void LoadFromConfig()
     {
@@ -225,14 +236,39 @@ public class SettingsViewModel : BaseViewModel
         FontSizeMode = c.FontSizeMode;
         ToggleTranslationHotkey = c.ToggleTranslationHotkey;
         ToggleOverlayHotkey = c.ToggleOverlayHotkey;
+
+        // Match saved OCR tag against installed packs.
+        var savedTag = c.SourceLanguage;
+        SelectedOcrLanguage = OcrLanguages.FirstOrDefault(o =>
+            string.Equals(o.Tag, savedTag, StringComparison.OrdinalIgnoreCase))
+            ?? OcrLanguages.FirstOrDefault(o =>
+                string.Equals(o.Tag, _ocrService.CurrentLanguageTag, StringComparison.OrdinalIgnoreCase))
+            ?? OcrLanguages.FirstOrDefault();
     }
 
     private void RefreshOcrLanguages()
     {
+        OcrLanguages.Clear();
         var langs = _ocrService.GetAvailableLanguages();
-        InstalledOcrLanguages = langs.Count == 0
+        foreach (var (tag, display) in langs)
+            OcrLanguages.Add(new OcrLanguageOption(tag, $"{display} ({tag})"));
+
+        InstalledOcrLanguages = OcrLanguages.Count == 0
             ? "Не установлено ни одного пакета"
-            : string.Join(", ", langs.Select(l => $"{l.DisplayName} ({l.Tag})"));
+            : string.Join(", ", OcrLanguages.Select(o => o.DisplayName));
+    }
+
+    private void OpenWindowsLanguageSettings()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("ms-settings:regionlanguage") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Не удалось открыть параметры Windows: {ex.Message}",
+                "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
     }
 
     private async Task TestProviderAsync()
@@ -271,6 +307,8 @@ public class SettingsViewModel : BaseViewModel
         c.LibreTranslateApiKey = LibreApiKey ?? string.Empty;
         if (SelectedTargetLanguage != null)
             c.TargetLanguage = SelectedTargetLanguage.Code;
+        if (SelectedOcrLanguage != null)
+            c.SourceLanguage = SelectedOcrLanguage.Tag;
         c.OverlayFontFamily = OverlayFontFamily;
         c.OverlayOpacity = OverlayOpacity;
         c.BackgroundColor = BackgroundColor;
@@ -291,6 +329,9 @@ public class SettingsViewModel : BaseViewModel
             _appSettings.Save();
             _translationService.Reload();
 
+            if (SelectedOcrLanguage != null)
+                _ocrService.SetLanguage(SelectedOcrLanguage.Tag);
+
             MessageBox.Show("Настройки сохранены.", "Сохранено",
                 MessageBoxButton.OK, MessageBoxImage.Information);
         }
@@ -303,3 +344,4 @@ public class SettingsViewModel : BaseViewModel
 }
 
 public record ProviderOption(string Id, string DisplayName);
+public record OcrLanguageOption(string Tag, string DisplayName);
