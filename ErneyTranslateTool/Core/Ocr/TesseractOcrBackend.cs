@@ -71,15 +71,14 @@ public class TesseractOcrBackend : IOcrBackend
 
             _engine?.Dispose();
             _engine = new TesseractEngine(_tessdata.TessdataPath, tag, EngineMode.Default);
-            // SingleBlock (PSM 6) is the classic UI-screenshot mode — assumes
-            // a single uniform block of text, evenly spaced. Works well for
-            // both stacked menu buttons (same font, same column) and
-            // multi-line dialog boxes. Auto kept dropping the second line
-            // of dialog because its layout analyser would split paragraphs
-            // unpredictably.
-            _engine.DefaultPageSegMode = PageSegMode.SingleBlock;
+            // SparseText (PSM 11): finds scattered text blocks without
+            // assuming a single layout. Tried SingleBlock as an experiment
+            // but it lumped the whole frame into one giant region that the
+            // grouper then merged into a single huge bounds — causing the
+            // overlay to render text at a comically large auto-font-size.
+            _engine.DefaultPageSegMode = PageSegMode.SparseText;
             _currentLanguage = tag;
-            _logger.Information("Tesseract language: {Tag} (PSM=SingleBlock)", tag);
+            _logger.Information("Tesseract language: {Tag} (PSM=SparseText)", tag);
             return true;
         }
         catch (Exception ex)
