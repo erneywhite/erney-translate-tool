@@ -11,6 +11,7 @@ using Windows.Globalization;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using Windows.Storage.Streams;
+using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
 using Serilog;
 
@@ -35,13 +36,22 @@ public class OcrService : IDisposable
         .ToList();
 
     /// <summary>
-    /// Initialize OCR service.
+    /// Currently active OCR language tag (e.g. "en-US"), or empty if none.
     /// </summary>
-    /// <param name="logger">Logger instance.</param>
-    public OcrService(ILogger logger)
+    public string CurrentLanguageTag => _currentLanguage?.LanguageTag ?? string.Empty;
+
+    /// <summary>
+    /// Initialize OCR service. Picks the saved language from settings if any,
+    /// otherwise prefers English.
+    /// </summary>
+    public OcrService(ILogger logger, AppSettings settings)
     {
         _logger = logger;
         InitializeOcrEngine();
+
+        var saved = settings.Config.SourceLanguage;
+        if (!string.IsNullOrWhiteSpace(saved))
+            SetLanguage(saved);
     }
 
     /// <summary>

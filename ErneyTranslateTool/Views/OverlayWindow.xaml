@@ -7,23 +7,23 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
+        ShowActivated="False"
+        Focusable="False"
         IsHitTestVisible="False"
-        Left="0" Top="0" Width="400" Height="100">
-
-    <Grid>
-        <Border x:Name="TranslationBorder"
-                Background="#CC000000"
-                CornerRadius="6"
-                Padding="10,6"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Top"
-                Visibility="Collapsed">
-            <TextBlock x:Name="TranslationText"
-                       Foreground="White"
-                       FontSize="14"
-                       FontFamily="Segoe UI"
-                       TextWrapping="Wrap"
-                       MaxWidth="600" />
-        </Border>
-    </Grid>
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual"
+        Left="0" Top="0">
+    <Border x:Name="TranslationBorder"
+            Background="#D81A1A1A"
+            CornerRadius="6"
+            Padding="10,6"
+            Visibility="Collapsed">
+        <TextBlock x:Name="TranslationText"
+                   Foreground="White"
+                   FontSize="16"
+                   FontFamily="Segoe UI"
+                   TextWrapping="Wrap"
+                   MaxWidth="800"/>
+    </Border>
 </Window>

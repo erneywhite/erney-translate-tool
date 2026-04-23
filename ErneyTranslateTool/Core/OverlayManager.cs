@@ -1,22 +1,26 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
-using ErneyTranslateTool.Models;
+using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Views;
-using Serilog;
 
 namespace ErneyTranslateTool.Core
 {
     public class OverlayManager : IDisposable
     {
         [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-        [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hWnd);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct RECT { public int Left, Top, Right, Bottom; }
 
+        private readonly AppSettings _settings;
         private OverlayWindow? _overlayWindow;
         private bool _disposed;
+
+        public OverlayManager(AppSettings settings)
+        {
+            _settings = settings;
+        }
 
         public bool IsVisible => _overlayWindow?.IsVisible ?? false;
 
@@ -29,7 +33,11 @@ namespace ErneyTranslateTool.Core
                     _overlayWindow = new OverlayWindow();
                     _overlayWindow.Show();
                 }
-                _overlayWindow.SetTranslation(text, targetRect);
+                else if (!_overlayWindow.IsVisible)
+                {
+                    _overlayWindow.Show();
+                }
+                _overlayWindow.SetTranslation(text, targetRect, _settings.Config);
             });
         }
 
