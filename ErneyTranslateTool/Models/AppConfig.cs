@@ -138,4 +138,10 @@ public class AppConfig
     /// Tesseract language code (e.g. "eng", "rus", "jpn"). Multi-language allowed via "+".
     /// </summary>
     public string TesseractLanguage { get; set; } = "eng";
+
+    /// <summary>
+    /// When true, downloads of additional Tesseract languages pull from
+    /// tessdata_best (4-5x larger but markedly better quality).
+    /// </summary>
+    public bool UseBestTessdata { get; set; } = true;
 }
