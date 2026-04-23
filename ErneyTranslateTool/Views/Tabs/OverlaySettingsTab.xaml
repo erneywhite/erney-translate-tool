@@ -92,12 +92,18 @@
                 </Border>
             </GroupBox>
 
-            <Button Content="Сохранить настройки"
-                    Command="{Binding SaveCommand}"
-                    Padding="20,10" FontWeight="SemiBold"
-                    Background="{DynamicResource PrimaryBrush}"
-                    Foreground="{DynamicResource PrimaryForegroundBrush}"
-                    HorizontalAlignment="Left"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Сохранить настройки"
+                        Command="{Binding SaveCommand}"
+                        Padding="20,10" FontWeight="SemiBold"
+                        Background="{DynamicResource PrimaryBrush}"
+                        Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+                <TextBlock Text="{Binding SaveStatus}"
+                           Foreground="{DynamicResource SuccessBrush}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="15,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

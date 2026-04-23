@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -9,6 +10,12 @@ namespace ErneyTranslateTool.Views;
 
 public partial class OverlayWindow : Window
 {
+    // Snap OCR-reported coordinates to this grid to kill ±1-2px jitter
+    // when the same text gets re-detected frame after frame.
+    private const double SnapGrid = 4.0;
+
+    private string _lastFingerprint = string.Empty;
+
     public OverlayWindow()
     {
         InitializeComponent();
@@ -16,21 +23,42 @@ public partial class OverlayWindow : Window
 
     /// <summary>
     /// Resize/reposition the overlay to cover the target window, then draw a
-    /// translated label on top of every detected region. Each region keeps the
-    /// position OCR reported (image pixels relative to the captured window).
+    /// translated label on top of every detected region. Positions are snapped
+    /// to a grid and the whole render is skipped if the set of regions is
+    /// identical to the previous frame — that prevents the visible jitter
+    /// the user reported when the source text isn't actually changing.
     /// </summary>
     public void SetRegions(IReadOnlyList<TranslationRegion> regions, Rect targetWindowRect, AppConfig cfg)
     {
-        // Cover the target window so absolute Canvas coords line up with OCR pixels.
         Left = targetWindowRect.Left;
         Top = targetWindowRect.Top;
         Width = Math.Max(1, targetWindowRect.Width);
         Height = Math.Max(1, targetWindowRect.Height);
 
-        RegionCanvas.Children.Clear();
-        if (regions.Count == 0) return;
+        // Snap + filter; build a fingerprint so we can short-circuit identical frames.
+        var snapped = new List<(double X, double Y, double W, double H, string Text)>();
+        foreach (var r in regions)
+        {
+            if (string.IsNullOrWhiteSpace(r.TranslatedText)) continue;
+            if (r.Bounds.Width <= 0 || r.Bounds.Height <= 0) continue;
+            snapped.Add((
+                Snap(r.Bounds.X),
+                Snap(r.Bounds.Y),
+                Snap(r.Bounds.Width),
+                Snap(r.Bounds.Height),
+                r.TranslatedText));
+        }
 
-        var bgColor = ParseColor(cfg.BackgroundColor, Color.FromRgb(0x1A, 0x1A, 0x1A));
+        var fingerprint = string.Join("|",
+            snapped.Select(s => $"{s.X}:{s.Y}:{s.W}:{s.H}:{s.Text}"));
+        if (fingerprint == _lastFingerprint && RegionCanvas.Children.Count > 0)
+            return;
+        _lastFingerprint = fingerprint;
+
+        RegionCanvas.Children.Clear();
+        if (snapped.Count == 0) return;
+
+        var bgColor = ParseColor(cfg.BackgroundColor, Colors.Black);
         bgColor.A = (byte)Math.Clamp(cfg.OverlayOpacity * 255, 60, 255);
         var bgBrush = new SolidColorBrush(bgColor);
         bgBrush.Freeze();
@@ -44,34 +72,36 @@ public partial class OverlayWindow : Window
 
         var manualMode = string.Equals(cfg.FontSizeMode, "Manual", StringComparison.OrdinalIgnoreCase);
 
-        foreach (var r in regions)
+        foreach (var s in snapped)
         {
-            if (string.IsNullOrWhiteSpace(r.TranslatedText)) continue;
-            if (r.Bounds.Width <= 0 || r.Bounds.Height <= 0) continue;
-
             var fontSize = manualMode && cfg.ManualFontSize >= 8
                 ? cfg.ManualFontSize
-                : Math.Max(11, r.Bounds.Height * 0.7);
+                : Math.Max(11, s.H * 0.7);
 
+            // Cover the original text completely: at least as big as the source rect.
+            // Translation can spill out a bit horizontally if Russian needs more room.
             var border = new Border
             {
                 Background = bgBrush,
-                CornerRadius = new CornerRadius(3),
-                Padding = new Thickness(4, 2, 4, 2),
+                CornerRadius = new CornerRadius(2),
+                Padding = new Thickness(4, 1, 4, 1),
+                MinWidth = s.W,
+                MinHeight = s.H,
                 SnapsToDevicePixels = true
             };
             border.Child = new TextBlock
             {
-                Text = r.TranslatedText,
+                Text = s.Text,
                 Foreground = fgBrush,
                 FontFamily = fontFamily,
                 FontSize = fontSize,
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = Math.Max(160, r.Bounds.Width * 1.6)
+                MaxWidth = Math.Max(120, s.W * 1.4),
+                VerticalAlignment = VerticalAlignment.Center
             };
 
-            Canvas.SetLeft(border, r.Bounds.X);
-            Canvas.SetTop(border, r.Bounds.Y);
+            Canvas.SetLeft(border, s.X);
+            Canvas.SetTop(border, s.Y);
             RegionCanvas.Children.Add(border);
         }
     }
@@ -84,6 +114,8 @@ public partial class OverlayWindow : Window
         Width = Math.Max(1, windowRect.Width);
         Height = Math.Max(1, windowRect.Height);
     }
+
+    private static double Snap(double v) => Math.Round(v / SnapGrid) * SnapGrid;
 
     private static Color ParseColor(string hex, Color fallback)
     {

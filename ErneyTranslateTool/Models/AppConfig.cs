@@ -34,14 +34,15 @@ public class AppConfig
     public double ManualFontSize { get; set; } = 14;
 
     /// <summary>
-    /// Overlay background opacity (0.6 - 1.0).
+    /// Overlay background opacity (0.6 - 1.0). Near-opaque by default so the
+    /// translation actually hides the original text underneath.
     /// </summary>
-    public double OverlayOpacity { get; set; } = 0.85;
+    public double OverlayOpacity { get; set; } = 0.95;
 
     /// <summary>
     /// Overlay background color (hex format).
     /// </summary>
-    public string BackgroundColor { get; set; } = "#1A1A1A";
+    public string BackgroundColor { get; set; } = "#000000";
 
     /// <summary>
     /// Overlay text color (hex format).
