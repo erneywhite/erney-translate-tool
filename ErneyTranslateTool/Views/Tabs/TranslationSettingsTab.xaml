@@ -31,28 +31,24 @@
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,0,0,10"/>
 
-                    <!-- DeepL fields -->
                     <StackPanel Visibility="{Binding IsDeepL, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="API-ключ DeepL:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <TextBox Text="{Binding DeepLApiKey, UpdateSourceTrigger=PropertyChanged}"
                                  FontFamily="Consolas"/>
                     </StackPanel>
 
-                    <!-- MyMemory fields -->
                     <StackPanel Visibility="{Binding IsMyMemory, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Email (необязательно — увеличивает лимит до 50 000 симв./день):"
                                    Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <TextBox Text="{Binding MyMemoryEmail, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
 
-                    <!-- GoogleFree — no input -->
                     <StackPanel Visibility="{Binding IsGoogleFree, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Никаких настроек не требуется — нажми «Проверить» чтобы убедиться что endpoint доступен."
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
 
-                    <!-- LibreTranslate fields -->
                     <StackPanel Visibility="{Binding IsLibre, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="URL инстанса:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <TextBox Text="{Binding LibreUrl, UpdateSourceTrigger=PropertyChanged}"
@@ -83,10 +79,15 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Распознавание текста (OCR) — Windows.Media.OCR"
-                      Style="{DynamicResource DarkGroupBoxStyle}"
-                      Margin="0,0,0,15">
+            <GroupBox Header="Распознавание текста (OCR)" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
+                    <TextBlock Text="Движок распознавания:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding OcrEngines}"
+                              SelectedValue="{Binding SelectedOcrEngine}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
+                              Margin="0,0,0,10"/>
+
                     <TextBlock Text="Язык распознавания (укажи язык игры):"
                                Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                     <ComboBox ItemsSource="{Binding OcrLanguages}"
@@ -95,31 +96,95 @@
                               Width="320" HorizontalAlignment="Left"
                               Margin="0,0,0,10"/>
 
-                    <TextBlock TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,0,0,10">
-                        Windows OCR работает только с установленными системными пакетами. Если
-                        нужного языка нет в списке (например, японского) — установи пакет вручную.
-                    </TextBlock>
+                    <!-- Windows OCR specific help -->
+                    <StackPanel Visibility="{Binding IsWindowsOcr, Converter={StaticResource BoolToVis}}">
+                        <TextBlock TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8">
+                            Windows OCR работает только с установленными системными пакетами.
+                            Если нужного языка нет в списке — установи через параметры Windows.
+                        </TextBlock>
+                        <Button Content="Открыть параметры языков Windows"
+                                Command="{Binding OpenWindowsLanguageSettingsCommand}"
+                                Padding="14,6" HorizontalAlignment="Left"/>
+                    </StackPanel>
 
-                    <Button Content="Открыть параметры языков Windows"
-                            Command="{Binding OpenWindowsLanguageSettingsCommand}"
-                            Padding="14,6" HorizontalAlignment="Left"
-                            Margin="0,0,0,10"/>
+                    <!-- Tesseract specific: catalog with download -->
+                    <StackPanel Visibility="{Binding IsTesseract, Converter={StaticResource BoolToVis}}">
+                        <TextBlock TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,8">
+                            Tesseract: английский, русский и японский встроены сразу. Любой
+                            другой язык можно скачать одной кнопкой (~3-6 МБ на язык, источник —
+                            официальный репозиторий tesseract-ocr/tessdata_fast).
+                        </TextBlock>
 
-                    <TextBlock TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,0,0,5">
-                        Параметры Windows → Время и язык → Язык и регион → Добавить язык →
-                        выбрать (например, 日本語 / 中文 / 한국어) → отметить «Базовая поддержка
-                        набора» (содержит OCR). После установки нажми «Сохранить настройки» здесь.
-                    </TextBlock>
+                        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4"
+                                Background="{DynamicResource InputBackgroundBrush}" Padding="6">
+                            <ItemsControl ItemsSource="{Binding TessdataCatalog}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="4,3">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="120"/>
+                                            </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="{Binding InstalledOcrLanguages, StringFormat='Установлено: {0}'}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               FontSize="11"
-                               Margin="0,8,0,0"/>
+                                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text=" — "
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                <TextBlock Text="{Binding Code}"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                                           FontFamily="Consolas"/>
+                                                <TextBlock Text="{Binding StatusText}"
+                                                           Foreground="{DynamicResource WarningBrush}"
+                                                           Margin="10,0,0,0"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding SizeText}"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Right"
+                                                       Margin="0,0,8,0"/>
+
+                                            <Grid Grid.Column="2">
+                                                <Button Content="Скачать"
+                                                        Padding="10,4"
+                                                        Visibility="{Binding CanDownload, Converter={StaticResource BoolToVis}}"
+                                                        Command="{Binding DataContext.DownloadLanguageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Content="Удалить"
+                                                        Padding="10,4"
+                                                        Background="Transparent"
+                                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                                        Command="{Binding DataContext.DeleteLanguageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                                <DataTrigger Binding="{Binding IsBusy}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </Grid>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
 

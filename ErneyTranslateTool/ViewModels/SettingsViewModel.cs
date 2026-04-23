@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Core.Ocr;
 using ErneyTranslateTool.Core.Translators;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
@@ -19,6 +20,7 @@ public class SettingsViewModel : BaseViewModel
     private readonly AppSettings _appSettings;
     private readonly TranslationService _translationService;
     private readonly OcrService _ocrService;
+    private readonly TessdataManager _tessdata;
 
     private string _selectedProvider = TranslatorFactory.ProviderMyMemory;
     private string _deeplApiKey = string.Empty;
@@ -36,23 +38,27 @@ public class SettingsViewModel : BaseViewModel
     private string _fontSizeMode = "Auto";
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
-    private string _installedOcrLanguages = string.Empty;
+    private string _selectedOcrEngine = OcrService.EngineTesseract;
     private OcrLanguageOption? _selectedOcrLanguage;
 
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
     public ObservableCollection<string> SystemFonts { get; }
     public ObservableCollection<string> FontSizeModes { get; } = new() { "Auto", "Manual" };
+    public ObservableCollection<EngineOption> OcrEngines { get; }
     public ObservableCollection<OcrLanguageOption> OcrLanguages { get; } = new();
+    public ObservableCollection<TessdataItem> TessdataCatalog { get; } = new();
 
     public SettingsViewModel(
         AppSettings appSettings,
         TranslationService translationService,
-        OcrService ocrService)
+        OcrService ocrService,
+        TessdataManager tessdata)
     {
         _appSettings = appSettings;
         _translationService = translationService;
         _ocrService = ocrService;
+        _tessdata = tessdata;
 
         Providers = new ObservableCollection<ProviderOption>(
             TranslatorFactory.AllProviders.Select(p =>
@@ -62,12 +68,22 @@ public class SettingsViewModel : BaseViewModel
         SystemFonts = new ObservableCollection<string>(
             Fonts.SystemFontFamilies.Select(f => f.Source).OrderBy(s => s));
 
+        OcrEngines = new ObservableCollection<EngineOption>
+        {
+            new(OcrService.EngineTesseract, "Tesseract (рекомендуется — встроенные пакеты, поддержка любых языков)"),
+            new(OcrService.EngineWindows, "Windows OCR (требует системные языковые пакеты)")
+        };
+
         TestProviderCommand = new RelayCommand(async _ => await TestProviderAsync(), _ => !_isTesting);
         SaveCommand = new RelayCommand(_ => Save());
         OpenWindowsLanguageSettingsCommand = new RelayCommand(_ => OpenWindowsLanguageSettings());
+        DownloadLanguageCommand = new RelayCommand(async p => await DownloadLanguageAsync(p as TessdataItem));
+        DeleteLanguageCommand = new RelayCommand(p => DeleteLanguage(p as TessdataItem));
+        RefreshOcrLanguagesCommand = new RelayCommand(_ => RefreshOcrLanguages());
 
-        RefreshOcrLanguages();
+        BuildTessdataCatalog();
         LoadFromConfig();
+        RefreshOcrLanguages();
     }
 
     public string SelectedProvider
@@ -94,17 +110,15 @@ public class SettingsViewModel : BaseViewModel
     public string ProviderHelpText => _selectedProvider switch
     {
         TranslatorFactory.ProviderDeepL =>
-            "DeepL: лучшее качество. Зарегистрируйся на deepl.com/pro-api (Sign up for free). " +
+            "DeepL: лучшее качество. Регистрация на deepl.com/pro-api. " +
             "Бесплатный тариф 500 000 симв./мес, но требует привязку карты. Ключ заканчивается на «:fx».",
         TranslatorFactory.ProviderMyMemory =>
             "MyMemory: бесплатно, без карты. 5 000 символов в день анонимно, " +
-            "50 000 — если указать любой свой email (он отправляется как параметр запроса).",
+            "50 000 — если указать любой свой email.",
         TranslatorFactory.ProviderGoogleFree =>
-            "Google Translate (бесплатный публичный endpoint): без регистрации, без ключа, без карты. " +
-            "Неофициально — Google теоретически может ограничить или изменить, но обычно работает стабильно.",
+            "Google Translate (бесплатный публичный endpoint): без регистрации, без ключа, без карты.",
         TranslatorFactory.ProviderLibreTranslate =>
-            "LibreTranslate: open-source. Можно использовать публичный инстанс или развернуть свой. " +
-            "Часть инстансов требует API-ключ.",
+            "LibreTranslate: open-source. Можно использовать публичный инстанс или свой собственный.",
         _ => string.Empty
     };
 
@@ -198,11 +212,22 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _toggleOverlayHotkey, value);
     }
 
-    public string InstalledOcrLanguages
+    public string SelectedOcrEngine
     {
-        get => _installedOcrLanguages;
-        set => SetProperty(ref _installedOcrLanguages, value);
+        get => _selectedOcrEngine;
+        set
+        {
+            if (SetProperty(ref _selectedOcrEngine, value))
+            {
+                OnPropertyChanged(nameof(IsWindowsOcr));
+                OnPropertyChanged(nameof(IsTesseract));
+                RefreshOcrLanguages();
+            }
+        }
     }
+
+    public bool IsWindowsOcr => _selectedOcrEngine == OcrService.EngineWindows;
+    public bool IsTesseract => _selectedOcrEngine == OcrService.EngineTesseract;
 
     public OcrLanguageOption? SelectedOcrLanguage
     {
@@ -213,6 +238,9 @@ public class SettingsViewModel : BaseViewModel
     public ICommand TestProviderCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand OpenWindowsLanguageSettingsCommand { get; }
+    public ICommand DownloadLanguageCommand { get; }
+    public ICommand DeleteLanguageCommand { get; }
+    public ICommand RefreshOcrLanguagesCommand { get; }
 
     private void LoadFromConfig()
     {
@@ -237,25 +265,94 @@ public class SettingsViewModel : BaseViewModel
         ToggleTranslationHotkey = c.ToggleTranslationHotkey;
         ToggleOverlayHotkey = c.ToggleOverlayHotkey;
 
-        // Match saved OCR tag against installed packs.
-        var savedTag = c.SourceLanguage;
-        SelectedOcrLanguage = OcrLanguages.FirstOrDefault(o =>
-            string.Equals(o.Tag, savedTag, StringComparison.OrdinalIgnoreCase))
-            ?? OcrLanguages.FirstOrDefault(o =>
-                string.Equals(o.Tag, _ocrService.CurrentLanguageTag, StringComparison.OrdinalIgnoreCase))
-            ?? OcrLanguages.FirstOrDefault();
+        SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EngineTesseract : c.OcrEngine;
     }
 
-    private void RefreshOcrLanguages()
+    public void RefreshOcrLanguages()
     {
         OcrLanguages.Clear();
-        var langs = _ocrService.GetAvailableLanguages();
-        foreach (var (tag, display) in langs)
-            OcrLanguages.Add(new OcrLanguageOption(tag, $"{display} ({tag})"));
+        if (IsTesseract)
+        {
+            foreach (var code in _tessdata.GetInstalledLanguageCodes())
+                OcrLanguages.Add(new OcrLanguageOption(code, $"{TesseractLanguages.DisplayNameFor(code)} ({code})"));
 
-        InstalledOcrLanguages = OcrLanguages.Count == 0
-            ? "Не установлено ни одного пакета"
-            : string.Join(", ", OcrLanguages.Select(o => o.DisplayName));
+            var saved = _appSettings.Config.TesseractLanguage;
+            SelectedOcrLanguage = OcrLanguages.FirstOrDefault(o =>
+                string.Equals(o.Tag, saved, StringComparison.OrdinalIgnoreCase))
+                ?? OcrLanguages.FirstOrDefault(o => o.Tag == "eng")
+                ?? OcrLanguages.FirstOrDefault();
+        }
+        else
+        {
+            // Windows OCR
+            try
+            {
+                foreach (var (tag, display) in
+                    Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages.Select(l => (l.LanguageTag, l.DisplayName)))
+                {
+                    OcrLanguages.Add(new OcrLanguageOption(tag, $"{display} ({tag})"));
+                }
+            }
+            catch { /* ignore */ }
+
+            var saved = _appSettings.Config.SourceLanguage;
+            SelectedOcrLanguage = OcrLanguages.FirstOrDefault(o =>
+                string.Equals(o.Tag, saved, StringComparison.OrdinalIgnoreCase))
+                ?? OcrLanguages.FirstOrDefault();
+        }
+    }
+
+    private void BuildTessdataCatalog()
+    {
+        TessdataCatalog.Clear();
+        foreach (var entry in TesseractLanguages.Catalog)
+        {
+            TessdataCatalog.Add(new TessdataItem
+            {
+                Code = entry.Code,
+                DisplayName = entry.DisplayName,
+                SizeText = $"~{entry.SizeMb:F1} МБ",
+                IsInstalled = _tessdata.IsInstalled(entry.Code)
+            });
+        }
+    }
+
+    private async Task DownloadLanguageAsync(TessdataItem? item)
+    {
+        if (item == null || item.IsBusy || item.IsInstalled) return;
+        try
+        {
+            item.IsBusy = true;
+            item.StatusText = "Скачивание...";
+            await _tessdata.DownloadLanguageAsync(item.Code);
+            item.IsInstalled = true;
+            item.StatusText = string.Empty;
+            RefreshOcrLanguages();
+        }
+        catch (Exception ex)
+        {
+            item.StatusText = $"Ошибка: {ex.Message}";
+            MessageBox.Show($"Не удалось скачать {item.Code}: {ex.Message}", "Ошибка",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            item.IsBusy = false;
+        }
+    }
+
+    private void DeleteLanguage(TessdataItem? item)
+    {
+        if (item == null || !item.IsInstalled) return;
+        if (MessageBox.Show($"Удалить пакет {item.DisplayName} ({item.Code})?",
+                "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        if (_tessdata.DeleteLanguage(item.Code))
+        {
+            item.IsInstalled = false;
+            RefreshOcrLanguages();
+        }
     }
 
     private void OpenWindowsLanguageSettings()
@@ -278,7 +375,6 @@ public class SettingsViewModel : BaseViewModel
             IsTesting = true;
             TestStatus = "Проверка...";
 
-            // Persist creds first so the factory can pick them up.
             ApplyToConfig();
             if (IsDeepL && !string.IsNullOrWhiteSpace(DeepLApiKey))
                 _appSettings.SetApiKey(DeepLApiKey);
@@ -307,8 +403,12 @@ public class SettingsViewModel : BaseViewModel
         c.LibreTranslateApiKey = LibreApiKey ?? string.Empty;
         if (SelectedTargetLanguage != null)
             c.TargetLanguage = SelectedTargetLanguage.Code;
+        c.OcrEngine = SelectedOcrEngine;
         if (SelectedOcrLanguage != null)
-            c.SourceLanguage = SelectedOcrLanguage.Tag;
+        {
+            if (IsTesseract) c.TesseractLanguage = SelectedOcrLanguage.Tag;
+            else c.SourceLanguage = SelectedOcrLanguage.Tag;
+        }
         c.OverlayFontFamily = OverlayFontFamily;
         c.OverlayOpacity = OverlayOpacity;
         c.BackgroundColor = BackgroundColor;
@@ -328,9 +428,7 @@ public class SettingsViewModel : BaseViewModel
                 _appSettings.SetApiKey(DeepLApiKey);
             _appSettings.Save();
             _translationService.Reload();
-
-            if (SelectedOcrLanguage != null)
-                _ocrService.SetLanguage(SelectedOcrLanguage.Tag);
+            _ocrService.Reload();
 
             MessageBox.Show("Настройки сохранены.", "Сохранено",
                 MessageBoxButton.OK, MessageBoxImage.Information);
@@ -345,3 +443,43 @@ public class SettingsViewModel : BaseViewModel
 
 public record ProviderOption(string Id, string DisplayName);
 public record OcrLanguageOption(string Tag, string DisplayName);
+public record EngineOption(string Id, string DisplayName);
+
+public class TessdataItem : BaseViewModel
+{
+    private bool _isInstalled;
+    private bool _isBusy;
+    private string _statusText = string.Empty;
+
+    public string Code { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
+    public string SizeText { get; init; } = string.Empty;
+
+    public bool IsInstalled
+    {
+        get => _isInstalled;
+        set
+        {
+            if (SetProperty(ref _isInstalled, value))
+                OnPropertyChanged(nameof(CanDownload));
+        }
+    }
+
+    public bool IsBusy
+    {
+        get => _isBusy;
+        set
+        {
+            if (SetProperty(ref _isBusy, value))
+                OnPropertyChanged(nameof(CanDownload));
+        }
+    }
+
+    public string StatusText
+    {
+        get => _statusText;
+        set => SetProperty(ref _statusText, value);
+    }
+
+    public bool CanDownload => !IsInstalled && !IsBusy;
+}
