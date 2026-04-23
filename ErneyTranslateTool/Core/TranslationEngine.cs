@@ -148,6 +148,10 @@ public class TranslationEngine : IDisposable
             var regions = RegionGrouper.Group(rawRegions);
             if (regions.Count != rawRegions.Count)
                 _logger.Debug("Frame: grouped {From} -> {To} regions", rawRegions.Count, regions.Count);
+            foreach (var r in regions)
+                _logger.Debug("  -> tx[{Y:F0},{H:F0}]: '{Text}'",
+                    r.Bounds.Top, r.Bounds.Height,
+                    r.OriginalText.Length > 80 ? r.OriginalText.Substring(0, 80) + "..." : r.OriginalText);
 
             var translated = await _translation.TranslateRegionsAsync(
                 regions, _settings.Config.TargetLanguage);
