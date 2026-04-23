@@ -51,7 +51,7 @@ public class WindowPickerService
             Process? process = null;
             try
             {
-                process = Process.GetProcessById(processId);
+                process = Process.GetProcessById((int)processId);
             }
             catch
             {

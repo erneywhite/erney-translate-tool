@@ -15,40 +15,25 @@ namespace ErneyTranslateTool;
 /// </summary>
 public partial class App : Application
 {
-    /// <summary>
-    /// Service provider for dependency injection.
-    /// </summary>
     public IServiceProvider Services { get; private set; } = null!;
-
-    /// <summary>
-    /// Application settings instance.
-    /// </summary>
     public AppSettings Settings { get; private set; } = null!;
-
-    /// <summary>
-    /// Logger instance.
-    /// </summary>
     public ILogger Logger { get; private set; } = null!;
 
-    /// <summary>
-    /// Initialize application services and configure logging.
-    /// </summary>
+    public static string AppDataPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ErneyTranslateTool");
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        // Ensure app data directory exists
-        var appDataPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ErneyTranslateTool");
-        Directory.CreateDirectory(appDataPath);
-        Directory.CreateDirectory(Path.Combine(appDataPath, "logs"));
+        Directory.CreateDirectory(AppDataPath);
+        Directory.CreateDirectory(Path.Combine(AppDataPath, "logs"));
 
-        // Configure Serilog
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.File(
-                path: Path.Combine(appDataPath, "logs", "ett-.log"),
+                path: Path.Combine(AppDataPath, "logs", "ett-.log"),
                 rollingInterval: RollingInterval.Day,
                 outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}",
                 retainedFileCountLimit: 30)
@@ -59,21 +44,21 @@ public partial class App : Application
 
         try
         {
-            Logger.Information("Application starting. Version: {Version}", 
+            Logger.Information("Application starting. Version: {Version}",
                 Assembly.GetExecutingAssembly().GetName().Version);
 
-            // Load settings
-            Settings = new AppSettings(appDataPath, Logger);
+            Settings = new AppSettings(AppDataPath, Logger);
             Settings.Load();
 
-            // Configure DI
             var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();
 
-            // Set up global exception handler
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
+            var mainWindow = Services.GetRequiredService<MainWindow>();
+            mainWindow.Show();
 
             Logger.Information("Application started successfully");
         }
@@ -89,74 +74,55 @@ public partial class App : Application
         }
     }
 
-    /// <summary>
-    /// Configure dependency injection services.
-    /// </summary>
     private void ConfigureServices(IServiceCollection services)
     {
-        // Core services
         services.AddSingleton(Settings);
         services.AddSingleton(Logger);
+
+        // Repositories require appDataPath in their constructors.
+        services.AddSingleton(sp => new CacheRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
+        services.AddSingleton(sp => new HistoryRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
+
+        // Core services
         services.AddSingleton<CaptureService>();
         services.AddSingleton<OcrService>();
         services.AddSingleton<TranslationService>();
         services.AddSingleton<OverlayManager>();
         services.AddSingleton<HotkeyService>();
         services.AddSingleton<WindowPickerService>();
-
-        // Data repositories
-        services.AddSingleton<CacheRepository>();
-        services.AddSingleton<HistoryRepository>();
+        services.AddSingleton<TranslationEngine>();
 
         // ViewModels
-        services.AddTransient<ViewModels.MainViewModel>();
-        services.AddTransient<ViewModels.SettingsViewModel>();
-        services.AddTransient<ViewModels.HistoryViewModel>();
+        services.AddSingleton<ViewModels.MainViewModel>();
+        services.AddSingleton<ViewModels.SettingsViewModel>();
+        services.AddSingleton<ViewModels.HistoryViewModel>();
 
-        // Main window
         services.AddSingleton<MainWindow>();
     }
 
-    /// <summary>
-    /// Handle WPF dispatcher unhandled exceptions.
-    /// </summary>
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Logger.Error(e.Exception, "Unhandled WPF dispatcher exception");
-        
         MessageBox.Show(
             $"Произошла непредвиденная ошибка:\n{e.Exception.Message}\n\nОшибка записана в лог.",
             "Ошибка",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
-        
         e.Handled = true;
     }
 
-    /// <summary>
-    /// Handle AppDomain unhandled exceptions.
-    /// </summary>
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         var ex = e.ExceptionObject as Exception;
         Logger.Fatal(ex, "Unhandled AppDomain exception");
     }
 
-    /// <summary>
-    /// Clean up resources on application exit.
-    /// </summary>
     protected override void OnExit(ExitEventArgs e)
     {
         Logger.Information("Application shutting down");
-        
-        // Dispose services
         if (Services is IDisposable disposable)
-        {
             disposable.Dispose();
-        }
-
         Log.CloseAndFlush();
-        
         base.OnExit(e);
     }
 }

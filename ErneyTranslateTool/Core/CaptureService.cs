@@ -13,7 +13,7 @@ using ErneyTranslateTool.Models;
 
 namespace ErneyTranslateTool.Core
 {
-    public class CaptureService : ICaptureService
+    public class CaptureService : IDisposable
     {
         private readonly ILogger _logger;
         private IntPtr _targetWindowHandle;

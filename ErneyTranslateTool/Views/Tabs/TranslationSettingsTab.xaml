@@ -3,147 +3,78 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:local="clr-namespace:ErneyTranslateTool.Views.Tabs"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
-
-    <UserControl.Resources>
-        <Style x:Key="SettingsGroupBoxStyle" TargetType="GroupBox" BasedOn="{StaticResource {x:Type GroupBox}}">
-            <Setter Property="Margin" Value="0,0,0,15"/>
-            <Setter Property="Padding" Value="15"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <Style x:Key="SettingsLabelStyle" TargetType="TextBlock">
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        </Style>
-
-        <Style x:Key="SettingsDescriptionStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-        </Style>
-    </UserControl.Resources>
-
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled"
-                  Padding="20">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
         <StackPanel>
             <TextBlock Text="Настройки перевода"
-                      FontSize="24"
-                      FontWeight="Bold"
-                      Foreground="{DynamicResource TextPrimaryBrush}"
-                      Margin="0,0,0,20"/>
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Margin="0,0,0,20"/>
 
-            <!-- Секция: DeepL API -->
-            <GroupBox Header="DeepL API" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
+            <GroupBox Header="DeepL API" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
                     <TextBlock TextWrapping="Wrap"
-                              Style="{StaticResource SettingsDescriptionStyle}"
-                              Margin="0,0,0,15">
-                        Для работы перевода необходим бесплатный ключ DeepL API.
-                        Зарегистрируйтесь на deepl.com/pro-api — 500 000 символов в месяц бесплатно.
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,10">
+                        Бесплатный ключ DeepL API: 500 000 символов в месяц, карта не требуется.
+                        Регистрация: https://www.deepl.com/pro-api (Sign up for free).
+                        Ключ заканчивается на ":fx".
                     </TextBlock>
 
+                    <TextBlock Text="API-ключ DeepL:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0" Text="API-ключ DeepL:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <TextBox Grid.Column="1"
-                                Text="{Binding DeeplApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                Style="{DynamicResource DarkTextBoxStyle}"
-                                Margin="0,0,10,0"/>
-                        <Button Grid.Column="2" Content="Проверить ключ"
-                               Command="{Binding TestApiCommand}"
-                               Style="{DynamicResource DarkButtonStyle}"/>
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding ApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas"/>
+                        <Button Grid.Column="1"
+                                Content="Проверить ключ"
+                                Command="{Binding TestApiCommand}"
+                                Padding="12,6" Margin="10,0,0,0"/>
                     </Grid>
 
                     <TextBlock Text="{Binding TestApiStatus}"
-                              Foreground="{Binding TestApiSuccess, Converter={StaticResource BoolToColorConverter}}"
-                              Margin="150,5,0,0"/>
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
             </GroupBox>
 
-            <!-- Секция: Язык перевода -->
-            <GroupBox Header="Язык перевода" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
-                    <TextBlock Text="Целевой язык (на который переводить):"
-                              Style="{StaticResource SettingsDescriptionStyle}"/>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="200"/>
-                        </Grid.ColumnDefinitions>
-
-                        <TextBlock Grid.Column="0" Text="Язык перевода:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <ComboBox Grid.Column="1"
-                                 ItemsSource="{Binding TargetLanguages}"
-                                 SelectedItem="{Binding SelectedTargetLanguage}"
-                                 Style="{DynamicResource DarkComboBoxStyle}"/>
-                    </Grid>
+            <GroupBox Header="Целевой язык перевода" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <ComboBox ItemsSource="{Binding TargetLanguages}"
+                              SelectedItem="{Binding SelectedTargetLanguage}"
+                              DisplayMemberPath="DisplayName"
+                              Width="280" HorizontalAlignment="Left"/>
                 </StackPanel>
             </GroupBox>
 
-            <!-- Секция: Распознавание текста (OCR) -->
-            <GroupBox Header="Распознавание текста (OCR)" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
+            <GroupBox Header="Языковые пакеты OCR (Windows.Media.OCR)"
+                      Style="{DynamicResource DarkGroupBoxStyle}"
+                      Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Установленные пакеты:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding InstalledOcrLanguages}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"/>
                     <TextBlock TextWrapping="Wrap"
-                              Style="{StaticResource SettingsDescriptionStyle}">
-                        Используется встроенный Windows.Media.OCR — не требует установки сторонних программ.
-                        Для японского и китайского языков необходимо установить языковые пакеты Windows.
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,10,0,0">
+                        Для распознавания японского/китайского/корейского установите соответствующий
+                        языковой пакет: Параметры Windows → Время и язык → Язык и регион → Добавить язык.
+                        Включите опцию «Распознавание рукописного ввода» — она содержит OCR.
                     </TextBlock>
-
-                    <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Масштабирование:" Style="{StaticResource SettingsLabelStyle}"/>
-                        <Grid Grid.Row="0" Grid.Column="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0"
-                                    Text="{Binding OcrScaleFactor, UpdateSourceTrigger=PropertyChanged}"
-                                    Style="{DynamicResource DarkTextBoxStyle}"/>
-                            <TextBlock Grid.Column="1"
-                                      Text="x (рекомендуется 2-3)"
-                                      VerticalAlignment="Center"
-                                      Margin="10,0,0,0"
-                                      Foreground="{DynamicResource TextSecondaryBrush}"/>
-                        </Grid>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Установленные пакеты:" Style="{StaticResource SettingsLabelStyle}" Margin="0,10,0,0"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1"
-                                  Text="{Binding InstalledOcrLanguages}"
-                                  Foreground="{DynamicResource TextSecondaryBrush}"
-                                  VerticalAlignment="Center"
-                                  Margin="0,10,0,0"
-                                  TextWrapping="Wrap"/>
-                    </Grid>
                 </StackPanel>
             </GroupBox>
 
-            <!-- Секция: Настройки захвата -->
-            <GroupBox Header="Настройки захвата" Style="{StaticResource SettingsGroupBoxStyle}">
-                <Grid>
+            <GroupBox Header="Горячие клавиши" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <Grid Margin="5">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="220"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
@@ -151,35 +82,27 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Интервал захвата (мс):" Style="{StaticResource SettingsLabelStyle}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Включить/выключить перевод:"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
                     <TextBox Grid.Row="0" Grid.Column="1"
-                            Text="{Binding CaptureDelay, UpdateSourceTrigger=PropertyChanged}"
-                            Style="{DynamicResource DarkTextBoxStyle}"
-                            HorizontalAlignment="Left"
-                            Width="100"/>
+                             Text="{Binding ToggleTranslationHotkey, UpdateSourceTrigger=PropertyChanged}"
+                             Margin="0,0,0,8"/>
 
-                    <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                             Content="Предобработка изображения (улучшает качество OCR)"
-                             IsChecked="{Binding OcrPreprocessImage}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
-                             Margin="0,10,0,0"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Показать/скрыть оверлей:"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <TextBox Grid.Row="1" Grid.Column="1"
+                             Text="{Binding ToggleOverlayHotkey, UpdateSourceTrigger=PropertyChanged}"/>
                 </Grid>
             </GroupBox>
 
-            <!-- Секция: Автоперевод -->
-            <GroupBox Header="Автоперевод" Style="{StaticResource SettingsGroupBoxStyle}">
-                <StackPanel>
-                    <CheckBox Content="Автоматически переводить после захвата"
-                             IsChecked="{Binding AutoTranslateAfterCapture}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"
-                             Margin="0,0,0,10"/>
-
-                    <CheckBox Content="Показывать перевод в оверлее"
-                             IsChecked="{Binding ShowTranslationInOverlay}"
-                             Foreground="{DynamicResource TextPrimaryBrush}"/>
-                </StackPanel>
-            </GroupBox>
-
+            <Button Content="Сохранить настройки"
+                    Command="{Binding SaveCommand}"
+                    Padding="20,10" FontWeight="SemiBold"
+                    Background="{DynamicResource PrimaryBrush}"
+                    Foreground="{DynamicResource PrimaryForegroundBrush}"
+                    HorizontalAlignment="Left"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

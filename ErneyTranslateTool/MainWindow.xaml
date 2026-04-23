@@ -1,0 +1,27 @@
+<Window x:Class="ErneyTranslateTool.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tabs="clr-namespace:ErneyTranslateTool.Views.Tabs"
+        Title="Erney's Translate Tool"
+        Height="700" Width="1000"
+        MinHeight="500" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}">
+    <TabControl Margin="0">
+        <TabItem Header="Главная">
+            <tabs:MainTab DataContext="{Binding MainVM}"/>
+        </TabItem>
+        <TabItem Header="Настройки перевода">
+            <tabs:TranslationSettingsTab DataContext="{Binding SettingsVM}"/>
+        </TabItem>
+        <TabItem Header="Настройки оверлея">
+            <tabs:OverlaySettingsTab DataContext="{Binding SettingsVM}"/>
+        </TabItem>
+        <TabItem Header="История">
+            <tabs:HistoryTab DataContext="{Binding HistoryVM}"/>
+        </TabItem>
+        <TabItem Header="О программе">
+            <tabs:AboutTab/>
+        </TabItem>
+    </TabControl>
+</Window>
