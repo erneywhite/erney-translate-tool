@@ -18,12 +18,13 @@ public class TesseractOcrBackend : IOcrBackend
 {
     public string Name => "Tesseract";
 
-    // Feed Tesseract a larger image than the game renders — LSTM quality
-    // improves substantially above ~30px per letter. We only upscale when
-    // the source itself is small; for 1080p+ captures the letters are
-    // already big enough and 2x just wastes CPU (4x more pixels to process).
+    // Feed Tesseract a larger image than the game renders. LSTM quality
+    // improves a lot above ~30px per letter, and stylized menu fonts (thin
+    // strokes, gradients, drop shadows) still benefit from extra resolution
+    // even at 1080p. We used to make this conditional on source size, but
+    // that silently tanked accuracy on fancy UI fonts — keeping 2x always
+    // and relying on the frame-hash short-circuit for the speed side.
     private const float UpscaleFactor = 2.0f;
-    private const int UpscaleWidthThreshold = 1280;
 
     private readonly TessdataManager _tessdata;
     private readonly ILogger _logger;
@@ -98,14 +99,10 @@ public class TesseractOcrBackend : IOcrBackend
         try
         {
             using var raw = Pix.LoadFromMemory(pngBytes);
-            // Upscale only when the source is small (e.g. 720p game). For
-            // 1080p+ captures the letters are already big enough and the 4x
-            // extra pixels just slow OCR down with no quality gain.
-            var scale = raw.Width < UpscaleWidthThreshold ? UpscaleFactor : 1.0f;
-            upscaled = scale > 1.0f ? raw.Scale(scale, scale) : null;
-            var pix = upscaled ?? raw;
+            const float scale = UpscaleFactor;
+            upscaled = raw.Scale(scale, scale);
 
-            using var page = _engine.Process(pix);
+            using var page = _engine.Process(upscaled);
             using var iter = page.GetIterator();
             iter.Begin();
 
