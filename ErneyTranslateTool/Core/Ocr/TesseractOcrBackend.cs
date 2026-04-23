@@ -113,14 +113,8 @@ public class TesseractOcrBackend : IOcrBackend
                 if (string.IsNullOrEmpty(text)) continue;
                 if (OcrTextHelpers.IsEntirelyCyrillic(text)) continue;
 
-                // Filter out OCR noise: Tesseract loves to hallucinate on
-                // textures, decorative borders, jewelry etc. and emit short
-                // garbage strings ("Дж", "&", "от В до е 4"...) that
-                // translators happily turn into nonsense.
-                if (!IsLikelyText(text)) continue;
-
                 var conf = iter.GetConfidence(PageIteratorLevel.TextLine);
-                if (conf < 65) continue;
+                if (!ShouldKeep(text, conf)) continue;
 
                 kept++;
                 // Bounding box is in the upscaled coordinate space — divide
@@ -149,12 +143,15 @@ public class TesseractOcrBackend : IOcrBackend
     }
 
     /// <summary>
-    /// Reject single-letter and mostly-symbol detections, plus strings whose
-    /// longest run of letters is too short to plausibly be a real word.
+    /// Decide whether a detected line is real text or OCR noise. Length-scaled
+    /// confidence: 2-letter strings like "OK" / "No" need 85+ to pass (real
+    /// labels easily clear that, hallucinations almost never do); 3-4 letter
+    /// strings need 75+; longer strings need 65+. All strings must have at
+    /// least 2 letters AND a contiguous letter run of 2+ — that filters
+    /// "&", "5", "@s", "& a 4 b" patterns that come from textures.
     /// </summary>
-    private static bool IsLikelyText(string text)
+    private static bool ShouldKeep(string text, double confidence)
     {
-        // Need at least three letters total.
         int letters = 0, longestRun = 0, currentRun = 0;
         foreach (var c in text)
         {
@@ -169,11 +166,13 @@ public class TesseractOcrBackend : IOcrBackend
                 currentRun = 0;
             }
         }
-        if (letters < 3) return false;
-        // Require at least one contiguous letter run of length 3+ (filters
-        // things like "от В до е 4" — letters but not real words).
-        if (longestRun < 3) return false;
-        return true;
+
+        if (letters < 2 || longestRun < 2) return false;
+
+        double minConf = letters <= 2 ? 85
+                       : letters <= 4 ? 75
+                       : 65;
+        return confidence >= minConf;
     }
 
     public void Dispose()
