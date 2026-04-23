@@ -71,12 +71,13 @@ public class TesseractOcrBackend : IOcrBackend
 
             _engine?.Dispose();
             _engine = new TesseractEngine(_tessdata.TessdataPath, tag, EngineMode.Default);
-            // SparseText works far better than the default PSM for game UIs —
-            // it doesn't assume a newspaper-style layout and finds scattered
-            // labels and button text reliably.
-            _engine.DefaultPageSegMode = PageSegMode.SparseText;
+            // Auto handles both scattered labels (game menu buttons) and
+            // multi-line paragraphs (dialog text wrapped over 2-3 rows).
+            // SparseText found buttons fine but tended to miss the second
+            // line of wrapped dialog, leaving translations partial.
+            _engine.DefaultPageSegMode = PageSegMode.Auto;
             _currentLanguage = tag;
-            _logger.Information("Tesseract language: {Tag} (PSM=SparseText)", tag);
+            _logger.Information("Tesseract language: {Tag} (PSM=Auto)", tag);
             return true;
         }
         catch (Exception ex)
@@ -106,7 +107,7 @@ public class TesseractOcrBackend : IOcrBackend
             using var iter = page.GetIterator();
             iter.Begin();
 
-            int total = 0, kept = 0;
+            int total = 0, kept = 0, dropped = 0;
             do
             {
                 total++;
@@ -115,12 +116,24 @@ public class TesseractOcrBackend : IOcrBackend
 
                 var text = iter.GetText(PageIteratorLevel.TextLine)?.Trim();
                 if (string.IsNullOrEmpty(text)) continue;
-                if (OcrTextHelpers.IsEntirelyCyrillic(text)) continue;
+                if (OcrTextHelpers.IsEntirelyCyrillic(text))
+                {
+                    dropped++;
+                    _logger.Debug("  drop[cyrillic-only]: '{Text}'", Truncate(text, 60));
+                    continue;
+                }
 
                 var conf = iter.GetConfidence(PageIteratorLevel.TextLine);
-                if (!ShouldKeep(text, conf)) continue;
+                if (!ShouldKeep(text, conf))
+                {
+                    dropped++;
+                    _logger.Debug("  drop[filter]: conf={Conf:F0} '{Text}'", conf, Truncate(text, 60));
+                    continue;
+                }
 
                 kept++;
+                _logger.Debug("  keep: conf={Conf:F0} y={Y} h={H} '{Text}'",
+                    conf, rect.Y1, rect.Height, Truncate(text, 80));
                 // Bounding box is in the (possibly upscaled) coordinate space —
                 // divide back so overlays land on the correct spot in the game.
                 regions.Add(new TranslationRegion
@@ -137,8 +150,8 @@ public class TesseractOcrBackend : IOcrBackend
                 });
             } while (iter.Next(PageIteratorLevel.TextLine));
 
-            _logger.Debug("Tesseract: scanned {Total} lines, kept {Kept} (scale={Scale})",
-                total, kept, scale);
+            _logger.Debug("Tesseract: scanned {Total}, kept {Kept}, dropped {Dropped} (scale={Scale})",
+                total, kept, dropped, scale);
         }
         catch (Exception ex)
         {
@@ -150,6 +163,9 @@ public class TesseractOcrBackend : IOcrBackend
         }
         return regions;
     }
+
+    private static string Truncate(string s, int max) =>
+        s.Length <= max ? s : s.Substring(0, max) + "...";
 
     /// <summary>
     /// Decide whether a detected line is real text or OCR noise. Combines a
