@@ -40,6 +40,8 @@ public class SettingsViewModel : BaseViewModel
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
     private string _selectedOcrEngine = OcrService.EngineTesseract;
     private OcrLanguageOption? _selectedOcrLanguage;
+    private string _saveStatus = string.Empty;
+    private int _saveStatusToken;
 
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
@@ -228,6 +230,12 @@ public class SettingsViewModel : BaseViewModel
 
     public bool IsWindowsOcr => _selectedOcrEngine == OcrService.EngineWindows;
     public bool IsTesseract => _selectedOcrEngine == OcrService.EngineTesseract;
+
+    public string SaveStatus
+    {
+        get => _saveStatus;
+        set => SetProperty(ref _saveStatus, value);
+    }
 
     public OcrLanguageOption? SelectedOcrLanguage
     {
@@ -430,14 +438,21 @@ public class SettingsViewModel : BaseViewModel
             _translationService.Reload();
             _ocrService.Reload();
 
-            MessageBox.Show("Настройки сохранены.", "Сохранено",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowTransientStatus("Сохранено ✓");
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Не удалось сохранить настройки: {ex.Message}", "Ошибка",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowTransientStatus("Ошибка: " + ex.Message);
         }
+    }
+
+    private async void ShowTransientStatus(string message)
+    {
+        SaveStatus = message;
+        var token = ++_saveStatusToken;
+        await Task.Delay(3000);
+        if (_saveStatusToken == token)
+            SaveStatus = string.Empty;
     }
 }
 
