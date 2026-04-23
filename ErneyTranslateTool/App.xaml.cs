@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Threading;
 using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Core.Ocr;
 using ErneyTranslateTool.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -82,6 +83,7 @@ public partial class App : Application
         // Repositories require appDataPath in their constructors.
         services.AddSingleton(sp => new CacheRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
         services.AddSingleton(sp => new HistoryRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
+        services.AddSingleton(sp => new TessdataManager(AppDataPath, sp.GetRequiredService<ILogger>()));
 
         // Core services
         services.AddSingleton<CaptureService>();

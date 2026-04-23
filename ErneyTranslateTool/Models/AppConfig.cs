@@ -127,4 +127,14 @@ public class AppConfig
     /// Optional API key for LibreTranslate instances that require one.
     /// </summary>
     public string LibreTranslateApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// OCR engine: "WindowsOcr" (built-in, system packs) or "Tesseract" (bundled).
+    /// </summary>
+    public string OcrEngine { get; set; } = "Tesseract";
+
+    /// <summary>
+    /// Tesseract language code (e.g. "eng", "rus", "jpn"). Multi-language allowed via "+".
+    /// </summary>
+    public string TesseractLanguage { get; set; } = "eng";
 }
