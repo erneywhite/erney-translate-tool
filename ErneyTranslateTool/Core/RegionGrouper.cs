@@ -62,15 +62,18 @@ public static class RegionGrouper
         var hRatio = Math.Min(lb.Height, cb.Height) / Math.Max(lb.Height, cb.Height);
         if (hRatio < 0.65) return false;
 
-        // Candidate sits below `last` with a gap no bigger than ~80% of one
-        // line height — anything wider is a paragraph break, not a wrap.
+        // Candidate sits below `last` with a gap no bigger than ~1.3 line
+        // heights — covers normal line spacing (0.3-0.6 H) plus a generous
+        // margin for fonts with wide leading. Anything wider is a paragraph
+        // break, not a wrap.
         var gap = cb.Top - lb.Bottom;
         if (gap < -lb.Height * 0.3) return false; // overlapping rows: weird, skip
-        if (gap > lb.Height * 0.8) return false;
+        if (gap > lb.Height * 1.3) return false;
 
-        // Roughly the same column — left edges within a few characters of
-        // each other, or candidate horizontally overlaps last.
-        var sameLeftEdge = Math.Abs(cb.Left - lb.Left) <= lb.Height * 3;
+        // Roughly the same column — either left edges close (left-aligned
+        // paragraph) or there's any horizontal overlap (centered text where
+        // each line has different width but they share screen real estate).
+        var sameLeftEdge = Math.Abs(cb.Left - lb.Left) <= lb.Height * 4;
         var horizontalOverlap = Math.Min(lb.Right, cb.Right) - Math.Max(lb.Left, cb.Left) > 0;
         if (!sameLeftEdge && !horizontalOverlap) return false;
 
