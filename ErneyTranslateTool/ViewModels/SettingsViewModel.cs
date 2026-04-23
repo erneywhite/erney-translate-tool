@@ -73,7 +73,8 @@ public class SettingsViewModel : BaseViewModel
 
         OcrEngines = new ObservableCollection<EngineOption>
         {
-            new(OcrService.EngineTesseract, "Tesseract (рекомендуется — встроенные пакеты, поддержка любых языков)"),
+            new(OcrService.EngineTesseract, "Tesseract (быстро, встроенные пакеты, средняя точность)"),
+            new(OcrService.EnginePaddle, "PaddleOCR (медленнее, но заметно точнее на стилизованных шрифтах; модели качаются с интернета на первом запуске)"),
             new(OcrService.EngineWindows, "Windows OCR (требует системные языковые пакеты)")
         };
 
@@ -224,6 +225,7 @@ public class SettingsViewModel : BaseViewModel
             {
                 OnPropertyChanged(nameof(IsWindowsOcr));
                 OnPropertyChanged(nameof(IsTesseract));
+                OnPropertyChanged(nameof(IsPaddle));
                 RefreshOcrLanguages();
             }
         }
@@ -231,6 +233,7 @@ public class SettingsViewModel : BaseViewModel
 
     public bool IsWindowsOcr => _selectedOcrEngine == OcrService.EngineWindows;
     public bool IsTesseract => _selectedOcrEngine == OcrService.EngineTesseract;
+    public bool IsPaddle => _selectedOcrEngine == OcrService.EnginePaddle;
 
     public string SaveStatus
     {
@@ -301,6 +304,20 @@ public class SettingsViewModel : BaseViewModel
                 string.Equals(o.Tag, saved, StringComparison.OrdinalIgnoreCase))
                 ?? OcrLanguages.FirstOrDefault(o => o.Tag == "eng")
                 ?? OcrLanguages.FirstOrDefault();
+        }
+        else if (IsPaddle)
+        {
+            // Curated PaddleOCR language families (each downloads ~10-20MB
+            // model on first selection).
+            OcrLanguages.Add(new OcrLanguageOption("en", "Английский (en)"));
+            OcrLanguages.Add(new OcrLanguageOption("zh", "Китайский (zh)"));
+            OcrLanguages.Add(new OcrLanguageOption("ja", "Японский (ja)"));
+            OcrLanguages.Add(new OcrLanguageOption("ko", "Корейский (ko)"));
+
+            var saved = _appSettings.Config.PaddleLanguage;
+            SelectedOcrLanguage = OcrLanguages.FirstOrDefault(o =>
+                string.Equals(o.Tag, saved, StringComparison.OrdinalIgnoreCase))
+                ?? OcrLanguages.First();
         }
         else
         {
@@ -427,6 +444,7 @@ public class SettingsViewModel : BaseViewModel
         if (SelectedOcrLanguage != null)
         {
             if (IsTesseract) c.TesseractLanguage = SelectedOcrLanguage.Tag;
+            else if (IsPaddle) c.PaddleLanguage = SelectedOcrLanguage.Tag;
             else c.SourceLanguage = SelectedOcrLanguage.Tag;
         }
         c.UseBestTessdata = UseBestTessdata;
