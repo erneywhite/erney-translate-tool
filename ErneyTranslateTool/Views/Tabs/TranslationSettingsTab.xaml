@@ -115,9 +115,19 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,8">
                             Tesseract: английский, русский и японский встроены сразу. Любой
-                            другой язык можно скачать одной кнопкой (~3-6 МБ на язык, источник —
-                            официальный репозиторий tesseract-ocr/tessdata_fast).
+                            другой язык можно скачать одной кнопкой (источник — официальный
+                            репозиторий tesseract-ocr/tessdata).
                         </TextBlock>
+
+                        <CheckBox Content="Скачивать модели в улучшенном качестве (best, ~5x больше файлы — 15–25 МБ на язык)"
+                                  IsChecked="{Binding UseBestTessdata}"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  Margin="0,0,0,4"/>
+                        <TextBlock Text="Чтобы заменить уже установленный пакет качественной версией — нажми «Удалить», включи галочку и скачай снова."
+                                   TextWrapping="Wrap"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="22,0,0,10"/>
 
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4"
                                 Background="{DynamicResource InputBackgroundBrush}" Padding="6">
