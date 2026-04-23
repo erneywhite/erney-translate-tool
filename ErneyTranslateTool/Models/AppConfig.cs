@@ -107,4 +107,24 @@ public class AppConfig
     /// Source OCR language tag (e.g. "en-US"). Empty = auto.
     /// </summary>
     public string SourceLanguage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Translation provider id: DeepL / MyMemory / GoogleFree / LibreTranslate.
+    /// </summary>
+    public string TranslationProvider { get; set; } = "MyMemory";
+
+    /// <summary>
+    /// Optional email for MyMemory (raises daily limit from 5K to 50K chars).
+    /// </summary>
+    public string MyMemoryEmail { get; set; } = string.Empty;
+
+    /// <summary>
+    /// LibreTranslate instance URL (defaults to public site).
+    /// </summary>
+    public string LibreTranslateUrl { get; set; } = "https://libretranslate.com";
+
+    /// <summary>
+    /// Optional API key for LibreTranslate instances that require one.
+    /// </summary>
+    public string LibreTranslateApiKey { get; set; } = string.Empty;
 }
