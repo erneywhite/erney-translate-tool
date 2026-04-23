@@ -16,7 +16,8 @@ namespace ErneyTranslateTool.Core.Ocr;
 /// </summary>
 public class TessdataManager
 {
-    private const string GitHubBaseUrl = "https://github.com/tesseract-ocr/tessdata_fast/raw/main/";
+    private const string FastBaseUrl = "https://github.com/tesseract-ocr/tessdata_fast/raw/main/";
+    private const string BestBaseUrl = "https://github.com/tesseract-ocr/tessdata_best/raw/main/";
 
     private readonly ILogger _logger;
     public string TessdataPath { get; }
@@ -67,10 +68,15 @@ public class TessdataManager
     public bool IsInstalled(string code) =>
         File.Exists(Path.Combine(TessdataPath, code + ".traineddata"));
 
-    public async Task DownloadLanguageAsync(string code, IProgress<double>? progress = null,
-        CancellationToken ct = default)
+    public Task DownloadLanguageAsync(string code, IProgress<double>? progress = null,
+        CancellationToken ct = default) =>
+        DownloadLanguageAsync(code, useBestModel: false, progress, ct);
+
+    public async Task DownloadLanguageAsync(string code, bool useBestModel,
+        IProgress<double>? progress = null, CancellationToken ct = default)
     {
-        var url = GitHubBaseUrl + code + ".traineddata";
+        var baseUrl = useBestModel ? BestBaseUrl : FastBaseUrl;
+        var url = baseUrl + code + ".traineddata";
         var dst = Path.Combine(TessdataPath, code + ".traineddata");
         var tmp = dst + ".part";
 
@@ -96,7 +102,8 @@ public class TessdataManager
 
         if (File.Exists(dst)) File.Delete(dst);
         File.Move(tmp, dst);
-        _logger.Information("Downloaded tessdata: {Code} ({Bytes} bytes)", code, total);
+        _logger.Information("Downloaded tessdata: {Code} ({Bytes} bytes, {Quality})",
+            code, total, useBestModel ? "best" : "fast");
     }
 
     public bool DeleteLanguage(string code)

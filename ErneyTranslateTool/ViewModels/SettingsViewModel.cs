@@ -42,6 +42,7 @@ public class SettingsViewModel : BaseViewModel
     private OcrLanguageOption? _selectedOcrLanguage;
     private string _saveStatus = string.Empty;
     private int _saveStatusToken;
+    private bool _useBestTessdata;
 
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
@@ -237,6 +238,16 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _saveStatus, value);
     }
 
+    /// <summary>
+    /// When true, downloads pull from tessdata_best (4-5x larger but markedly
+    /// better quality on stylized / pixel-art / small fonts).
+    /// </summary>
+    public bool UseBestTessdata
+    {
+        get => _useBestTessdata;
+        set => SetProperty(ref _useBestTessdata, value);
+    }
+
     public OcrLanguageOption? SelectedOcrLanguage
     {
         get => _selectedOcrLanguage;
@@ -331,8 +342,8 @@ public class SettingsViewModel : BaseViewModel
         try
         {
             item.IsBusy = true;
-            item.StatusText = "Скачивание...";
-            await _tessdata.DownloadLanguageAsync(item.Code);
+            item.StatusText = UseBestTessdata ? "Скачивание (best)..." : "Скачивание...";
+            await _tessdata.DownloadLanguageAsync(item.Code, UseBestTessdata);
             item.IsInstalled = true;
             item.StatusText = string.Empty;
             RefreshOcrLanguages();
