@@ -27,6 +27,7 @@ public class TranslationEngine : IDisposable
     private readonly ILogger _logger;
     private int _processingFlag;
     private bool _disposed;
+    private long _lastFrameHash;
 
     public bool IsRunning { get; private set; }
     public IntPtr TargetWindowHandle { get; private set; }
@@ -117,6 +118,18 @@ public class TranslationEngine : IDisposable
 
         try
         {
+            // Sample-based hash of the captured pixels: lets us skip the OCR +
+            // translation pipeline entirely when the game is on a static screen.
+            // Cheap (4096 pixel reads), deterministic, and good enough to
+            // distinguish "still on the same dialog" from "scene changed".
+            var hash = QuickSampleHash(bitmap);
+            if (hash == _lastFrameHash)
+            {
+                bitmap.Dispose();
+                return;
+            }
+            _lastFrameHash = hash;
+
             byte[] bytes;
             using (var ms = new MemoryStream())
             {
@@ -125,9 +138,16 @@ public class TranslationEngine : IDisposable
             }
             bitmap.Dispose();
 
-            var regions = _ocr.ProcessFrame(bytes);
-            _logger.Debug("Frame: OCR -> {Count} regions", regions.Count);
-            if (regions.Count == 0) return;
+            var rawRegions = _ocr.ProcessFrame(bytes);
+            _logger.Debug("Frame: OCR -> {Count} raw regions", rawRegions.Count);
+            if (rawRegions.Count == 0) return;
+
+            // Stitch adjacent lines of the same paragraph back together so a
+            // dialog that wraps to N lines is translated as one sentence
+            // instead of N independent fragments.
+            var regions = RegionGrouper.Group(rawRegions);
+            if (regions.Count != rawRegions.Count)
+                _logger.Debug("Frame: grouped {From} -> {To} regions", rawRegions.Count, regions.Count);
 
             var translated = await _translation.TranslateRegionsAsync(
                 regions, _settings.Config.TargetLanguage);
@@ -152,6 +172,30 @@ public class TranslationEngine : IDisposable
         {
             Interlocked.Exchange(ref _processingFlag, 0);
         }
+    }
+
+    /// <summary>
+    /// Sample 64x64 grid of pixels from the bitmap and combine into a long.
+    /// FNV-1a-ish; not cryptographic, just stable enough to detect "frame
+    /// pixels are identical to last time".
+    /// </summary>
+    private static long QuickSampleHash(Bitmap bmp)
+    {
+        const int samples = 64;
+        long hash = unchecked((long)0xcbf29ce484222325UL);
+        var w = bmp.Width;
+        var h = bmp.Height;
+        for (int sy = 0; sy < samples; sy++)
+        {
+            int y = (int)((sy + 0.5) / samples * h);
+            for (int sx = 0; sx < samples; sx++)
+            {
+                int x = (int)((sx + 0.5) / samples * w);
+                hash ^= bmp.GetPixel(x, y).ToArgb();
+                hash *= unchecked((long)0x100000001b3L);
+            }
+        }
+        return hash;
     }
 
     [DllImport("user32.dll")]

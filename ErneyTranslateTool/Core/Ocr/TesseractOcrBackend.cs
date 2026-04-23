@@ -19,9 +19,11 @@ public class TesseractOcrBackend : IOcrBackend
     public string Name => "Tesseract";
 
     // Feed Tesseract a larger image than the game renders — LSTM quality
-    // improves substantially above ~30px per letter. 2x is a good balance
-    // between quality and CPU cost.
+    // improves substantially above ~30px per letter. We only upscale when
+    // the source itself is small; for 1080p+ captures the letters are
+    // already big enough and 2x just wastes CPU (4x more pixels to process).
     private const float UpscaleFactor = 2.0f;
+    private const int UpscaleWidthThreshold = 1280;
 
     private readonly TessdataManager _tessdata;
     private readonly ILogger _logger;
@@ -92,12 +94,17 @@ public class TesseractOcrBackend : IOcrBackend
             return regions;
         }
 
+        Pix? upscaled = null;
         try
         {
             using var raw = Pix.LoadFromMemory(pngBytes);
-            // Upscale before OCR — gives Tesseract more pixels per letter,
-            // substantially improves accuracy on pixel-art / stylized fonts.
-            using var pix = raw.Scale(UpscaleFactor, UpscaleFactor);
+            // Upscale only when the source is small (e.g. 720p game). For
+            // 1080p+ captures the letters are already big enough and the 4x
+            // extra pixels just slow OCR down with no quality gain.
+            var scale = raw.Width < UpscaleWidthThreshold ? UpscaleFactor : 1.0f;
+            upscaled = scale > 1.0f ? raw.Scale(scale, scale) : null;
+            var pix = upscaled ?? raw;
+
             using var page = _engine.Process(pix);
             using var iter = page.GetIterator();
             iter.Begin();
@@ -117,15 +124,15 @@ public class TesseractOcrBackend : IOcrBackend
                 if (!ShouldKeep(text, conf)) continue;
 
                 kept++;
-                // Bounding box is in the upscaled coordinate space — divide
-                // back so overlays land on the correct spot in the game window.
+                // Bounding box is in the (possibly upscaled) coordinate space —
+                // divide back so overlays land on the correct spot in the game.
                 regions.Add(new TranslationRegion
                 {
                     Bounds = new WpfRect(
-                        rect.X1 / UpscaleFactor,
-                        rect.Y1 / UpscaleFactor,
-                        rect.Width / UpscaleFactor,
-                        rect.Height / UpscaleFactor),
+                        rect.X1 / scale,
+                        rect.Y1 / scale,
+                        rect.Width / scale,
+                        rect.Height / scale),
                     OriginalText = text,
                     SourceLanguage = OcrTextHelpers.DetectLanguage(text),
                     ContainsCyrillic = OcrTextHelpers.ContainsCyrillic(text),
@@ -133,11 +140,16 @@ public class TesseractOcrBackend : IOcrBackend
                 });
             } while (iter.Next(PageIteratorLevel.TextLine));
 
-            _logger.Debug("Tesseract: scanned {Total} lines, kept {Kept}", total, kept);
+            _logger.Debug("Tesseract: scanned {Total} lines, kept {Kept} (scale={Scale})",
+                total, kept, scale);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Tesseract processing failed");
+        }
+        finally
+        {
+            upscaled?.Dispose();
         }
         return regions;
     }
