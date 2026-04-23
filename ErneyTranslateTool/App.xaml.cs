@@ -20,9 +20,39 @@ public partial class App : Application
     public AppSettings Settings { get; private set; } = null!;
     public ILogger Logger { get; private set; } = null!;
 
-    public static string AppDataPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ErneyTranslateTool");
+    public static string AppDataPath { get; } = DetermineAppDataPath();
+
+    /// <summary>
+    /// Prefer the install folder so the app behaves portably (settings, cache,
+    /// history, downloaded tessdata stay together with the exe). Falls back to
+    /// %AppData% when the install folder is read-only (e.g. Program Files).
+    /// </summary>
+    private static string DetermineAppDataPath()
+    {
+        var exeDir = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (!string.IsNullOrEmpty(exeDir) && CanWriteTo(exeDir))
+            return exeDir;
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "ErneyTranslateTool");
+    }
+
+    private static bool CanWriteTo(string dir)
+    {
+        try
+        {
+            Directory.CreateDirectory(dir);
+            var probe = Path.Combine(dir, ".write-probe-" + Guid.NewGuid().ToString("N"));
+            File.WriteAllText(probe, string.Empty);
+            File.Delete(probe);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -32,7 +62,7 @@ public partial class App : Application
         Directory.CreateDirectory(Path.Combine(AppDataPath, "logs"));
 
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
+            .MinimumLevel.Debug()
             .WriteTo.File(
                 path: Path.Combine(AppDataPath, "logs", "ett-.log"),
                 rollingInterval: RollingInterval.Day,

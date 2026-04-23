@@ -77,7 +77,11 @@ public class TesseractOcrBackend : IOcrBackend
     public List<TranslationRegion> ProcessFrame(byte[] pngBytes)
     {
         var regions = new List<TranslationRegion>();
-        if (_engine == null) return regions;
+        if (_engine == null)
+        {
+            _logger.Debug("Tesseract: engine is null, skipping frame");
+            return regions;
+        }
 
         try
         {
@@ -86,8 +90,10 @@ public class TesseractOcrBackend : IOcrBackend
             using var iter = page.GetIterator();
             iter.Begin();
 
+            int total = 0, kept = 0;
             do
             {
+                total++;
                 if (!iter.TryGetBoundingBox(PageIteratorLevel.TextLine, out var rect))
                     continue;
 
@@ -96,8 +102,9 @@ public class TesseractOcrBackend : IOcrBackend
                 if (OcrTextHelpers.IsEntirelyCyrillic(text)) continue;
 
                 var conf = iter.GetConfidence(PageIteratorLevel.TextLine);
-                if (conf < 50) continue; // skip low-confidence noise
+                if (conf < 30) continue; // very loose — noise filtering only
 
+                kept++;
                 regions.Add(new TranslationRegion
                 {
                     Bounds = new WpfRect(rect.X1, rect.Y1, rect.Width, rect.Height),
@@ -107,6 +114,8 @@ public class TesseractOcrBackend : IOcrBackend
                     DetectedAt = DateTime.UtcNow
                 });
             } while (iter.Next(PageIteratorLevel.TextLine));
+
+            _logger.Debug("Tesseract: scanned {Total} lines, kept {Kept}", total, kept);
         }
         catch (Exception ex)
         {

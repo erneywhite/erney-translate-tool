@@ -11,19 +11,7 @@
         Focusable="False"
         IsHitTestVisible="False"
         ResizeMode="NoResize"
-        SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual"
-        Left="0" Top="0">
-    <Border x:Name="TranslationBorder"
-            Background="#D81A1A1A"
-            CornerRadius="6"
-            Padding="10,6"
-            Visibility="Collapsed">
-        <TextBlock x:Name="TranslationText"
-                   Foreground="White"
-                   FontSize="16"
-                   FontFamily="Segoe UI"
-                   TextWrapping="Wrap"
-                   MaxWidth="800"/>
-    </Border>
+        Left="0" Top="0" Width="100" Height="100">
+    <Canvas x:Name="RegionCanvas"/>
 </Window>
