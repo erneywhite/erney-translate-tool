@@ -50,9 +50,18 @@ public class AppConfig
     public string TextColor { get; set; } = "#FFFFFF";
 
     /// <summary>
-    /// Selected window handle (HWND) for capture.
+    /// Selected window handle (HWND) for capture, stored as long because
+    /// System.Text.Json refuses to serialize IntPtr. Round-trip via the
+    /// helper property below.
     /// </summary>
-    public IntPtr TargetWindowHandle { get; set; } = IntPtr.Zero;
+    public long TargetWindowHandleValue { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IntPtr TargetWindowHandle
+    {
+        get => new IntPtr(TargetWindowHandleValue);
+        set => TargetWindowHandleValue = value.ToInt64();
+    }
 
     /// <summary>
     /// Selected window title for display.

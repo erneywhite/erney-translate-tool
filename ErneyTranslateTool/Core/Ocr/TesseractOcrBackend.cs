@@ -71,13 +71,15 @@ public class TesseractOcrBackend : IOcrBackend
 
             _engine?.Dispose();
             _engine = new TesseractEngine(_tessdata.TessdataPath, tag, EngineMode.Default);
-            // Auto handles both scattered labels (game menu buttons) and
-            // multi-line paragraphs (dialog text wrapped over 2-3 rows).
-            // SparseText found buttons fine but tended to miss the second
-            // line of wrapped dialog, leaving translations partial.
-            _engine.DefaultPageSegMode = PageSegMode.Auto;
+            // SingleBlock (PSM 6) is the classic UI-screenshot mode — assumes
+            // a single uniform block of text, evenly spaced. Works well for
+            // both stacked menu buttons (same font, same column) and
+            // multi-line dialog boxes. Auto kept dropping the second line
+            // of dialog because its layout analyser would split paragraphs
+            // unpredictably.
+            _engine.DefaultPageSegMode = PageSegMode.SingleBlock;
             _currentLanguage = tag;
-            _logger.Information("Tesseract language: {Tag} (PSM=Auto)", tag);
+            _logger.Information("Tesseract language: {Tag} (PSM=SingleBlock)", tag);
             return true;
         }
         catch (Exception ex)
@@ -197,9 +199,12 @@ public class TesseractOcrBackend : IOcrBackend
 
         if (LooksLikeGarbage(text)) return false;
 
+        // Length-scaled confidence — longer strings rarely look like garbage
+        // by pure chance, so the floor relaxes as the text gets longer.
         double minConf = letters <= 2 ? 85
                        : letters <= 4 ? 75
-                       : 65;
+                       : letters <= 9 ? 65
+                       : 55; // 10+ letters: very unlikely to be noise
         return confidence >= minConf;
     }
 
