@@ -120,9 +120,12 @@ public partial class OverlayWindow : Window
 
         foreach (var s in snapped)
         {
+            // Auto-size to roughly match source text height, but clamp to
+            // a sane range so a freak OCR result spanning the whole frame
+            // doesn't blow the overlay up to a wall-of-text font.
             var fontSize = manualMode && cfg.ManualFontSize >= 8
                 ? cfg.ManualFontSize
-                : Math.Max(11, s.Rect.Height * 0.7);
+                : Math.Clamp(s.Rect.Height * 0.55, 11.0, 28.0);
 
             var border = new Border
             {
