@@ -88,7 +88,13 @@ public partial class App : Application
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
+            // Exit the process when the user closes the main window, so the
+            // still-visible OverlayWindow (another WPF Window) doesn't keep
+            // the app alive in the background.
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+
             var mainWindow = Services.GetRequiredService<MainWindow>();
+            MainWindow = mainWindow;
             mainWindow.Show();
 
             Logger.Information("Application started successfully");
