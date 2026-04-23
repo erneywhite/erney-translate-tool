@@ -152,12 +152,13 @@ public class TesseractOcrBackend : IOcrBackend
     }
 
     /// <summary>
-    /// Decide whether a detected line is real text or OCR noise. Length-scaled
-    /// confidence: 2-letter strings like "OK" / "No" need 85+ to pass (real
-    /// labels easily clear that, hallucinations almost never do); 3-4 letter
-    /// strings need 75+; longer strings need 65+. All strings must have at
-    /// least 2 letters AND a contiguous letter run of 2+ — that filters
-    /// "&", "5", "@s", "& a 4 b" patterns that come from textures.
+    /// Decide whether a detected line is real text or OCR noise. Combines a
+    /// length-scaled confidence threshold, a structural check (must have at
+    /// least 2 letters AND a contiguous letter run of 2+ — kills "&", "5",
+    /// "@s", "& a 4 b" patterns), and a pattern-based "looks like garbage"
+    /// check that rejects classic Tesseract misreads on textures (consonant
+    /// clusters with no vowels like "MNT", capital-lower-capital triples
+    /// like "AlN").
     /// </summary>
     private static bool ShouldKeep(string text, double confidence)
     {
@@ -178,10 +179,57 @@ public class TesseractOcrBackend : IOcrBackend
 
         if (letters < 2 || longestRun < 2) return false;
 
+        if (LooksLikeGarbage(text)) return false;
+
         double minConf = letters <= 2 ? 85
                        : letters <= 4 ? 75
                        : 65;
         return confidence >= minConf;
+    }
+
+    /// <summary>
+    /// Pattern-based reject for short Tesseract hallucinations. Short text is
+    /// where the noise lives — long detections are reliable. We reject:
+    ///   - Short strings whose letters form a consonant-only cluster (MNT, PRT)
+    ///   - Three-letter capital-lower-capital sequences (AlN, BoP) which are
+    ///     almost always a single letter mis-segmented as "I → l"
+    ///   - Strings that are mostly digits / punctuation with a couple of
+    ///     letters dropped in
+    /// </summary>
+    private static bool LooksLikeGarbage(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length > 8) return false; // long strings get the benefit of the doubt
+
+        var letterChars = new System.Collections.Generic.List<char>(trimmed.Length);
+        foreach (var c in trimmed) if (char.IsLetter(c)) letterChars.Add(c);
+
+        if (letterChars.Count == 0) return true;
+
+        // No vowels in any short letter sequence — typical for texture noise.
+        const string Vowels = "AEIOUYАЕИОУЫЭЮЯaeiouyаеиоуыэюя";
+        if (letterChars.Count <= 5)
+        {
+            var hasVowel = false;
+            foreach (var c in letterChars)
+                if (Vowels.IndexOf(c) >= 0) { hasVowel = true; break; }
+            if (!hasVowel) return true;
+        }
+
+        // Capital-lower-capital triple ("AlN", "BlR"): almost always Tesseract
+        // mis-reading a single character as "l" between two upper-case letters.
+        if (letterChars.Count == 3
+            && char.IsUpper(letterChars[0])
+            && char.IsLower(letterChars[1])
+            && char.IsUpper(letterChars[2]))
+            return true;
+
+        // Mostly non-letters: e.g. "&[a4]" — barely any letters in a sea of
+        // punctuation.
+        if (trimmed.Length >= 4 && letterChars.Count * 2 < trimmed.Length)
+            return true;
+
+        return false;
     }
 
     public void Dispose()
