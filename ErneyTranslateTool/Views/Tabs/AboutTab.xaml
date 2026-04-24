@@ -14,7 +14,7 @@
                            FontSize="32" FontWeight="Bold"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Версия 1.0.5 · MIT License"
+                <TextBlock Text="Версия 1.0.6 · MIT License"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            HorizontalAlignment="Center"
                            Margin="0,4,0,0"/>

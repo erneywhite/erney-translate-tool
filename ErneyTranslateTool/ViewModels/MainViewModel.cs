@@ -154,7 +154,7 @@ public class MainViewModel : BaseViewModel
             }
             else if (SelectedWindow != null)
             {
-                await _engine.StartAsync(SelectedWindow.Handle, SelectedWindow.Title);
+                await _engine.StartAsync(SelectedWindow.Handle, SelectedWindow.Title, SelectedWindow.ProcessName);
             }
             RefreshStats();
         }

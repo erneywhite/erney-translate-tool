@@ -1,0 +1,164 @@
+<UserControl x:Class="ErneyTranslateTool.Views.Tabs.ProfilesTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="{DynamicResource BackgroundBrush}">
+    <Grid Margin="28,20,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Профили под игру"
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                <TextBlock Text="Активный: "
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ActiveProfileName}"
+                           Foreground="{DynamicResource PrimaryBrush}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="1" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   Margin="0,0,0,12">
+            Профиль — это набор настроек (OCR-движок, языки, провайдер перевода, шрифт и цвет
+            оверлея, флаг глоссария) под конкретную игру. Когда ты выбираешь окно на «Главной»
+            и жмёшь «Запустить», программа ищет первый профиль, чей «Шаблон» совпадает с
+            заголовком окна или именем процесса, и применяет его настройки. Если не найден —
+            используется профиль «По умолчанию».
+        </TextBlock>
+
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" Content="Добавить пустой"
+                    Command="{Binding AddBlankCommand}"
+                    Padding="14,6" Margin="0,0,8,0"/>
+            <Button Grid.Column="1" Content="Создать из текущих настроек"
+                    Command="{Binding CreateFromCurrentCommand}"
+                    Padding="14,6"
+                    ToolTip="Снимает снимок текущих настроек (вкладок «Настройки перевода» и «Настройки оверлея») в новый профиль"/>
+
+            <Button Grid.Column="3" Content="Импорт..."
+                    Command="{Binding ImportCommand}"
+                    Padding="14,6" Margin="0,0,8,0"/>
+            <Button Grid.Column="4" Content="Экспорт..."
+                    Command="{Binding ExportCommand}"
+                    Padding="14,6" Margin="0,0,8,0"/>
+            <Button Grid.Column="5" Content="Сохранить"
+                    Command="{Binding SaveCommand}"
+                    Padding="18,6" FontWeight="SemiBold"
+                    Background="{DynamicResource PrimaryBrush}"
+                    Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+        </Grid>
+
+        <DataGrid Grid.Row="3"
+                  ItemsSource="{Binding Profiles}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  Background="{DynamicResource InputBackgroundBrush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  RowBackground="{DynamicResource InputBackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource AlternateRowBrush}"
+                  HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
+                  RowHeaderWidth="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Имя"
+                                    Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
+                                    Width="*" MinWidth="120"/>
+                <DataGridTextColumn Header="Шаблон совпадения"
+                                    Binding="{Binding MatchPattern, UpdateSourceTrigger=LostFocus}"
+                                    Width="*" MinWidth="140"
+                                    ToolTipService.ToolTip="Подстрока (регистр не важен) для поиска в заголовке окна или имени процесса"/>
+                <DataGridCheckBoxColumn Header="Искать в exe"
+                                        Binding="{Binding MatchByProcessName, UpdateSourceTrigger=PropertyChanged}"
+                                        Width="80"
+                                        ToolTipService.ToolTip="Если включено — шаблон сравнивается с именем процесса, иначе с заголовком окна"/>
+                <DataGridTextColumn Header="Цель"
+                                    Binding="{Binding TargetLanguage, UpdateSourceTrigger=LostFocus}"
+                                    Width="50"/>
+                <DataGridTextColumn Header="OCR"
+                                    Binding="{Binding OcrEngine, UpdateSourceTrigger=LostFocus}"
+                                    Width="90"/>
+                <DataGridTextColumn Header="Провайдер"
+                                    Binding="{Binding TranslationProvider, UpdateSourceTrigger=LostFocus}"
+                                    Width="90"/>
+                <DataGridTemplateColumn Header="" Width="170">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Применить"
+                                        Padding="8,3" Margin="0,0,4,0"
+                                        Command="{Binding DataContext.ApplyNowCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip="Применить настройки этого профиля прямо сейчас (не дожидаясь следующего запуска)"/>
+                                <Button Padding="8,3"
+                                        Background="Transparent"
+                                        Foreground="{DynamicResource TextSecondaryBrush}"
+                                        Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Content>Удалить</Button.Content>
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                            <Setter Property="IsEnabled" Value="True"/>
+                                            <Style.Triggers>
+                                                <!-- Default profile is the always-present fallback -
+                                                     gray out delete to make this obvious in the UI. -->
+                                                <DataTrigger Binding="{Binding IsDefault}" Value="True">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                    <Setter Property="ToolTip" Value="Профиль «По умолчанию» нельзя удалить"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       VerticalAlignment="Center"
+                       FontSize="11"/>
+            <Button Grid.Column="1" Content="Обновить"
+                    Command="{Binding RefreshCommand}"
+                    Padding="12,5"/>
+        </Grid>
+    </Grid>
+</UserControl>

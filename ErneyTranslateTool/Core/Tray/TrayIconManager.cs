@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using System.Windows.Threading;
+using ErneyTranslateTool.Core.Profiles;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.ViewModels;
 using Hardcodet.Wpf.TaskbarNotification;
@@ -22,6 +23,7 @@ public class TrayIconManager : IDisposable
     private readonly TranslationEngine _engine;
     private readonly CaptureService _capture;
     private readonly AppSettings _settings;
+    private readonly ProfileManager _profiles;
     private readonly ILogger _logger;
     private bool _disposed;
     // Anything sticky we showed while the user wasn't looking — Attention
@@ -41,13 +43,14 @@ public class TrayIconManager : IDisposable
 
     public TrayIconManager(Window mainWindow, MainViewModel mainVm,
         TranslationEngine engine, CaptureService capture,
-        AppSettings settings, ILogger logger)
+        AppSettings settings, ProfileManager profiles, ILogger logger)
     {
         _mainWindow = mainWindow;
         _mainVm = mainVm;
         _engine = engine;
         _capture = capture;
         _settings = settings;
+        _profiles = profiles;
         _logger = logger;
 
         _icon = new TaskbarIcon
@@ -78,6 +81,7 @@ public class TrayIconManager : IDisposable
         _engine.StateChanged += (_, _) => RefreshIconAndTooltip();
         _engine.StatusUpdated += (_, _) => RefreshIconAndTooltip();
         _capture.PauseStateChanged += (_, _) => RefreshIconAndTooltip();
+        _profiles.ActiveProfileChanged += (_, _) => RefreshIconAndTooltip();
         RefreshIconAndTooltip();
     }
 
@@ -148,6 +152,11 @@ public class TrayIconManager : IDisposable
         Application.Current?.Dispatcher.Invoke(() =>
         {
             var state = ComputeState();
+            // Don't bracket the active-profile line with "Default" — most
+            // users never create profiles and the line would just be noise.
+            var profileLine = !_profiles.ActiveProfile.IsDefault
+                ? $"\nПрофиль: {_profiles.ActiveProfile.Name}"
+                : string.Empty;
             var stats = $"\nПереведено сегодня: {_settings.Config.CharactersTranslatedToday:N0} симв." +
                         $"\nПопадания в кэш: {_settings.GetCacheHitRate():F1}%";
 
@@ -161,7 +170,7 @@ public class TrayIconManager : IDisposable
                 TrayIconState.Translating => $"Erney's Translate Tool — перевод активен\n{_engine.TargetWindowTitle}",
                 _                         => "Erney's Translate Tool — ожидание",
             };
-            _icon.ToolTipText = headline + stats;
+            _icon.ToolTipText = headline + profileLine + stats;
 
             // Start/stop the pulse alongside the paused state — no point
             // burning a timer tick while the user can see a steady dot.
