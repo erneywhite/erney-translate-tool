@@ -34,6 +34,12 @@ public class TesseractOcrBackend : IOcrBackend
 
     public string CurrentLanguageTag => _currentLanguage;
 
+    public OcrBackendState State => _engine != null ? OcrBackendState.Ready : OcrBackendState.Failed;
+    public string StatusMessage => _engine != null
+        ? $"Готов: {_currentLanguage}"
+        : "Не загружен — нет нужного tessdata-пакета";
+    public event EventHandler? StatusChanged;
+
     public TesseractOcrBackend(TessdataManager tessdata, ILogger logger, string preferredLanguage)
     {
         _tessdata = tessdata;
@@ -79,6 +85,7 @@ public class TesseractOcrBackend : IOcrBackend
             _engine.DefaultPageSegMode = PageSegMode.SparseText;
             _currentLanguage = tag;
             _logger.Information("Tesseract language: {Tag} (PSM=SparseText)", tag);
+            StatusChanged?.Invoke(this, EventArgs.Empty);
             return true;
         }
         catch (Exception ex)

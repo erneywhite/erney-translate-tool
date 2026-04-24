@@ -36,12 +36,21 @@ public class OcrService : IDisposable
     public string CurrentEngine => _backend?.Name ?? "(none)";
     public string CurrentLanguageTag => _backend?.CurrentLanguageTag ?? string.Empty;
 
+    public OcrBackendState State => _backend?.State ?? OcrBackendState.NotInitialized;
+    public string StatusMessage => _backend?.StatusMessage ?? "Не инициализирован";
+
+    /// <summary>Fires whenever the active backend's state or status changes,
+    /// or when Reload() swaps in a new backend.</summary>
+    public event EventHandler? StatusChanged;
+
     /// <summary>Rebuild the active backend from current settings.</summary>
     public void Reload()
     {
         try
         {
+            if (_backend != null) _backend.StatusChanged -= OnBackendStatusChanged;
             _backend?.Dispose();
+
             var engine = _settings.Config.OcrEngine;
             if (string.IsNullOrWhiteSpace(engine)) engine = EnginePaddle;
 
@@ -64,14 +73,19 @@ public class OcrService : IDisposable
                         : _settings.Config.TesseractLanguage);
             }
 
+            _backend.StatusChanged += OnBackendStatusChanged;
             _logger.Information("OCR backend active: {Name} / {Lang}",
                 _backend.Name, _backend.CurrentLanguageTag);
+            StatusChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to load OCR backend");
         }
     }
+
+    private void OnBackendStatusChanged(object? sender, EventArgs e) =>
+        StatusChanged?.Invoke(this, EventArgs.Empty);
 
     public List<(string Tag, string DisplayName)> GetAvailableLanguages() =>
         _backend?.GetAvailableLanguages() ?? new List<(string, string)>();

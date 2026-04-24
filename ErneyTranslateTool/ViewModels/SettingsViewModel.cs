@@ -43,6 +43,15 @@ public class SettingsViewModel : BaseViewModel
     private string _saveStatus = string.Empty;
     private int _saveStatusToken;
     private bool _useBestTessdata = true;
+    private string _ocrStatus = string.Empty;
+    private Brush _ocrStatusColor = MakeBrush("#9CA3AF");
+
+    private static Brush MakeBrush(string hex)
+    {
+        var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        b.Freeze();
+        return b;
+    }
 
     public ObservableCollection<ProviderOption> Providers { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
@@ -88,6 +97,37 @@ public class SettingsViewModel : BaseViewModel
         BuildTessdataCatalog();
         LoadFromConfig();
         RefreshOcrLanguages();
+
+        // Live status indicator for the active OCR backend (download / init /
+        // ready state) — important for PaddleOCR which can be loading models
+        // for minutes the first time you pick a new language.
+        _ocrService.StatusChanged += (_, _) =>
+            System.Windows.Application.Current?.Dispatcher.Invoke(UpdateOcrStatus);
+        UpdateOcrStatus();
+    }
+
+    public string OcrStatus
+    {
+        get => _ocrStatus;
+        private set => SetProperty(ref _ocrStatus, value);
+    }
+
+    public Brush OcrStatusColor
+    {
+        get => _ocrStatusColor;
+        private set => SetProperty(ref _ocrStatusColor, value);
+    }
+
+    private void UpdateOcrStatus()
+    {
+        OcrStatus = $"{_ocrService.CurrentEngine}: {_ocrService.StatusMessage}";
+        OcrStatusColor = _ocrService.State switch
+        {
+            OcrBackendState.Ready => MakeBrush("#10B981"),   // green
+            OcrBackendState.Loading => MakeBrush("#F59E0B"), // amber
+            OcrBackendState.Failed => MakeBrush("#EF4444"),  // red
+            _ => MakeBrush("#9CA3AF")                        // gray
+        };
     }
 
     public string SelectedProvider
