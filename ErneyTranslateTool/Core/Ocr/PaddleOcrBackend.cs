@@ -123,6 +123,13 @@ public class PaddleOcrBackend : IOcrBackend
         });
     }
 
+    // Cap captured-frame width sent to OCR. Paddle's detector internally
+    // resizes anything > ~1280-1600 px wide to its own preferred resolution,
+    // so feeding it a 4K capture mostly burns CPU on JPEG decode + Mat ops
+    // without improving quality. 1600 keeps small UI fonts readable while
+    // halving inference time on 1080p+ captures.
+    private const int MaxOcrWidth = 1600;
+
     public List<TranslationRegion> ProcessFrame(byte[] pngBytes)
     {
         var regions = new List<TranslationRegion>();
@@ -135,37 +142,66 @@ public class PaddleOcrBackend : IOcrBackend
             using var src = Cv2.ImDecode(pngBytes, ImreadModes.Color);
             if (src.Empty()) return regions;
 
-            var result = engine.Run(src);
-            int kept = 0, dropped = 0;
-            foreach (var r in result.Regions)
+            // Downscale very large captures before OCR. We track the scale
+            // factor so we can map the bounding boxes back to original coords.
+            double scale = 1.0;
+            Mat ocrMat = src;
+            Mat? scaledMat = null;
+            if (src.Width > MaxOcrWidth)
             {
-                var text = r.Text?.Trim();
-                if (string.IsNullOrEmpty(text)) { dropped++; continue; }
-                if (OcrTextHelpers.IsEntirelyCyrillic(text)) { dropped++; continue; }
-
-                if (r.Score < 0.6f)
-                {
-                    dropped++;
-                    _logger.Debug("  drop[paddle-low]: score={Score:F2} '{Text}'",
-                        r.Score, Truncate(text, 60));
-                    continue;
-                }
-
-                var box = r.Rect.BoundingRect();
-                regions.Add(new TranslationRegion
-                {
-                    Bounds = new WpfRect(box.X, box.Y, box.Width, box.Height),
-                    OriginalText = text,
-                    SourceLanguage = OcrTextHelpers.DetectLanguage(text),
-                    ContainsCyrillic = OcrTextHelpers.ContainsCyrillic(text),
-                    DetectedAt = DateTime.UtcNow
-                });
-                kept++;
-                _logger.Debug("  paddle-keep: score={Score:F2} y={Y} h={H} '{Text}'",
-                    r.Score, box.Y, box.Height, Truncate(text, 80));
+                scale = (double)MaxOcrWidth / src.Width;
+                scaledMat = new Mat();
+                Cv2.Resize(src, scaledMat,
+                    new Size((int)(src.Width * scale), (int)(src.Height * scale)),
+                    interpolation: InterpolationFlags.Area);
+                ocrMat = scaledMat;
             }
-            _logger.Debug("PaddleOCR: {Total} regions, kept {Kept}, dropped {Dropped}",
-                result.Regions.Length, kept, dropped);
+
+            try
+            {
+                var result = engine.Run(ocrMat);
+                int kept = 0, dropped = 0;
+                foreach (var r in result.Regions)
+                {
+                    var text = r.Text?.Trim();
+                    if (string.IsNullOrEmpty(text)) { dropped++; continue; }
+                    if (OcrTextHelpers.IsEntirelyCyrillic(text)) { dropped++; continue; }
+
+                    if (r.Score < 0.6f)
+                    {
+                        dropped++;
+                        _logger.Debug("  drop[paddle-low]: score={Score:F2} '{Text}'",
+                            r.Score, Truncate(text, 60));
+                        continue;
+                    }
+
+                    // Map bounding box back to original-image coordinates
+                    // when we downscaled before OCR.
+                    var box = r.Rect.BoundingRect();
+                    var bounds = scale == 1.0
+                        ? new WpfRect(box.X, box.Y, box.Width, box.Height)
+                        : new WpfRect(box.X / scale, box.Y / scale,
+                                      box.Width / scale, box.Height / scale);
+
+                    regions.Add(new TranslationRegion
+                    {
+                        Bounds = bounds,
+                        OriginalText = text,
+                        SourceLanguage = OcrTextHelpers.DetectLanguage(text),
+                        ContainsCyrillic = OcrTextHelpers.ContainsCyrillic(text),
+                        DetectedAt = DateTime.UtcNow
+                    });
+                    kept++;
+                    _logger.Debug("  paddle-keep: score={Score:F2} y={Y:F0} h={H:F0} '{Text}'",
+                        r.Score, bounds.Y, bounds.Height, Truncate(text, 80));
+                }
+                _logger.Debug("PaddleOCR: {Total} regions, kept {Kept}, dropped {Dropped} (ocr-scale={Scale:F2})",
+                    result.Regions.Length, kept, dropped, scale);
+            }
+            finally
+            {
+                scaledMat?.Dispose();
+            }
         }
         catch (Exception ex)
         {

@@ -139,9 +139,12 @@ public class AppConfig
     public string LibreTranslateApiKey { get; set; } = string.Empty;
 
     /// <summary>
-    /// OCR engine: "WindowsOcr" (built-in, system packs) or "Tesseract" (bundled).
+    /// OCR engine: "PaddleOCR" (default — neural, best accuracy on stylized
+    /// fonts), "Tesseract" (bundled, faster), or "WindowsOcr" (built-in but
+    /// requires system language packs). PaddleOCR downloads its model on
+    /// first use of each language.
     /// </summary>
-    public string OcrEngine { get; set; } = "Tesseract";
+    public string OcrEngine { get; set; } = "PaddleOCR";
 
     /// <summary>
     /// Tesseract language code (e.g. "eng", "rus", "jpn"). Multi-language allowed via "+".

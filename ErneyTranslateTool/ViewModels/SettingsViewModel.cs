@@ -38,7 +38,7 @@ public class SettingsViewModel : BaseViewModel
     private string _fontSizeMode = "Auto";
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
-    private string _selectedOcrEngine = OcrService.EngineTesseract;
+    private string _selectedOcrEngine = OcrService.EnginePaddle;
     private OcrLanguageOption? _selectedOcrLanguage;
     private string _saveStatus = string.Empty;
     private int _saveStatusToken;
@@ -73,9 +73,9 @@ public class SettingsViewModel : BaseViewModel
 
         OcrEngines = new ObservableCollection<EngineOption>
         {
-            new(OcrService.EngineTesseract, "Tesseract (быстро, встроенные пакеты, средняя точность)"),
-            new(OcrService.EnginePaddle, "PaddleOCR (медленнее, но заметно точнее на стилизованных шрифтах; модели качаются с интернета на первом запуске)"),
-            new(OcrService.EngineWindows, "Windows OCR (требует системные языковые пакеты)")
+            new(OcrService.EnginePaddle, "PaddleOCR (рекомендуется — лучшая точность, нейросеть; модель качается с интернета на первом запуске)"),
+            new(OcrService.EngineTesseract, "Tesseract (быстрее, но хуже распознаёт стилизованные шрифты)"),
+            new(OcrService.EngineWindows, "Windows OCR (нужны системные языковые пакеты)")
         };
 
         TestProviderCommand = new RelayCommand(async _ => await TestProviderAsync(), _ => !_isTesting);
@@ -287,7 +287,7 @@ public class SettingsViewModel : BaseViewModel
         ToggleTranslationHotkey = c.ToggleTranslationHotkey;
         ToggleOverlayHotkey = c.ToggleOverlayHotkey;
 
-        SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EngineTesseract : c.OcrEngine;
+        SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EnginePaddle : c.OcrEngine;
         UseBestTessdata = c.UseBestTessdata;
     }
 

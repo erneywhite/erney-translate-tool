@@ -127,13 +127,22 @@ public partial class OverlayWindow : Window
                 ? cfg.ManualFontSize
                 : Math.Clamp(s.Rect.Height * 0.55, 11.0, 28.0);
 
+            // How much horizontal room is left between the source rect's
+            // left edge and the right edge of the overlay window?
+            // Translation can grow up to that, no further — anything wider
+            // would spill off the right side of the game window.
+            const double rightMargin = 12;
+            var availableWidth = Math.Max(60, Width - s.Rect.X - rightMargin);
+            var preferredMax = Math.Min(availableWidth, Math.Max(120, s.Rect.Width * 1.6));
+
             var border = new Border
             {
                 Background = bgBrush,
                 CornerRadius = new CornerRadius(2),
                 Padding = new Thickness(4, 1, 4, 1),
-                MinWidth = s.Rect.Width,
+                MinWidth = Math.Min(s.Rect.Width, availableWidth),
                 MinHeight = s.Rect.Height,
+                MaxWidth = availableWidth,
                 SnapsToDevicePixels = true
             };
             border.Child = new TextBlock
@@ -143,7 +152,7 @@ public partial class OverlayWindow : Window
                 FontFamily = fontFamily,
                 FontSize = fontSize,
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = Math.Max(120, s.Rect.Width * 1.4),
+                MaxWidth = preferredMax,
                 VerticalAlignment = VerticalAlignment.Center
             };
 
