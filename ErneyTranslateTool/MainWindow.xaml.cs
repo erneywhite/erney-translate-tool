@@ -113,29 +113,44 @@ public partial class MainWindow : Window
 
     private async System.Threading.Tasks.Task CheckForUpdatesAsync(bool showAlways)
     {
-        var info = await _updateChecker.CheckAsync();
-        if (info == null)
-        {
-            if (showAlways)
-                MessageBox.Show("Не удалось проверить обновления — нет интернета или GitHub недоступен.",
-                    "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
+        var result = await _updateChecker.CheckAsync();
 
-        if (info.IsNewer)
+        switch (result.Outcome)
         {
-            var msg = $"Доступна новая версия {info.Latest} (у тебя {info.Current}).\n\nОткрыть страницу релиза в браузере?";
-            _tray?.ShowBalloon("Доступно обновление",
-                $"Версия {info.Latest} вышла. Открой «О программе» чтобы скачать.");
-            var result = MessageBox.Show(msg, "Обновление",
-                MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (result == MessageBoxResult.Yes)
-                OpenInBrowser(info.ReleaseUrl);
-        }
-        else if (showAlways)
-        {
-            MessageBox.Show($"У тебя установлена последняя версия ({info.Current}).",
-                "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+            case UpdateCheckOutcome.UpdateAvailable:
+                _tray?.ShowBalloon("Доступно обновление",
+                    $"Версия {result.Latest} вышла. Открой «О программе» чтобы скачать.");
+                if (MessageBox.Show(
+                        $"Доступна новая версия {result.Latest} (у тебя {result.Current}).\n\n" +
+                        "Открыть страницу релиза в браузере?",
+                        "Обновление", MessageBoxButton.YesNo, MessageBoxImage.Information)
+                    == MessageBoxResult.Yes)
+                {
+                    OpenInBrowser(result.ReleaseUrl);
+                }
+                break;
+
+            case UpdateCheckOutcome.UpToDate:
+                if (showAlways)
+                    MessageBox.Show($"У тебя последняя версия ({result.Current}).",
+                        "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+                break;
+
+            case UpdateCheckOutcome.NoReleases:
+                if (showAlways)
+                    MessageBox.Show(
+                        $"В репозитории пока нет опубликованных релизов.\n" +
+                        $"У тебя dev-сборка версии {result.Current}.",
+                        "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+                break;
+
+            case UpdateCheckOutcome.Error:
+                if (showAlways)
+                    MessageBox.Show(
+                        $"Не удалось проверить обновления.\n\n" +
+                        $"Подробности: {result.ErrorMessage}",
+                        "Обновление", MessageBoxButton.OK, MessageBoxImage.Warning);
+                break;
         }
     }
 
