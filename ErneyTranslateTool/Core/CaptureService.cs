@@ -27,7 +27,11 @@ namespace ErneyTranslateTool.Core
 
         public event EventHandler<Bitmap>? FrameCaptured;
         public event EventHandler? CaptureStopped;
+        /// <summary>Raised when the loop pauses/resumes because the target window was minimised/restored.</summary>
+        public event EventHandler<bool>? PauseStateChanged;
         public bool IsCapturing { get; private set; }
+        /// <summary>True while the loop is skipping work because the target window is iconic.</summary>
+        public bool IsPaused { get; private set; }
         public IntPtr TargetWindowHandle => _targetWindowHandle;
 
         public CaptureService(ILogger logger)
@@ -97,8 +101,21 @@ namespace ErneyTranslateTool.Core
                 {
                     if (IsIconic(_targetWindowHandle))
                     {
+                        // Edge-trigger the pause event so subscribers can flip
+                        // the status text exactly once instead of every 500 ms.
+                        if (!IsPaused)
+                        {
+                            IsPaused = true;
+                            PauseStateChanged?.Invoke(this, true);
+                        }
                         await Task.Delay(500, ct);
                         continue;
+                    }
+
+                    if (IsPaused)
+                    {
+                        IsPaused = false;
+                        PauseStateChanged?.Invoke(this, false);
                     }
 
                     var bitmap = CaptureWindow(_targetWindowHandle);

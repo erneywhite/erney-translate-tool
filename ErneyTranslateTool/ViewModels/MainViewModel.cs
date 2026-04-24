@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Data;
 
@@ -13,6 +14,10 @@ public class MainViewModel : BaseViewModel
     private readonly TranslationEngine _engine;
     private readonly WindowPickerService _windowPicker;
     private readonly AppSettings _settings;
+    // Polls engine + settings for live stats while translation is active.
+    // Cheaper than wiring an event for every translated character — once a
+    // second is plenty for human-readable counters.
+    private readonly DispatcherTimer _statsTimer;
 
     private string _statusMessage = "Ожидание";
     private string _selectedWindowTitle = "(окно не выбрано)";
@@ -20,6 +25,7 @@ public class MainViewModel : BaseViewModel
     private bool _isRunning;
     private int _charactersTranslatedToday;
     private double _cacheHitRate;
+    private string _frameTimeText = "—";
 
     public ObservableCollection<WindowInfo> Windows { get; } = new();
 
@@ -32,10 +38,18 @@ public class MainViewModel : BaseViewModel
         _windowPicker = windowPicker;
         _settings = settings;
 
+        // Construct the timer BEFORE wiring the engine event so the handler
+        // can safely reference it without a null-warning.
+        _statsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _statsTimer.Tick += (_, _) => RefreshStats();
+
         _engine.StateChanged += (_, _) =>
         {
             IsRunning = _engine.IsRunning;
             OnPropertyChanged(nameof(ToggleButtonText));
+            // Start/stop the live-stats poll alongside the engine state.
+            if (IsRunning) _statsTimer.Start();
+            else _statsTimer.Stop();
         };
         _engine.StatusUpdated += (_, msg) => StatusMessage = msg;
 
@@ -97,6 +111,13 @@ public class MainViewModel : BaseViewModel
         set => SetProperty(ref _cacheHitRate, value);
     }
 
+    /// <summary>Human-readable per-frame latency, e.g. "340 мс (последний 280)" or "—".</summary>
+    public string FrameTimeText
+    {
+        get => _frameTimeText;
+        set => SetProperty(ref _frameTimeText, value);
+    }
+
     public string ToggleButtonText => IsRunning ? "Остановить" : "Запустить";
     public bool CanToggle => SelectedWindow != null;
 
@@ -115,6 +136,12 @@ public class MainViewModel : BaseViewModel
     {
         CharactersTranslatedToday = _settings.Config.CharactersTranslatedToday;
         CacheHitRate = _settings.GetCacheHitRate();
+
+        var avg = _engine.AverageFrameMs;
+        var last = _engine.LastFrameMs;
+        FrameTimeText = avg <= 0
+            ? "—"
+            : $"{avg:F0} мс (последний {last} мс)";
     }
 
     private async Task ToggleEngineAsync()

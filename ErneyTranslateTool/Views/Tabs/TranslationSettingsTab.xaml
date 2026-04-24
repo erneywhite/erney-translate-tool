@@ -228,6 +228,51 @@
                 </StackPanel>
             </GroupBox>
 
+            <GroupBox Header="Кэш переводов" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,10">
+                        Все переведённые фразы сохраняются в локальный кэш — повторное появление того же
+                        текста (диалог, меню, описание квеста) подтягивается из кэша моментально, без
+                        запроса к сервису перевода. При превышении лимита удаляются самые давно неиспользуемые записи.
+                    </TextBlock>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Максимальный размер:"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding CacheSizeOptions}"
+                                  SelectedItem="{Binding SelectedCacheSizeOption}"
+                                  DisplayMemberPath="DisplayName"
+                                  Width="260"
+                                  HorizontalAlignment="Left"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="Текущее состояние: "
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding CacheStatsText}"
+                                   Foreground="{DynamicResource PrimaryBrush}"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Обновить"
+                                Command="{Binding RefreshCacheStatsCommand}"
+                                Padding="14,6" Margin="0,0,8,0"/>
+                        <Button Content="Очистить кэш"
+                                Command="{Binding ClearCacheCommand}"
+                                Padding="14,6"/>
+                    </StackPanel>
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="Горячие клавиши" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>

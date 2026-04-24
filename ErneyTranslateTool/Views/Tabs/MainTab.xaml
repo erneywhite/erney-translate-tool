@@ -89,10 +89,17 @@
                     <TextBlock Text="{Binding CharactersTranslatedToday}"
                                Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                     <TextBlock Text="Попадания в кэш: "
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:F1}%}"
+                               Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Среднее время на фрейм: "
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               ToolTip="OCR + перевод + отрисовка оверлея, скользящее среднее"/>
+                    <TextBlock Text="{Binding FrameTimeText}"
                                Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
                 </StackPanel>
             </StackPanel>
