@@ -33,6 +33,22 @@ public static class TesseractLanguages
         new("nld", "Голландский", 5.0),
         new("tur", "Турецкий", 4.6),
         new("ara", "Арабский", 1.9),
+
+        // Прибалтика
+        new("lav", "Латышский", 4.6),
+        new("lit", "Литовский", 4.5),
+        new("est", "Эстонский", 4.7),
+
+        // Скандинавия
+        new("fin", "Финский", 5.0),
+        new("swe", "Шведский", 4.4),
+        new("nor", "Норвежский", 4.3),
+        new("dan", "Датский", 4.2),
+
+        // Прочая Европа
+        new("ron", "Румынский", 4.4),
+        new("hun", "Венгерский", 4.8),
+        new("ell", "Греческий", 4.4),
     };
 
     public static string DisplayNameFor(string code)

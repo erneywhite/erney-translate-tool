@@ -7,7 +7,7 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>ErneyTranslateTool</RootNamespace>
     <AssemblyName>ErneyTranslateTool</AssemblyName>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Erney</Authors>
     <Product>Erney's Translate Tool</Product>
     <Description>Real-time screen OCR translator for gaming</Description>
