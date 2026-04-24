@@ -77,6 +77,11 @@ public class PaddleOcrBackend : IOcrBackend
     }
 
     public List<(string Tag, string DisplayName)> GetAvailableLanguages() =>
+        SupportedLanguages;
+
+    /// <summary>Static accessor so the settings UI can list languages without
+    /// needing a Paddle engine instance.</summary>
+    public static List<(string Tag, string DisplayName)> SupportedLanguages =>
         AvailableLangs.Select(l => (l.Tag, l.Display)).ToList();
 
     public bool SetLanguage(string tag)
