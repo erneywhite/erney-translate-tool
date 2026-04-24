@@ -29,6 +29,7 @@ public class SettingsViewModel : BaseViewModel
     private readonly ILogger _logger;
 
     private string _selectedProvider = TranslatorFactory.ProviderMyMemory;
+    private string _selectedFallbackProvider = string.Empty;
     private string _deeplApiKey = string.Empty;
     private string _myMemoryEmail = string.Empty;
     private string _libreUrl = "https://libretranslate.com";
@@ -56,8 +57,6 @@ public class SettingsViewModel : BaseViewModel
     private bool _closeToTray = true;
     private bool _checkForUpdatesOnStartup = true;
     private bool _autoStartWithWindows;
-    private bool _overlayFadeInEnabled = true;
-    private AutoHideOption? _selectedAutoHideOption;
 
     private static Brush MakeBrush(string hex)
     {
@@ -67,6 +66,8 @@ public class SettingsViewModel : BaseViewModel
     }
 
     public ObservableCollection<ProviderOption> Providers { get; }
+    /// <summary>Same list as <see cref="Providers"/> plus a "no fallback" sentinel at the top. Filled in the constructor.</summary>
+    public ObservableCollection<ProviderOption> FallbackProviders { get; }
     public ObservableCollection<LanguageInfo> TargetLanguages { get; }
     public ObservableCollection<string> SystemFonts { get; }
     public ObservableCollection<string> FontSizeModes { get; } = new() { "Auto", "Manual" };
@@ -132,29 +133,6 @@ public class SettingsViewModel : BaseViewModel
         }
     }
 
-    /// <summary>Bound to AppConfig.OverlayFadeInEnabled — saved on next Save click.</summary>
-    public bool OverlayFadeInEnabled
-    {
-        get => _overlayFadeInEnabled;
-        set => SetProperty(ref _overlayFadeInEnabled, value);
-    }
-
-    /// <summary>Predefined auto-hide intervals + an "off" entry. 0 means never auto-hide.</summary>
-    public ObservableCollection<AutoHideOption> AutoHideOptions { get; } = new()
-    {
-        new(0,   "Никогда"),
-        new(10,  "10 секунд"),
-        new(30,  "30 секунд (по умолчанию)"),
-        new(60,  "1 минута"),
-        new(120, "2 минуты"),
-        new(300, "5 минут"),
-    };
-
-    public AutoHideOption? SelectedAutoHideOption
-    {
-        get => _selectedAutoHideOption;
-        set => SetProperty(ref _selectedAutoHideOption, value);
-    }
 
     /// <summary>Pre-baked overlay colour combinations users can pick with one click.</summary>
     public ObservableCollection<OverlayPreset> OverlayPresets { get; } = new()
@@ -189,6 +167,11 @@ public class SettingsViewModel : BaseViewModel
         Providers = new ObservableCollection<ProviderOption>(
             TranslatorFactory.AllProviders.Select(p =>
                 new ProviderOption(p, TranslatorFactory.DisplayName(p))));
+
+        FallbackProviders = new ObservableCollection<ProviderOption>();
+        FallbackProviders.Add(new ProviderOption(string.Empty, "Без резервного"));
+        foreach (var p in TranslatorFactory.AllProviders)
+            FallbackProviders.Add(new ProviderOption(p, TranslatorFactory.DisplayName(p)));
 
         TargetLanguages = new ObservableCollection<LanguageInfo>(LanguageInfo.GetSupportedTargetLanguages());
         SystemFonts = new ObservableCollection<string>(
@@ -262,6 +245,17 @@ public class SettingsViewModel : BaseViewModel
                 OnPropertyChanged(nameof(ProviderHelpText));
             }
         }
+    }
+
+    /// <summary>
+    /// Bound to the "Резервный провайдер" dropdown. Empty string means
+    /// "no fallback" (single-translator mode). Saved to
+    /// <see cref="AppConfig.FallbackProvider"/> on Save.
+    /// </summary>
+    public string SelectedFallbackProvider
+    {
+        get => _selectedFallbackProvider;
+        set => SetProperty(ref _selectedFallbackProvider, value);
     }
 
     public bool IsDeepL => _selectedProvider == TranslatorFactory.ProviderDeepL;
@@ -512,6 +506,7 @@ public class SettingsViewModel : BaseViewModel
         SelectedProvider = string.IsNullOrWhiteSpace(c.TranslationProvider)
             ? TranslatorFactory.ProviderMyMemory
             : c.TranslationProvider;
+        SelectedFallbackProvider = c.FallbackProvider ?? string.Empty;
         DeepLApiKey = _appSettings.GetApiKey() ?? string.Empty;
         MyMemoryEmail = c.MyMemoryEmail;
         LibreUrl = string.IsNullOrWhiteSpace(c.LibreTranslateUrl) ? "https://libretranslate.com" : c.LibreTranslateUrl;
@@ -540,10 +535,6 @@ public class SettingsViewModel : BaseViewModel
         // re-write to the registry while just reading state.
         _autoStartWithWindows = AutoStartManager.IsEnabled(_logger);
         OnPropertyChanged(nameof(AutoStartWithWindows));
-
-        OverlayFadeInEnabled = c.OverlayFadeInEnabled;
-        SelectedAutoHideOption = AutoHideOptions.FirstOrDefault(o => o.Seconds == c.OverlayAutoHideAfterSeconds)
-            ?? AutoHideOptions.First(o => o.Seconds == 30);
 
         // Match the saved limit to one of our preset options; fall back to
         // 200 MB if the stored value isn't in the dropdown (manual edit).
@@ -693,6 +684,11 @@ public class SettingsViewModel : BaseViewModel
     {
         var c = _appSettings.Config;
         c.TranslationProvider = SelectedProvider;
+        // Don't save a fallback identical to primary — that would be a no-op
+        // at runtime and just confuse the next read.
+        c.FallbackProvider = string.Equals(SelectedFallbackProvider, SelectedProvider, StringComparison.OrdinalIgnoreCase)
+            ? string.Empty
+            : (SelectedFallbackProvider ?? string.Empty);
         c.MyMemoryEmail = MyMemoryEmail ?? string.Empty;
         c.LibreTranslateUrl = string.IsNullOrWhiteSpace(LibreUrl) ? "https://libretranslate.com" : LibreUrl;
         c.LibreTranslateApiKey = LibreApiKey ?? string.Empty;
@@ -718,9 +714,6 @@ public class SettingsViewModel : BaseViewModel
         c.CheckForUpdatesOnStartup = CheckForUpdatesOnStartup;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
-        c.OverlayFadeInEnabled = OverlayFadeInEnabled;
-        if (SelectedAutoHideOption != null)
-            c.OverlayAutoHideAfterSeconds = SelectedAutoHideOption.Seconds;
     }
 
     private void Save()
@@ -765,7 +758,6 @@ public record OcrLanguageOption(string Tag, string DisplayName);
 public record EngineOption(string Id, string DisplayName);
 public record OverlayPreset(string Name, string Background, string Text, double Opacity, double CornerRadius);
 public record CacheSizeOption(int Mb, string DisplayName);
-public record AutoHideOption(int Seconds, string DisplayName);
 
 public class TessdataItem : BaseViewModel
 {
