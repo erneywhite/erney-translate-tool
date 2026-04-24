@@ -256,7 +256,7 @@ public class TranslationService : IDisposable
                     _consecutiveFailures = 0;
                     _logger.Information("Primary {P} recovered, switching back from fallback", primary.Name);
                     FallbackStateChanged?.Invoke(this,
-                        $"Основной провайдер ({primary.Name}) снова работает");
+                        LanguageManager.Format("Strings.Engine.FallbackOff", primary.Name));
                     return probe;
                 }
             }
@@ -291,7 +291,7 @@ public class TranslationService : IDisposable
                     _logger.Warning("Primary {P} hit failure threshold — switching to fallback {F}",
                         primary.Name, fallback.Name);
                     FallbackStateChanged?.Invoke(this,
-                        $"⚠ Основной провайдер ({primary.Name}) недоступен — использую резервный ({fallback.Name})");
+                        LanguageManager.Format("Strings.Engine.FallbackOn", primary.Name, fallback.Name));
 
                     // Retry this request on the fallback so the user doesn't
                     // see the trigger request as a loss.

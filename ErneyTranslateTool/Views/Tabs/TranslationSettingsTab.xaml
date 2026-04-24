@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ErneyTranslateTool.Views.Controls"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
@@ -12,14 +13,14 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
         <StackPanel>
-            <TextBlock Text="Настройки перевода"
+            <TextBlock Text="{DynamicResource Strings.TS.Title}"
                        FontSize="24" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,20"/>
 
-            <GroupBox Header="Сервис перевода" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.TS.Service}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock Text="Выбери сервис:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Strings.TS.SelectService}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                     <ComboBox ItemsSource="{Binding Providers}"
                               SelectedValue="{Binding SelectedProvider}"
                               SelectedValuePath="Id"
@@ -32,71 +33,83 @@
                                Margin="0,0,0,10"/>
 
                     <StackPanel Visibility="{Binding IsDeepL, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="API-ключ DeepL:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding DeepLApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                 FontFamily="Consolas"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.DeepLKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding DeepLApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"/>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding IsMyMemory, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Email (необязательно — увеличивает лимит до 50 000 симв./день):"
+                        <TextBlock Text="{DynamicResource Strings.TS.MyMemoryEmail}"
                                    Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <TextBox Text="{Binding MyMemoryEmail, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding IsGoogleFree, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="Никаких настроек не требуется — нажми «Проверить» чтобы убедиться что endpoint доступен."
+                        <TextBlock Text="{DynamicResource Strings.TS.GoogleHelp}"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding IsLibre, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="URL инстанса:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.LibreUrl}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <TextBox Text="{Binding LibreUrl, UpdateSourceTrigger=PropertyChanged}"
                                  FontFamily="Consolas"
                                  Margin="0,0,0,8"/>
-                        <TextBlock Text="API-ключ (если требуется):" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding LibreApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                 FontFamily="Consolas"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.LibreKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding LibreApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"/>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding IsOpenAI, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="API-ключ OpenAI (sk-...):" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding OpenAIApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                 FontFamily="Consolas"
-                                 Margin="0,0,0,8"/>
-                        <TextBlock Text="Модель:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                        <ComboBox ItemsSource="{Binding OpenAIModelPresets}"
-                                  Text="{Binding OpenAIModel, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEditable="True"
-                                  Width="280"
-                                  HorizontalAlignment="Left"
-                                  ToolTipService.ToolTip="Можно выбрать из списка или вписать любую другую модель OpenAI"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.OpenAIKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding OpenAIApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.Model}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding OpenAIModel, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="Consolas"
+                                     Margin="0,0,8,0"
+                                     ToolTip="{DynamicResource Strings.TS.ModelTextHint}"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding OpenAIModelPresets}"
+                                      SelectedItem="{Binding OpenAIModel, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{DynamicResource Strings.TS.ModelPresetsHint}"/>
+                        </Grid>
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding IsAnthropic, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="API-ключ Anthropic (sk-ant-...):" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding AnthropicApiKey, UpdateSourceTrigger=PropertyChanged}"
-                                 FontFamily="Consolas"
-                                 Margin="0,0,0,8"/>
-                        <TextBlock Text="Модель:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
-                        <ComboBox ItemsSource="{Binding AnthropicModelPresets}"
-                                  Text="{Binding AnthropicModel, UpdateSourceTrigger=PropertyChanged}"
-                                  IsEditable="True"
-                                  Width="280"
-                                  HorizontalAlignment="Left"
-                                  ToolTipService.ToolTip="Можно выбрать из списка или вписать любую другую модель Anthropic"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.AnthropicKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding AnthropicApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.Model}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding AnthropicModel, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="Consolas"
+                                     Margin="0,0,8,0"
+                                     ToolTip="{DynamicResource Strings.TS.ModelTextHint}"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding AnthropicModelPresets}"
+                                      SelectedItem="{Binding AnthropicModel, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{DynamicResource Strings.TS.ModelPresetsHint}"/>
+                        </Grid>
                     </StackPanel>
 
                     <!-- Temperature + context controls — common to both LLM providers. -->
                     <StackPanel Visibility="{Binding IsLlm, Converter={StaticResource BoolToVis}}"
                                 Margin="0,12,0,0">
-                        <TextBlock Foreground="{DynamicResource TextSecondaryBrush}"
+                        <TextBlock Text="{DynamicResource Strings.TS.LlmHelp}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                    FontSize="11"
                                    TextWrapping="Wrap"
-                                   Margin="0,0,0,8">
-                            Параметры ниже общие для OpenAI и Anthropic — задаются здесь и применяются к тому,
-                            что выбрано как основной провайдер выше.
-                        </TextBlock>
+                                   Margin="0,0,0,8"/>
 
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -104,10 +117,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Температура:"
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Strings.TS.Temperature}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        VerticalAlignment="Center"
-                                       ToolTipService.ToolTip="0 = одинаковый перевод каждый раз, 1 = более свободный/креативный. Для перевода обычно 0.2–0.4."/>
+                                       ToolTip="{DynamicResource Strings.TS.Temperature.Tooltip}"/>
                             <Slider Grid.Column="1"
                                     Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1"
                                     TickFrequency="0.1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
@@ -121,11 +134,11 @@
                                        HorizontalAlignment="Right"/>
                         </Grid>
 
-                        <CheckBox Content="Передавать контекст последних реплик"
+                        <CheckBox Content="{DynamicResource Strings.TS.UseContext}"
                                   IsChecked="{Binding LlmUseContext}"
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   Margin="0,0,0,4"
-                                  ToolTipService.ToolTip="Помогает LLM правильно обрабатывать местоимения и продолжающиеся диалоги"/>
+                                  ToolTip="{DynamicResource Strings.TS.UseContext.Tooltip}"/>
 
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
@@ -133,10 +146,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="60"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Размер контекста:"
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Strings.TS.ContextSize}"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
                                        VerticalAlignment="Center"
-                                       ToolTipService.ToolTip="Сколько предыдущих переводов передавать каждый раз. Больше = лучше контекст, но дороже"/>
+                                       ToolTip="{DynamicResource Strings.TS.ContextSize.Tooltip}"/>
                             <Slider Grid.Column="1"
                                     Minimum="0" Maximum="10" SmallChange="1" LargeChange="2"
                                     TickFrequency="1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
@@ -152,7 +165,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <Button Content="Проверить соединение"
+                    <Button Content="{DynamicResource Strings.TS.TestConnection}"
                             Command="{Binding TestProviderCommand}"
                             Padding="14,8" HorizontalAlignment="Left"
                             Margin="0,12,0,8"/>
@@ -163,16 +176,12 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Резервный провайдер" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.TS.Fallback}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock TextWrapping="Wrap"
+                    <TextBlock Text="{DynamicResource Strings.TS.FallbackHelp}"
+                               TextWrapping="Wrap"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,0,0,8">
-                        Если основной провайдер не отвечает несколько запросов подряд (упал, лимит исчерпан, нет интернета),
-                        программа автоматически переключится на резервный. Каждую минуту пробует основной снова —
-                        как только он восстановится, возвращается к нему. Учётные данные у обоих провайдеров общие
-                        (DeepL ключ, MyMemory email, LibreTranslate URL/ключ) — задаются в блоке выше.
-                    </TextBlock>
+                               Margin="0,0,0,8"/>
                     <ComboBox ItemsSource="{Binding FallbackProviders}"
                               SelectedValue="{Binding SelectedFallbackProvider}"
                               SelectedValuePath="Id"
@@ -182,7 +191,7 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Целевой язык перевода" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.TS.TargetLang}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
                     <ComboBox ItemsSource="{Binding TargetLanguages}"
                               SelectedItem="{Binding SelectedTargetLanguage}"
@@ -191,9 +200,9 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Распознавание текста (OCR)" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.TS.OcrSection}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock Text="Движок распознавания:" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                    <TextBlock Text="{DynamicResource Strings.TS.OcrEngine}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                     <ComboBox ItemsSource="{Binding OcrEngines}"
                               SelectedValue="{Binding SelectedOcrEngine}"
                               SelectedValuePath="Id"
@@ -218,7 +227,7 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Text="Язык распознавания (укажи язык игры):"
+                    <TextBlock Text="{DynamicResource Strings.TS.OcrLang}"
                                Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                     <ComboBox ItemsSource="{Binding OcrLanguages}"
                               SelectedItem="{Binding SelectedOcrLanguage}"
@@ -228,32 +237,27 @@
 
                     <!-- Windows OCR specific help -->
                     <StackPanel Visibility="{Binding IsWindowsOcr, Converter={StaticResource BoolToVis}}">
-                        <TextBlock TextWrapping="Wrap"
+                        <TextBlock Text="{DynamicResource Strings.TS.WindowsOcrHelp}"
+                                   TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,0,0,8">
-                            Windows OCR работает только с установленными системными пакетами.
-                            Если нужного языка нет в списке — установи через параметры Windows.
-                        </TextBlock>
-                        <Button Content="Открыть параметры языков Windows"
+                                   Margin="0,0,0,8"/>
+                        <Button Content="{DynamicResource Strings.TS.OpenWindowsLang}"
                                 Command="{Binding OpenWindowsLanguageSettingsCommand}"
                                 Padding="14,6" HorizontalAlignment="Left"/>
                     </StackPanel>
 
                     <!-- Tesseract specific: catalog with download -->
                     <StackPanel Visibility="{Binding IsTesseract, Converter={StaticResource BoolToVis}}">
-                        <TextBlock TextWrapping="Wrap"
+                        <TextBlock Text="{DynamicResource Strings.TS.TesseractHelp}"
+                                   TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,0,0,8">
-                            Tesseract: английский, русский и японский встроены сразу. Любой
-                            другой язык можно скачать одной кнопкой (источник — официальный
-                            репозиторий tesseract-ocr/tessdata).
-                        </TextBlock>
+                                   Margin="0,0,0,8"/>
 
-                        <CheckBox Content="Скачивать модели в улучшенном качестве (best, ~5x больше файлы — 15–25 МБ на язык)"
+                        <CheckBox Content="{DynamicResource Strings.TS.TessdataBest}"
                                   IsChecked="{Binding UseBestTessdata}"
                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                   Margin="0,0,0,4"/>
-                        <TextBlock Text="Чтобы заменить уже установленный пакет качественной версией — нажми «Удалить», включи галочку и скачай снова."
+                        <TextBlock Text="{DynamicResource Strings.TS.TessdataBestHint}"
                                    TextWrapping="Wrap"
                                    FontSize="11"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
@@ -293,12 +297,12 @@
                                                        Margin="0,0,8,0"/>
 
                                             <Grid Grid.Column="2">
-                                                <Button Content="Скачать"
+                                                <Button Content="{DynamicResource Strings.TS.DownloadLang}"
                                                         Padding="10,4"
                                                         Visibility="{Binding CanDownload, Converter={StaticResource BoolToVis}}"
                                                         Command="{Binding DataContext.DownloadLanguageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding}"/>
-                                                <Button Content="Удалить"
+                                                <Button Content="{DynamicResource Strings.Common.Delete}"
                                                         Padding="10,4"
                                                         Background="Transparent"
                                                         Foreground="{DynamicResource TextSecondaryBrush}"
@@ -328,34 +332,27 @@
 
                     <!-- Paddle specific help -->
                     <StackPanel Visibility="{Binding IsPaddle, Converter={StaticResource BoolToVis}}">
-                        <TextBlock TextWrapping="Wrap"
+                        <TextBlock Text="{DynamicResource Strings.TS.PaddleHelp}"
+                                   TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Margin="0,0,0,8">
-                            PaddleOCR — нейросетевой движок, заметно точнее Tesseract на стилизованных
-                            и мелких шрифтах. На 1080p один кадр обрабатывается ~1-2 сек (вдвое медленнее
-                            Tesseract). При первом выборе языка модель (~10-20 МБ) скачается с интернета
-                            и закэшируется — дальше работает офлайн.
-                        </TextBlock>
+                                   Margin="0,0,0,8"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Кэш переводов" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.TS.Cache}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock TextWrapping="Wrap"
+                    <TextBlock Text="{DynamicResource Strings.TS.CacheHelp}"
+                               TextWrapping="Wrap"
                                Foreground="{DynamicResource TextSecondaryBrush}"
-                               Margin="0,0,0,10">
-                        Все переведённые фразы сохраняются в локальный кэш — повторное появление того же
-                        текста (диалог, меню, описание квеста) подтягивается из кэша моментально, без
-                        запроса к сервису перевода. При превышении лимита удаляются самые давно неиспользуемые записи.
-                    </TextBlock>
+                               Margin="0,0,0,10"/>
 
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="160"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Максимальный размер:"
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Strings.TS.CacheLimit}"
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    VerticalAlignment="Center"/>
                         <ComboBox Grid.Column="1"
@@ -367,7 +364,7 @@
                     </Grid>
 
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="Текущее состояние: "
+                        <TextBlock Text="{DynamicResource Strings.TS.CacheCurrent}"
                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <TextBlock Text="{Binding CacheStatsText}"
                                    Foreground="{DynamicResource PrimaryBrush}"
@@ -375,17 +372,17 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button Content="Обновить"
+                        <Button Content="{DynamicResource Strings.Common.Refresh}"
                                 Command="{Binding RefreshCacheStatsCommand}"
                                 Padding="14,6" Margin="0,0,8,0"/>
-                        <Button Content="Очистить кэш"
+                        <Button Content="{DynamicResource Strings.TS.ClearCache}"
                                 Command="{Binding ClearCacheCommand}"
                                 Padding="14,6"/>
                     </StackPanel>
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Горячие клавиши" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.TS.Hotkeys}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="220"/>
@@ -396,14 +393,14 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Включить/выключить перевод:"
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyToggle}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
                     <TextBox Grid.Row="0" Grid.Column="1"
                              Text="{Binding ToggleTranslationHotkey, UpdateSourceTrigger=PropertyChanged}"
                              Margin="0,0,0,8"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Показать/скрыть оверлей:"
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyOverlay}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
                     <TextBox Grid.Row="1" Grid.Column="1"
@@ -412,7 +409,7 @@
             </GroupBox>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Сохранить настройки"
+                <Button Content="{DynamicResource Strings.TS.SaveBtn}"
                         Command="{Binding SaveCommand}"
                         Padding="20,10" FontWeight="SemiBold"
                         Background="{DynamicResource PrimaryBrush}"

@@ -2,329 +2,253 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
-    <!-- ========================================
-         ОБЩИЕ СТРОКИ
-         ======================================== -->
-    
-    <sys:String x:Key="AppTitle">Erney's Translate Tool</sys:String>
-    <sys:String x:Key="AppVersion">Версия 1.0.0</sys:String>
-    <sys:String x:Key="Ok">OK</sys:String>
-    <sys:String x:Key="Cancel">Отмена</sys:String>
-    <sys:String x:Key="Save">Сохранить</sys:String>
-    <sys:String x:Key="Delete">Удалить</sys:String>
-    <sys:String x:Key="Clear">Очистить</sys:String>
-    <sys:String x:Key="Close">Закрыть</sys:String>
-    <sys:String x:Key="Yes">Да</sys:String>
-    <sys:String x:Key="No">Нет</sys:String>
-    <sys:String x:Key="Loading">Загрузка...</sys:String>
-    <sys:String x:Key="Processing">Обработка...</sys:String>
-    <sys:String x:Key="Error">Ошибка</sys:String>
-    <sys:String x:Key="Success">Успешно</sys:String>
-    <sys:String x:Key="Warning">Предупреждение</sys:String>
-    <sys:String x:Key="Info">Информация</sys:String>
-    
-    <!-- ========================================
-         ГЛАВНОЕ ОКНО
-         ======================================== -->
-    
-    <sys:String x:Key="MainWindow.Title">Erney's Translate Tool - Переводчик с экрана</sys:String>
-    <sys:String x:Key="MainWindow.TabMain">Главная</sys:String>
-    <sys:String x:Key="MainWindow.TabTranslationSettings">Перевод</sys:String>
-    <sys:String x:Key="MainWindow.TabOverlaySettings">Оверлей</sys:String>
-    <sys:String x:Key="MainWindow.TabHistory">История</sys:String>
-    <sys:String x:Key="MainWindow.TabAbout">О программе</sys:String>
-    
-    <!-- ========================================
-         ГЛАВНАЯ ВКЛАДКА
-         ======================================== -->
-    
-    <sys:String x:Key="MainTab.Title">Основной экран</sys:String>
-    <sys:String x:Key="MainTab.StatusReady">Готов к работе</sys:String>
-    <sys:String x:Key="MainTab.StatusCapturing">Захват области...</sys:String>
-    <sys:String x:Key="MainTab.StatusCaptureCancelled">Захват отменён</sys:String>
-    <sys:String x:Key="MainTab.StatusRecognizing">Распознавание текста...</sys:String>
-    <sys:String x:Key="MainTab.StatusTextNotFound">Текст не найден</sys:String>
-    <sys:String x:Key="MainTab.StatusTextRecognized">Текст распознан. Готов к переводу.</sys:String>
-    <sys:String x:Key="MainTab.StatusTranslating">Перевод...</sys:String>
-    <sys:String x:Key="MainTab.StatusTranslationCached">Перевод загружен из кэша</sys:String>
-    <sys:String x:Key="MainTab.StatusTranslationSuccess">Перевод выполнен успешно</sys:String>
-    <sys:String x:Key="MainTab.StatusTranslationError">Ошибка перевода: </sys:String>
-    <sys:String x:Key="MainTab.StatusCaptureError">Ошибка захвата: </sys:String>
-    <sys:String x:Key="MainTab.StatusCopied">Перевод скопирован в буфер обмена</sys:String>
-    <sys:String x:Key="MainTab.StatusCleared">Текст очищен</sys:String>
-    
-    <sys:String x:Key="MainTab.GroupCapturedText">Распознанный текст</sys:String>
-    <sys:String x:Key="MainTab.GroupTranslatedText">Перевод</sys:String>
-    
-    <sys:String x:Key="MainTab.BtnCapture">📷 Захват области</sys:String>
-    <sys:String x:Key="MainTab.BtnCapture.ToolTip">Горячая клавиша: Ctrl+Alt+Z</sys:String>
-    <sys:String x:Key="MainTab.BtnTranslate">➡ Перевести</sys:String>
-    <sys:String x:Key="MainTab.BtnTranslate.ToolTip">Горячая клавиша: Ctrl+Alt+X</sys:String>
-    <sys:String x:Key="MainTab.BtnCopy">📋 Копировать</sys:String>
-    <sys:String x:Key="MainTab.BtnClear">🗑 Очистить</sys:String>
-    <sys:String x:Key="MainTab.BtnOverlay">🔲 Оверлей</sys:String>
-    <sys:String x:Key="MainTab.BtnSettings">⚙ Настройки</sys:String>
-    <sys:String x:Key="MainTab.BtnHistory">📜 История</sys:String>
-    
-    <sys:String x:Key="MainTab.LabelFromLanguage">С языка:</sys:String>
-    <sys:String x:Key="MainTab.LabelToLanguage">На язык:</sys:String>
-    <sys:String x:Key="MainTab.LabelAuto">Автоопределение</sys:String>
-    
-    <!-- ========================================
-         НАСТРОЙКИ ПЕРЕВОДА
-         ======================================== -->
-    
-    <sys:String x:Key="TranslationSettingsTab.Title">Настройки перевода</sys:String>
-    
-    <sys:String x:Key="TranslationSettings.GroupTranslationService">Сервис перевода</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelSelectService">Выберите сервис для перевода текста:</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelService">Сервис:</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelApiKeys">API ключи (при необходимости):</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelGoogleApi">Google API:</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelDeepLApi">DeepL API:</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelYandexApi">Yandex API:</sys:String>
-    <sys:String x:Key="TranslationSettings.BtnTest">Проверить</sys:String>
-    <sys:String x:Key="TranslationSettings.StatusTesting">Проверка...</sys:String>
-    <sys:String x:Key="TranslationSettings.StatusConnectionSuccess">Соединение успешно!</sys:String>
-    <sys:String x:Key="TranslationSettings.StatusConnectionError">Ошибка соединения</sys:String>
-    
-    <sys:String x:Key="TranslationSettings.GroupCaptureSettings">Настройки захвата</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelCaptureDelay">Задержка захвата (мс):</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelCaptureFormat">Формат изображения:</sys:String>
-    <sys:String x:Key="TranslationSettings.CheckboxCaptureCursor">Захватывать курсор</sys:String>
-    
-    <sys:String x:Key="TranslationSettings.GroupOcrSettings">Настройки распознавания (OCR)</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelOcrEngine">Движок OCR:</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelOcrScale">Масштабирование:</sys:String>
-    <sys:String x:Key="TranslationSettings.LabelOcrScaleRecommendation">x (рекомендуется 2-3)</sys:String>
-    <sys:String x:Key="TranslationSettings.CheckboxOcrPreprocess">Предварительная обработка изображения (улучшение качества)</sys:String>
-    
-    <sys:String x:Key="TranslationSettings.GroupAutoTranslate">Автоперевод</sys:String>
-    <sys:String x:Key="TranslationSettings.CheckboxAutoTranslateAfterCapture">Автоматически переводить после захвата</sys:String>
-    <sys:String x:Key="TranslationSettings.CheckboxShowInOverlay">Показывать перевод в оверлее</sys:String>
-    
-    <!-- ========================================
-         НАСТРОЙКИ ОВЕРЛЕЯ
-         ======================================== -->
-    
-    <sys:String x:Key="OverlaySettingsTab.Title">Настройки оверлея</sys:String>
-    <sys:String x:Key="OverlaySettingsTab.Description">Оверлей — это полупрозрачное окно, которое отображает перевод поверх других приложений.</sys:String>
-    
-    <sys:String x:Key="OverlaySettings.GroupPosition">Позиция оверлея</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelSelectPosition">Выберите расположение окна перевода:</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionTopLeft">Верхний левый</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionTopCenter">Верхний центр</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionTopRight">Верхний правый</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionBottomLeft">Нижний левый</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionBottomCenter">Нижний центр</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionBottomRight">Нижний правый</sys:String>
-    <sys:String x:Key="OverlaySettings.PositionCenter">Центр экрана</sys:String>
-    
-    <sys:String x:Key="OverlaySettings.GroupAppearance">Внешний вид</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelOpacity">Прозрачность:</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelFontSize">Размер шрифта:</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelFontFamily">Шрифт:</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelBackgroundColor">Цвет фона:</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelTextColor">Цвет текста:</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelPreview">Предпросмотр оверлея</sys:String>
-    
-    <sys:String x:Key="OverlaySettings.GroupBehavior">Поведение</sys:String>
-    <sys:String x:Key="OverlaySettings.CheckboxAlwaysOnTop">Всегда поверх других окон</sys:String>
-    <sys:String x:Key="OverlaySettings.CheckboxClickThrough">Пропускать клики (клик проходит сквозь оверлей)</sys:String>
-    <sys:String x:Key="OverlaySettings.DescriptionClickThrough">При включении этой опции клики мыши будут проходить сквозь оверлей к приложению под ним.</sys:String>
-    
-    <sys:String x:Key="OverlaySettings.GroupHotkeys">Горячие клавиши оверлея</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelToggleHotkey">Показать/скрыть оверлей:</sys:String>
-    <sys:String x:Key="OverlaySettings.LabelHideHotkey">Скрыть оверлей:</sys:String>
-    <sys:String x:Key="OverlaySettings.ToolTipRecordHotkey">Нажмите для записи новой комбинации</sys:String>
-    
-    <!-- ========================================
-         ВКЛАДКА ИСТОРИИ
-         ======================================== -->
-    
-    <sys:String x:Key="HistoryTab.Title">История переводов</sys:String>
-    <sys:String x:Key="HistoryTab.TotalItems">Всего записей: {0}</sys:String>
-    
-    <sys:String x:Key="HistoryTab.BtnExport">📤 Экспорт CSV</sys:String>
-    <sys:String x:Key="HistoryTab.BtnClearAll">🗑 Очистить всё</sys:String>
-    
-    <sys:String x:Key="HistoryTab.GroupFilters">Фильтры и поиск</sys:String>
-    <sys:String x:Key="HistoryTab.LabelSearch">🔍</sys:String>
-    <sys:String x:Key="HistoryTab.ToolTipSearch">Поиск по тексту перевода</sys:String>
-    <sys:String x:Key="HistoryTab.LabelFromLanguage">С языка:</sys:String>
-    <sys:String x:Key="HistoryTab.LabelToLanguage">На язык:</sys:String>
-    <sys:String x:Key="HistoryTab.LabelFromDate">От:</sys:String>
-    <sys:String x:Key="HistoryTab.LabelToDate">До:</sys:String>
-    <sys:String x:Key="HistoryTab.BtnClearFilters">✕</sys:String>
-    <sys:String x:Key="HistoryTab.ToolTipClearFilters">Очистить фильтры</sys:String>
-    
-    <sys:String x:Key="HistoryTab.ColumnHeaderDate">Дата</sys:String>
-    <sys:String x:Key="HistoryTab.ColumnHeaderFromLanguage">С языка</sys:String>
-    <sys:String x:Key="HistoryTab.ColumnHeaderToLanguage">На язык</sys:String>
-    <sys:String x:Key="HistoryTab.ColumnHeaderSourceText">Исходный текст</sys:String>
-    <sys:String x:Key="HistoryTab.ColumnHeaderTranslatedText">Перевод</sys:String>
-    
-    <sys:String x:Key="HistoryTab.BtnCopyOriginal">📋 Копировать оригинал</sys:String>
-    <sys:String x:Key="HistoryTab.BtnCopyTranslation">📋 Копировать перевод</sys:String>
-    <sys:String x:Key="HistoryTab.BtnDelete">🗑 Удалить</sys:String>
-    
-    <sys:String x:Key="HistoryTab.LabelPage">Стр. {0} из {1}</sys:String>
-    <sys:String x:Key="HistoryTab.ToolTipFirstPage">Первая страница</sys:String>
-    <sys:String x:Key="HistoryTab.ToolTipPreviousPage">Предыдущая страница</sys:String>
-    <sys:String x:Key="HistoryTab.ToolTipNextPage">Следующая страница</sys:String>
-    <sys:String x:Key="HistoryTab.ToolTipLastPage">Последняя страница</sys:String>
-    
-    <sys:String x:Key="HistoryTab.LoadingText">Загрузка истории...</sys:String>
-    <sys:String x:Key="HistoryTab.AllLanguages">Все языки</sys:String>
-    
-    <!-- ========================================
-         ВКЛАДКА О ПРОГРАММЕ
-         ======================================== -->
-    
-    <sys:String x:Key="AboutTab.Title">О программе</sys:String>
-    
-    <sys:String x:Key="AboutTab.GroupAbout">О программе</sys:String>
-    <sys:String x:Key="AboutTab.Description1">Erney's Translate Tool — это удобный инструмент для мгновенного перевода текста с экрана.
-Просто выделите область с текстом, и программа автоматически распознает и переведёт его.</sys:String>
-    <sys:String x:Key="AboutTab.Description2">Программа идеально подходит для перевода текста в играх, приложениях, на веб-сайтах
-и в любых других местах, где стандартные методы копирования недоступны.</sys:String>
-    
-    <sys:String x:Key="AboutTab.GroupFeatures">Возможности</sys:String>
-    <sys:String x:Key="AboutTab.Feature1">Распознавание текста (OCR) с любого участка экрана</sys:String>
-    <sys:String x:Key="AboutTab.Feature2">Перевод через Google Translate, DeepL, Yandex</sys:String>
-    <sys:String x:Key="AboutTab.Feature3">Оверлей для отображения перевода поверх приложений</sys:String>
-    <sys:String x:Key="AboutTab.Feature4">Горячие клавиши для быстрого доступа</sys:String>
-    <sys:String x:Key="AboutTab.Feature5">История переводов с поиском и фильтрацией</sys:String>
-    <sys:String x:Key="AboutTab.Feature6">Кэширование переводов для ускорения работы</sys:String>
-    <sys:String x:Key="AboutTab.Feature7">Тёмная тема оформления</sys:String>
-    <sys:String x:Key="AboutTab.Feature8">Поддержка множества языков</sys:String>
-    
-    <sys:String x:Key="AboutTab.GroupHotkeys">Горячие клавиши по умолчанию</sys:String>
-    <sys:String x:Key="AboutTab.HotkeyCapture">Захват области:</sys:String>
-    <sys:String x:Key="AboutTab.HotkeyTranslate">Перевод:</sys:String>
-    <sys:String x:Key="AboutTab.HotkeyToggleOverlay">Показать/скрыть оверлей:</sys:String>
-    <sys:String x:Key="AboutTab.HotkeyHideOverlay">Скрыть оверлей:</sys:String>
-    
-    <sys:String x:Key="AboutTab.GroupRequirements">Системные требования</sys:String>
-    <sys:String x:Key="AboutTab.RequirementOS">ОС:</sys:String>
-    <sys:String x:Key="AboutTab.RequirementOSValue">Windows 10/11 (x64)</sys:String>
-    <sys:String x:Key="AboutTab.RequirementNet">.NET:</sys:String>
-    <sys:String x:Key="AboutTab.RequirementNetValue">.NET 8.0 Runtime</sys:String>
-    <sys:String x:Key="AboutTab.RequirementMemory">Память:</sys:String>
-    <sys:String x:Key="AboutTab.RequirementMemoryValue">512 МБ ОЗУ</sys:String>
-    <sys:String x:Key="AboutTab.RequirementDisk">Место на диске:</sys:String>
-    <sys:String x:Key="AboutTab.RequirementDiskValue">100 МБ</sys:String>
-    
-    <sys:String x:Key="AboutTab.GroupTechnologies">Используемые технологии</sys:String>
-    <sys:String x:Key="AboutTab.TechLanguage">Язык:</sys:String>
-    <sys:String x:Key="AboutTab.TechLanguageValue">C# .NET 8</sys:String>
-    <sys:String x:Key="AboutTab.TechFramework">Фреймворк:</sys:String>
-    <sys:String x:Key="AboutTab.TechFrameworkValue">WPF (Windows Presentation Foundation)</sys:String>
-    <sys:String x:Key="AboutTab.TechPattern">Паттерн:</sys:String>
-    <sys:String x:Key="AboutTab.TechPatternValue">MVVM</sys:String>
-    <sys:String x:Key="AboutTab.TechOcr">OCR:</sys:String>
-    <sys:String x:Key="AboutTab.TechOcrValue">Tesseract OCR / Windows.Media.OCR</sys:String>
-    <sys:String x:Key="AboutTab.TechTranslation">Перевод:</sys:String>
-    <sys:String x:Key="AboutTab.TechTranslationValue">Google Translate API / DeepL API / Yandex Translate API</sys:String>
-    
-    <sys:String x:Key="AboutTab.WarningTitle">⚠ Важное предупреждение</sys:String>
-    <sys:String x:Key="AboutTab.WarningText">Использование программы в онлайн-играх с античит-системами может привести к блокировке аккаунта.
-Автор не несёт ответственности за возможные последствия использования программы в играх.
-Используйте на свой страх и риск!</sys:String>
-    
-    <sys:String x:Key="AboutTab.GroupContacts">Контакты и поддержка</sys:String>
-    <sys:String x:Key="AboutTab.ContactsDescription">Если у вас возникли вопросы, предложения или вы обнаружили ошибку, пожалуйста, свяжитесь с нами.</sys:String>
-    <sys:String x:Key="AboutTab.BtnContactDeveloper">📧 Написать разработчику</sys:String>
-    <sys:String x:Key="AboutTab.BtnDocumentation">📄 Документация</sys:String>
-    <sys:String x:Key="AboutTab.BtnReportBug">🐛 Сообщить об ошибке</sys:String>
-    
-    <sys:String x:Key="AboutTab.Copyright">© 2024 Erney's Translate Tool. Все права защищены.</sys:String>
-    
-    <!-- ========================================
-         НАСТРОЙКИ (ОБЩИЕ)
-         ======================================== -->
-    
-    <sys:String x:Key="SettingsTab.Title">Настройки</sys:String>
-    
-    <sys:String x:Key="Settings.GroupGeneral">Общие настройки</sys:String>
-    <sys:String x:Key="Settings.CheckboxAutoStart">Запускать вместе с Windows</sys:String>
-    <sys:String x:Key="Settings.CheckboxMinimizeToTray">Сворачивать в трей</sys:String>
-    <sys:String x:Key="Settings.CheckboxShowNotifications">Показывать уведомления</sys:String>
-    <sys:String x:Key="Settings.LabelLanguage">Язык интерфейса:</sys:String>
-    <sys:String x:Key="Settings.LabelCacheSize">Размер кэша (записей):</sys:String>
-    <sys:String x:Key="Settings.LabelHistoryLimit">Лимит истории (записей):</sys:String>
-    
-    <sys:String x:Key="Settings.GroupHotkeys">Горячие клавиши</sys:String>
-    <sys:String x:Key="Settings.LabelCaptureHotkey">Захват области:</sys:String>
-    <sys:String x:Key="Settings.LabelTranslateHotkey">Перевод:</sys:String>
-    
-    <sys:String x:Key="Settings.BtnSave">Сохранить</sys:String>
-    <sys:String x:Key="Settings.BtnCancel">Отмена</sys:String>
-    <sys:String x:Key="Settings.BtnReset">Сбросить к умолчанию</sys:String>
-    
-    <!-- ========================================
-         СООБЩЕНИЯ И ДИАЛОГИ
-         ======================================== -->
-    
-    <sys:String x:Key="Messages.ConfirmClearHistory">Вы действительно хотите очистить всю историю переводов? Это действие нельзя отменить.</sys:String>
-    <sys:String x:Key="Messages.ConfirmDeleteItem">Вы действительно хотите удалить выбранный элемент?</sys:String>
-    <sys:String x:Key="Messages.ConfirmExit">Вы действительно хотите выйти из программы?</sys:String>
-    <sys:String x:Key="Messages.ConfirmRestart">Для применения некоторых настроек требуется перезапуск программы. Перезапустить сейчас?</sys:String>
-    
-    <sys:String x:Key="Messages.ErrorApikeyMissing">API ключ не указан. Пожалуйста, настройте API ключ в настройках.</sys:String>
-    <sys:String x:Key="Messages.ErrorNoText">Текст для перевода не найден.</sys:String>
-    <sys:String x:Key="Messages.ErrorNetwork">Ошибка сетевого соединения. Проверьте подключение к интернету.</sys:String>
-    <sys:String x:Key="Messages.ErrorOcrFailed">Не удалось распознать текст. Попробуйте захватить другую область.</sys:String>
-    <sys:String x:Key="Messages.ErrorTranslationFailed">Не удалось выполнить перевод. Проверьте API ключ и подключение к интернету.</sys:String>
-    <sys:String x:Key="Messages.ErrorHotkeyRegistered">Горячая клавиша уже используется другим приложением.</sys:String>
-    
-    <sys:String x:Key="Messages.InfoTranslationCached">Перевод загружен из кэша</sys:String>
-    <sys:String x:Key="Messages.InfoSettingsSaved">Настройки сохранены</sys:String>
-    <sys:String x:Key="Messages.InfoExportSuccess">История успешно экспортирована</sys:String>
-    <sys:String x:Key="Messages.InfoExportError">Ошибка экспорта истории</sys:String>
-    
-    <!-- ========================================
-         ЯЗЫКИ (ДЛЯ ВЫБОРА)
-         ======================================== -->
-    
-    <sys:String x:Key="Languages.Auto">Автоопределение</sys:String>
-    <sys:String x:Key="Languages.Russian">Русский</sys:String>
-    <sys:String x:Key="Languages.English">Английский</sys:String>
-    <sys:String x:Key="Languages.German">Немецкий</sys:String>
-    <sys:String x:Key="Languages.French">Французский</sys:String>
-    <sys:String x:Key="Languages.Spanish">Испанский</sys:String>
-    <sys:String x:Key="Languages.Italian">Итальянский</sys:String>
-    <sys:String x:Key="Languages.Portuguese">Португальский</sys:String>
-    <sys:String x:Key="Languages.Chinese">Китайский</sys:String>
-    <sys:String x:Key="Languages.Japanese">Японский</sys:String>
-    <sys:String x:Key="Languages.Korean">Корейский</sys:String>
-    <sys:String x:Key="Languages.Polish">Польский</sys:String>
-    <sys:String x:Key="Languages.Ukrainian">Украинский</sys:String>
-    <sys:String x:Key="Languages.Belarusian">Белорусский</sys:String>
-    <sys:String x:Key="Languages.Turkish">Турецкий</sys:String>
-    <sys:String x:Key="Languages.Arabic">Арабский</sys:String>
-    <sys:String x:Key="Languages.Hebrew">Иврит</sys:String>
-    <sys:String x:Key="Languages.Hindi">Хинди</sys:String>
-    <sys:String x:Key="Languages.Thai">Тайский</sys:String>
-    <sys:String x:Key="Languages.Vietnamese">Вьетнамский</sys:String>
-    <sys:String x:Key="Languages.Indonesian">Индонезийский</sys:String>
-    <sys:String x:Key="Languages.Dutch">Голландский</sys:String>
-    <sys:String x:Key="Languages.Swedish">Шведский</sys:String>
-    <sys:String x:Key="Languages.Norwegian">Норвежский</sys:String>
-    <sys:String x:Key="Languages.Danish">Датский</sys:String>
-    <sys:String x:Key="Languages.Finnish">Финский</sys:String>
-    <sys:String x:Key="Languages.Czech">Чешский</sys:String>
-    <sys:String x:Key="Languages.Slovak">Словацкий</sys:String>
-    <sys:String x:Key="Languages.Hungarian">Венгерский</sys:String>
-    <sys:String x:Key="Languages.Romanian">Румынский</sys:String>
-    <sys:String x:Key="Languages.Bulgarian">Болгарский</sys:String>
-    <sys:String x:Key="Languages.Croatian">Хорватский</sys:String>
-    <sys:String x:Key="Languages.Serbian">Сербский</sys:String>
-    <sys:String x:Key="Languages.Slovenian">Словенский</sys:String>
-    <sys:String x:Key="Languages.Estonian">Эстонский</sys:String>
-    <sys:String x:Key="Languages.Latvian">Латышский</sys:String>
-    <sys:String x:Key="Languages.Lithuanian">Литовский</sys:String>
-    <sys:String x:Key="Languages.Greek">Греческий</sys:String>
-    <sys:String x:Key="Languages.Catalan">Каталанский</sys:String>
-    
+    <!-- =========================================================
+         Strings.ru.xaml — русская локализация UI.
+         Парный файл: Strings.en.xaml.
+         Все ключи имеют префикс Strings. чтобы их легко найти и не
+         столкнуться с ключами стилей или цветов.
+         ========================================================= -->
+
+    <!-- Common -->
+    <sys:String x:Key="Strings.Common.Save">Сохранить</sys:String>
+    <sys:String x:Key="Strings.Common.Refresh">Обновить</sys:String>
+    <sys:String x:Key="Strings.Common.Add">Добавить</sys:String>
+    <sys:String x:Key="Strings.Common.Delete">Удалить</sys:String>
+    <sys:String x:Key="Strings.Common.Import">Импорт...</sys:String>
+    <sys:String x:Key="Strings.Common.Export">Экспорт...</sys:String>
+    <sys:String x:Key="Strings.Common.Apply">Применить</sys:String>
+    <sys:String x:Key="Strings.Common.Cancel">Отмена</sys:String>
+    <sys:String x:Key="Strings.Common.Yes">Да</sys:String>
+    <sys:String x:Key="Strings.Common.No">Нет</sys:String>
+    <sys:String x:Key="Strings.Common.Close">Закрыть</sys:String>
+    <sys:String x:Key="Strings.Common.Got">Понятно</sys:String>
+
+    <!-- Tabs -->
+    <sys:String x:Key="Strings.Tab.Main">Главная</sys:String>
+    <sys:String x:Key="Strings.Tab.TranslationSettings">Настройки перевода</sys:String>
+    <sys:String x:Key="Strings.Tab.OverlaySettings">Настройки оверлея</sys:String>
+    <sys:String x:Key="Strings.Tab.History">История</sys:String>
+    <sys:String x:Key="Strings.Tab.Glossary">Глоссарий</sys:String>
+    <sys:String x:Key="Strings.Tab.Profiles">Профили</sys:String>
+    <sys:String x:Key="Strings.Tab.About">О программе</sys:String>
+
+    <!-- MainTab -->
+    <sys:String x:Key="Strings.Main.Title">Главная</sys:String>
+    <sys:String x:Key="Strings.Main.WindowGroup">Окно для перевода</sys:String>
+    <sys:String x:Key="Strings.Main.WindowHelp">Выбери окно игры/программы из списка ниже. Игра должна быть запущена в оконном или borderless-режиме (полный экран не подходит).</sys:String>
+    <sys:String x:Key="Strings.Main.RefreshList">Обновить список</sys:String>
+    <sys:String x:Key="Strings.Main.RefreshList.Tooltip">Пересканировать список открытых окон</sys:String>
+    <sys:String x:Key="Strings.Main.SelectedLabel">Выбрано: </sys:String>
+    <sys:String x:Key="Strings.Main.NoWindow">(окно не выбрано)</sys:String>
+    <sys:String x:Key="Strings.Main.Start">Запустить</sys:String>
+    <sys:String x:Key="Strings.Main.Stop">Остановить</sys:String>
+    <sys:String x:Key="Strings.Main.RefreshStats">Обновить статистику</sys:String>
+    <sys:String x:Key="Strings.Main.StatsGroup">Статистика</sys:String>
+    <sys:String x:Key="Strings.Main.CharsToday">Переведено символов сегодня: </sys:String>
+    <sys:String x:Key="Strings.Main.CacheHit">Попадания в кэш: </sys:String>
+    <sys:String x:Key="Strings.Main.FrameTime">Среднее время на фрейм: </sys:String>
+    <sys:String x:Key="Strings.Main.FrameTime.Tooltip">OCR + перевод + отрисовка оверлея, скользящее среднее</sys:String>
+    <sys:String x:Key="Strings.Main.StatusWaiting">Ожидание</sys:String>
+
+    <!-- TranslationSettings -->
+    <sys:String x:Key="Strings.TS.Title">Настройки перевода</sys:String>
+    <sys:String x:Key="Strings.TS.Service">Сервис перевода</sys:String>
+    <sys:String x:Key="Strings.TS.SelectService">Выбери сервис:</sys:String>
+    <sys:String x:Key="Strings.TS.DeepLKey">API-ключ DeepL:</sys:String>
+    <sys:String x:Key="Strings.TS.MyMemoryEmail">Email (необязательно — увеличивает лимит до 50 000 симв./день):</sys:String>
+    <sys:String x:Key="Strings.TS.GoogleHelp">Никаких настроек не требуется — нажми «Проверить» чтобы убедиться что endpoint доступен.</sys:String>
+    <sys:String x:Key="Strings.TS.LibreUrl">URL инстанса:</sys:String>
+    <sys:String x:Key="Strings.TS.LibreKey">API-ключ (если требуется):</sys:String>
+    <sys:String x:Key="Strings.TS.OpenAIKey">API-ключ OpenAI (sk-...):</sys:String>
+    <sys:String x:Key="Strings.TS.AnthropicKey">API-ключ Anthropic (sk-ant-...):</sys:String>
+    <sys:String x:Key="Strings.TS.Model">Модель:</sys:String>
+    <sys:String x:Key="Strings.TS.ModelTextHint">Введи id модели или выбери из пресетов справа</sys:String>
+    <sys:String x:Key="Strings.TS.ModelPresetsHint">Пресеты — выбор подставит id в поле слева</sys:String>
+    <sys:String x:Key="Strings.TS.LlmHelp">Параметры ниже общие для OpenAI и Anthropic — задаются здесь и применяются к тому, что выбрано как основной провайдер выше.</sys:String>
+    <sys:String x:Key="Strings.TS.Temperature">Температура:</sys:String>
+    <sys:String x:Key="Strings.TS.Temperature.Tooltip">0 = одинаковый перевод каждый раз, 1 = более свободный/креативный. Для перевода обычно 0.2–0.4.</sys:String>
+    <sys:String x:Key="Strings.TS.UseContext">Передавать контекст последних реплик</sys:String>
+    <sys:String x:Key="Strings.TS.UseContext.Tooltip">Помогает LLM правильно обрабатывать местоимения и продолжающиеся диалоги</sys:String>
+    <sys:String x:Key="Strings.TS.ContextSize">Размер контекста:</sys:String>
+    <sys:String x:Key="Strings.TS.ContextSize.Tooltip">Сколько предыдущих переводов передавать каждый раз. Больше = лучше контекст, но дороже</sys:String>
+    <sys:String x:Key="Strings.TS.TestConnection">Проверить соединение</sys:String>
+
+    <sys:String x:Key="Strings.TS.Fallback">Резервный провайдер</sys:String>
+    <sys:String x:Key="Strings.TS.FallbackHelp">Если основной провайдер не отвечает несколько запросов подряд (упал, лимит исчерпан, нет интернета), программа автоматически переключится на резервный. Каждую минуту пробует основной снова — как только он восстановится, возвращается к нему. Учётные данные у обоих провайдеров общие (DeepL ключ, MyMemory email, LibreTranslate URL/ключ) — задаются в блоке выше.</sys:String>
+    <sys:String x:Key="Strings.TS.NoFallback">Без резервного</sys:String>
+
+    <sys:String x:Key="Strings.TS.TargetLang">Целевой язык перевода</sys:String>
+    <sys:String x:Key="Strings.TS.OcrEngine">Движок распознавания:</sys:String>
+    <sys:String x:Key="Strings.TS.OcrSection">Распознавание текста (OCR)</sys:String>
+    <sys:String x:Key="Strings.TS.OcrLang">Язык распознавания (укажи язык игры):</sys:String>
+    <sys:String x:Key="Strings.TS.WindowsOcrHelp">Windows OCR работает только с установленными системными пакетами. Если нужного языка нет в списке — установи через параметры Windows.</sys:String>
+    <sys:String x:Key="Strings.TS.OpenWindowsLang">Открыть параметры языков Windows</sys:String>
+    <sys:String x:Key="Strings.TS.TesseractHelp">Tesseract: английский, русский и японский встроены сразу. Любой другой язык можно скачать одной кнопкой (источник — официальный репозиторий tesseract-ocr/tessdata).</sys:String>
+    <sys:String x:Key="Strings.TS.TessdataBest">Скачивать модели в улучшенном качестве (best, ~5x больше файлы — 15–25 МБ на язык)</sys:String>
+    <sys:String x:Key="Strings.TS.TessdataBestHint">Чтобы заменить уже установленный пакет качественной версией — нажми «Удалить», включи галочку и скачай снова.</sys:String>
+    <sys:String x:Key="Strings.TS.PaddleHelp">PaddleOCR — нейросетевой движок, заметно точнее Tesseract на стилизованных и мелких шрифтах. На 1080p один кадр обрабатывается ~1-2 сек (вдвое медленнее Tesseract). При первом выборе языка модель (~10-20 МБ) скачается с интернета и закэшируется — дальше работает офлайн.</sys:String>
+    <sys:String x:Key="Strings.TS.DownloadLang">Скачать</sys:String>
+
+    <sys:String x:Key="Strings.TS.Cache">Кэш переводов</sys:String>
+    <sys:String x:Key="Strings.TS.CacheHelp">Все переведённые фразы сохраняются в локальный кэш — повторное появление того же текста (диалог, меню, описание квеста) подтягивается из кэша моментально, без запроса к сервису перевода. При превышении лимита удаляются самые давно неиспользуемые записи.</sys:String>
+    <sys:String x:Key="Strings.TS.CacheLimit">Максимальный размер:</sys:String>
+    <sys:String x:Key="Strings.TS.CacheCurrent">Текущее состояние: </sys:String>
+    <sys:String x:Key="Strings.TS.ClearCache">Очистить кэш</sys:String>
+    <sys:String x:Key="Strings.TS.CacheUnlimited">Без лимита</sys:String>
+
+    <sys:String x:Key="Strings.TS.Hotkeys">Горячие клавиши</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeyToggle">Включить/выключить перевод:</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeyOverlay">Показать/скрыть оверлей:</sys:String>
+
+    <sys:String x:Key="Strings.TS.SaveBtn">Сохранить настройки</sys:String>
+
+    <!-- OverlaySettings -->
+    <sys:String x:Key="Strings.OS.Title">Настройки оверлея и интерфейса</sys:String>
+    <sys:String x:Key="Strings.OS.Subtitle">Внешний вид «таблички» с переводом и тема самой программы.</sys:String>
+    <sys:String x:Key="Strings.OS.AppTheme">Тема программы</sys:String>
+    <sys:String x:Key="Strings.OS.AppThemeHelp">Цветовая палитра самого окна программы (применяется сразу):</sys:String>
+    <sys:String x:Key="Strings.OS.AppLanguage">Язык программы:</sys:String>
+    <sys:String x:Key="Strings.OS.Behavior">Поведение программы</sys:String>
+    <sys:String x:Key="Strings.OS.CloseToTray">Сворачивать в трей при нажатии «×» вместо выхода</sys:String>
+    <sys:String x:Key="Strings.OS.CloseToTrayHint">Полный выход — через ПКМ по иконке в трее → «Выход».</sys:String>
+    <sys:String x:Key="Strings.OS.CheckUpdates">Проверять обновления при запуске (фоном, тихо)</sys:String>
+    <sys:String x:Key="Strings.OS.AutoStart">Запускать с Windows (свёрнутым в трей)</sys:String>
+    <sys:String x:Key="Strings.OS.AutoStartHint">При входе в Windows программа сразу появится в трее. Открыть — клик по иконке.</sys:String>
+    <sys:String x:Key="Strings.OS.Presets">Готовые темы оверлея</sys:String>
+    <sys:String x:Key="Strings.OS.PresetsHelp">Один клик — применятся фон, цвет текста, прозрачность и скругление углов.</sys:String>
+    <sys:String x:Key="Strings.OS.Appearance">Внешний вид</sys:String>
+    <sys:String x:Key="Strings.OS.OverlayFont">Шрифт перевода:</sys:String>
+    <sys:String x:Key="Strings.OS.FontSize">Размер шрифта:</sys:String>
+    <sys:String x:Key="Strings.OS.OverlayOpacity">Прозрачность фона:</sys:String>
+    <sys:String x:Key="Strings.OS.CornerRadius">Скругление углов:</sys:String>
+    <sys:String x:Key="Strings.OS.BgColor">Цвет фона:</sys:String>
+    <sys:String x:Key="Strings.OS.FgColor">Цвет текста:</sys:String>
+    <sys:String x:Key="Strings.OS.Preview">Предпросмотр</sys:String>
+    <sys:String x:Key="Strings.OS.PreviewText">Пример переведённого текста</sys:String>
+    <sys:String x:Key="Strings.OS.SaveBtn">Сохранить настройки</sys:String>
+
+    <!-- Glossary -->
+    <sys:String x:Key="Strings.Glossary.Title">Глоссарий имён собственных</sys:String>
+    <sys:String x:Key="Strings.Glossary.Help">Заведи правило «Оригинал → Перевод» — после ответа переводчика программа подменит каждое вхождение в финальном тексте. Полезно для имён персонажей, локаций, артефактов в играх, которые автоперевод путает (например, «Geralt» → «Геральт», «Kaer Morhen» → «Каэр Морхен»). Правила привязаны к языку перевода: «RU» применяются только при переводе на русский.</sys:String>
+    <sys:String x:Key="Strings.Glossary.UseToggle">Использовать глоссарий</sys:String>
+    <sys:String x:Key="Strings.Glossary.UseToggle.Tooltip">Главный тогл — выключи, если нужно быстро отключить замены без удаления правил</sys:String>
+    <sys:String x:Key="Strings.Glossary.ColSource">Оригинал (что заменяем)</sys:String>
+    <sys:String x:Key="Strings.Glossary.ColTarget">Перевод (на что меняем)</sys:String>
+    <sys:String x:Key="Strings.Glossary.ColLang">Язык</sys:String>
+    <sys:String x:Key="Strings.Glossary.ColCase">Регистр</sys:String>
+    <sys:String x:Key="Strings.Glossary.ColWord">Слово</sys:String>
+    <sys:String x:Key="Strings.Glossary.ColNotes">Заметка</sys:String>
+
+    <!-- Profiles -->
+    <sys:String x:Key="Strings.Profiles.Title">Профили под игру</sys:String>
+    <sys:String x:Key="Strings.Profiles.Active">Активный: </sys:String>
+    <sys:String x:Key="Strings.Profiles.Help">Профиль — это набор настроек (OCR-движок, языки, провайдер перевода, шрифт и цвет оверлея, флаг глоссария) под конкретную игру. Когда ты выбираешь окно на «Главной» и жмёшь «Запустить», программа ищет первый профиль, чей «Шаблон» совпадает с заголовком окна или именем процесса, и применяет его настройки. Если не найден — используется профиль «По умолчанию». При первом запуске на новой игре профиль создаётся автоматически.</sys:String>
+    <sys:String x:Key="Strings.Profiles.AddBlank">Добавить пустой</sys:String>
+    <sys:String x:Key="Strings.Profiles.CreateFromCurrent">Создать из текущих настроек</sys:String>
+    <sys:String x:Key="Strings.Profiles.CreateFromCurrent.Tooltip">Снимает снимок текущих настроек (вкладок «Настройки перевода» и «Настройки оверлея») в новый профиль</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColName">Имя</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColPattern">Шаблон совпадения</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColPattern.Tooltip">Подстрока (регистр не важен) для поиска в заголовке окна или имени процесса</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColMatchExe">Искать в exe</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColMatchExe.Tooltip">Если включено — шаблон сравнивается с именем процесса, иначе с заголовком окна</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColTarget">Цель</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColOcr">OCR</sys:String>
+    <sys:String x:Key="Strings.Profiles.ColProvider">Провайдер</sys:String>
+    <sys:String x:Key="Strings.Profiles.Apply.Tooltip">Применить настройки этого профиля прямо сейчас (не дожидаясь следующего запуска)</sys:String>
+    <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
+
+    <!-- About -->
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.11 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
+    <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
+    <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>
+    <sys:String x:Key="Strings.About.WhatIsBody">Программа в реальном времени распознаёт текст в выбранном окне (игра, видео, любой софт), переводит его и накладывает русский перевод поверх оригинала прозрачной «табличкой». Управление — мышью или горячими клавишами; клики проходят сквозь оверлей, играть/работать можно как обычно.</sys:String>
+    <sys:String x:Key="Strings.About.QuickStart">Быстрый старт</sys:String>
+    <sys:String x:Key="Strings.About.SystemReqs">Системные требования</sys:String>
+    <sys:String x:Key="Strings.About.Donate">Купить мне кофе</sys:String>
+    <sys:String x:Key="Strings.About.DonateTitle">☕  Понравилась программа?</sys:String>
+    <sys:String x:Key="Strings.About.DonateBody">Программа полностью бесплатная и open-source. Если хочется поддержать разработку — можно угостить кофе.</sys:String>
+    <sys:String x:Key="Strings.About.DonateTooltip">Откроет страницу с вариантами поддержки в браузере</sys:String>
+    <sys:String x:Key="Strings.About.QuickStartStep1">1. Запусти игру (оконный или borderless-режим — полный экран не подходит).</sys:String>
+    <sys:String x:Key="Strings.About.QuickStartStep2">2. Вкладка «Главная» → нажми «Обновить список» → выбери окно игры → нажми «Запустить» (или Ctrl+Shift+T).</sys:String>
+    <sys:String x:Key="Strings.About.QuickStartStep3">3. В игре появятся переводы поверх английского текста. Игру можно тыкать как обычно.</sys:String>
+    <sys:String x:Key="Strings.About.QuickStartStep4">4. Чтобы остановить — снова Ctrl+Shift+T или кнопка «Остановить» в программе.</sys:String>
+    <sys:String x:Key="Strings.About.HotkeysGroup">Горячие клавиши</sys:String>
+    <sys:String x:Key="Strings.About.HotkeyToggle">Включить/выключить перевод:</sys:String>
+    <sys:String x:Key="Strings.About.HotkeyOverlay">Показать/скрыть оверлей:</sys:String>
+    <sys:String x:Key="Strings.About.WhatInside">Что внутри</sys:String>
+    <sys:String x:Key="Strings.About.OcrInside">Распознавание (OCR): три движка — PaddleOCR (нейросеть, по умолчанию, лучшая точность), Tesseract (быстрее, средняя точность), Windows OCR (нужны системные языковые пакеты). Tesseract поддерживает 30+ языков (Европа целиком, кириллица, японский, китайский, корейский). PaddleOCR — 12 семейств моделей включая режим «Авто» (англ+яп+кириллица одновременно).</sys:String>
+    <sys:String x:Key="Strings.About.TranslateInside">Перевод: шесть сервисов — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (open source, любой инстанс), OpenAI (LLM, нужен платный ключ), Anthropic Claude (LLM, нужен платный ключ). Можно настроить резервный провайдер на случай если основной упал.</sys:String>
+    <sys:String x:Key="Strings.About.CaptureInside">Захват экрана: Windows API PrintWindow с флагом RENDERFULLCONTENT — работает с современными играми, Chromium-браузерами и UWP.</sys:String>
+    <sys:String x:Key="Strings.About.FilesGroup">Где хранятся файлы программы</sys:String>
+    <sys:String x:Key="Strings.About.FilesIntro">Все данные хранятся рядом с программой (или в %AppData%\ErneyTranslateTool если папка только для чтения):</sys:String>
+    <sys:String x:Key="Strings.About.FilesList">settings.json — настройки&#x0a;cache.db — кэш переводов&#x0a;history.db — история сессий&#x0a;glossary.db — правила глоссария&#x0a;profiles.db — профили под игру&#x0a;logs\ — журналы работы&#x0a;tessdata\ — модели Tesseract&#x0a;Sdcb.PaddleOCR кэш — модели PaddleOCR (в %LocalAppData%\Sdcb)</sys:String>
+    <sys:String x:Key="Strings.About.DonateGroupTitle">☕  Понравилась программа?</sys:String>
+    <sys:String x:Key="Strings.About.DonateGroupBody">Программа полностью бесплатная и open-source. Если хочется поддержать разработку — можно угостить кофе.</sys:String>
+    <sys:String x:Key="Strings.About.DonateButton">☕  Купить мне кофе</sys:String>
+    <sys:String x:Key="Strings.About.OnlineWarningTitle">⚠ Важно про онлайн-игры</sys:String>
+    <sys:String x:Key="Strings.About.OnlineWarningBody">Программа использует только стандартные Windows API захвата окна и не лезет в память игр. Тем не менее в онлайн-играх с античитом (Vanguard, EAC, BattlEye, Ricochet и т.п.) использование любых внешних программ может нарушать правила игры — на свой страх и риск. Для одиночных игр и визуальных новелл — полностью безопасно.</sys:String>
+    <sys:String x:Key="Strings.About.SystemReqsBody">Windows 10 1809+ или Windows 11 (x64) · .NET 8 Runtime · ~2 ГБ ОЗУ свободно (для PaddleOCR) · Visual C++ Redistributable 2015-2022.</sys:String>
+    <sys:String x:Key="Strings.About.Footer">© 2026 Erney White · github.com/erneywhite/erney-translate-tool</sys:String>
+
+    <!-- Update dialog -->
+    <sys:String x:Key="Strings.UpdateDlg.Title">Доступно обновление</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.Heading">Доступна новая версия</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.HeadingFmt">Доступна версия {0}</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.SubFmt">У тебя сейчас {0}{1}</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.SizeSuffixFmt"> · {0:F0} МБ</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.WhatsNew">Что нового:</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.NoNotes">Описание изменений не указано.</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.OpenPage">Открыть страницу релиза</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.Later">Не сейчас</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.InstallNow">Обновить сейчас</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.Downloading">Скачивание установщика…</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.Launching">Запуск установщика…</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.NoInstaller">К релизу не прикреплён установщик — открой страницу вручную.</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.DownloadCancelled">Скачивание отменено.</sys:String>
+    <sys:String x:Key="Strings.UpdateDlg.DownloadFailedFmt">Не удалось скачать обновление:&#x0a;{0}</sys:String>
+
+    <!-- What's-new dialog -->
+    <sys:String x:Key="Strings.WhatsNew.Title">Что нового</sys:String>
+    <sys:String x:Key="Strings.WhatsNew.HeadingFmt">Что нового в v{0}</sys:String>
+    <sys:String x:Key="Strings.WhatsNew.Subtitle">Программа была обновлена. Вот что изменилось:</sys:String>
+    <sys:String x:Key="Strings.WhatsNew.NoNotes">Описание изменений недоступно. Открой страницу релиза на GitHub для подробностей.</sys:String>
+    <sys:String x:Key="Strings.WhatsNew.OpenGitHub">Открыть на GitHub</sys:String>
+
+    <!-- History -->
+    <sys:String x:Key="Strings.History.Title">История переводов</sys:String>
+    <sys:String x:Key="Strings.History.ExportSession">Экспорт сессии</sys:String>
+    <sys:String x:Key="Strings.History.ClearAll">Очистить историю</sys:String>
+    <sys:String x:Key="Strings.History.Search">Поиск</sys:String>
+    <sys:String x:Key="Strings.History.ColTime">Время</sys:String>
+    <sys:String x:Key="Strings.History.ColLang">Язык</sys:String>
+    <sys:String x:Key="Strings.History.ColOriginal">Оригинал</sys:String>
+    <sys:String x:Key="Strings.History.ColTranslated">Перевод</sys:String>
+
+    <!-- Engine status messages (used from C# via LanguageManager.Get/Format) -->
+    <sys:String x:Key="Strings.Engine.Active">Перевод активен: {0}</sys:String>
+    <sys:String x:Key="Strings.Engine.ActiveWithProfile">Перевод активен: {0}  ·  профиль: {1}</sys:String>
+    <sys:String x:Key="Strings.Engine.Stopped">Перевод остановлен</sys:String>
+    <sys:String x:Key="Strings.Engine.Paused">⏸ Окно «{0}» свёрнуто — пауза</sys:String>
+    <sys:String x:Key="Strings.Engine.NoTranslator">Сервис перевода не настроен — проверьте вкладку «Настройки перевода»</sys:String>
+    <sys:String x:Key="Strings.Engine.FallbackOn">⚠ Основной провайдер ({0}) недоступен — использую резервный ({1})</sys:String>
+    <sys:String x:Key="Strings.Engine.FallbackOff">Основной провайдер ({0}) снова работает</sys:String>
+
+    <!-- Tray -->
+    <sys:String x:Key="Strings.Tray.Open">Открыть</sys:String>
+    <sys:String x:Key="Strings.Tray.Toggle">Запустить / остановить перевод</sys:String>
+    <sys:String x:Key="Strings.Tray.ToggleOverlay">Показать / скрыть оверлей</sys:String>
+    <sys:String x:Key="Strings.Tray.Exit">Выход</sys:String>
+    <sys:String x:Key="Strings.Tray.HeadlineAttention">Erney's Translate Tool — есть уведомление (открой окно)</sys:String>
+    <sys:String x:Key="Strings.Tray.HeadlineError">Erney's Translate Tool — ошибка (открой окно)</sys:String>
+    <sys:String x:Key="Strings.Tray.HeadlinePaused">Erney's Translate Tool — пауза (окно «{0}» свёрнуто)</sys:String>
+    <sys:String x:Key="Strings.Tray.HeadlineActive">Erney's Translate Tool — перевод активен&#x0a;{0}</sys:String>
+    <sys:String x:Key="Strings.Tray.HeadlineIdle">Erney's Translate Tool — ожидание</sys:String>
+    <sys:String x:Key="Strings.Tray.ProfileLine">&#x0a;Профиль: {0}</sys:String>
+    <sys:String x:Key="Strings.Tray.StatsLine">&#x0a;Переведено сегодня: {0} симв.&#x0a;Попадания в кэш: {1:F1}%</sys:String>
+    <sys:String x:Key="Strings.Tray.MinimisedBalloon">Программа свёрнута в трей — кликни иконку чтобы открыть, или ПКМ → «Выход».</sys:String>
+    <sys:String x:Key="Strings.Tray.UpdateBalloonTitle">Доступно обновление</sys:String>
+    <sys:String x:Key="Strings.Tray.UpdateBalloonBody">Версия {0} вышла. Открой «О программе» чтобы установить.</sys:String>
+    <sys:String x:Key="Strings.Tray.UpdateDeferredBody">Версия {0} готова к установке. Открой программу чтобы обновиться.</sys:String>
+
 </ResourceDictionary>

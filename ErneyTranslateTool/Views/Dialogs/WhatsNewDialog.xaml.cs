@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
+using ErneyTranslateTool.Core;
 using Serilog;
 
 namespace ErneyTranslateTool.Views.Dialogs;
@@ -19,10 +20,10 @@ public partial class WhatsNewDialog : Window
         _releaseUrl = releaseUrl;
         _logger = logger;
 
-        TitleText.Text = $"Что нового в v{newVersion}";
-        SubtitleText.Text = "Программа была обновлена. Вот что изменилось:";
+        TitleText.Text = LanguageManager.Format("Strings.WhatsNew.HeadingFmt", newVersion);
+        SubtitleText.Text = LanguageManager.Get("Strings.WhatsNew.Subtitle");
         NotesText.Text = string.IsNullOrWhiteSpace(notes)
-            ? "Описание изменений недоступно. Открой страницу релиза на GitHub для подробностей."
+            ? LanguageManager.Get("Strings.WhatsNew.NoNotes")
             : CleanMarkdown(notes);
     }
 

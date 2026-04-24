@@ -8,25 +8,25 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BackgroundBrush}">
     <TabControl Margin="8,8,8,8" Padding="0">
-        <TabItem Header="Главная">
+        <TabItem Header="{DynamicResource Strings.Tab.Main}">
             <tabs:MainTab DataContext="{Binding MainVM}"/>
         </TabItem>
-        <TabItem Header="Настройки перевода">
+        <TabItem Header="{DynamicResource Strings.Tab.TranslationSettings}">
             <tabs:TranslationSettingsTab DataContext="{Binding SettingsVM}"/>
         </TabItem>
-        <TabItem Header="Настройки оверлея">
+        <TabItem Header="{DynamicResource Strings.Tab.OverlaySettings}">
             <tabs:OverlaySettingsTab DataContext="{Binding SettingsVM}"/>
         </TabItem>
-        <TabItem Header="История">
+        <TabItem Header="{DynamicResource Strings.Tab.History}">
             <tabs:HistoryTab DataContext="{Binding HistoryVM}"/>
         </TabItem>
-        <TabItem Header="Глоссарий">
+        <TabItem Header="{DynamicResource Strings.Tab.Glossary}">
             <tabs:GlossaryTab DataContext="{Binding GlossaryVM}"/>
         </TabItem>
-        <TabItem Header="Профили">
+        <TabItem Header="{DynamicResource Strings.Tab.Profiles}">
             <tabs:ProfilesTab DataContext="{Binding ProfilesVM}"/>
         </TabItem>
-        <TabItem Header="О программе">
+        <TabItem Header="{DynamicResource Strings.Tab.About}">
             <tabs:AboutTab/>
         </TabItem>
     </TabControl>

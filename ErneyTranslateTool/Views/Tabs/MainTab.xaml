@@ -16,7 +16,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Главная"
+        <TextBlock Grid.Row="0" Text="{DynamicResource Strings.Main.Title}"
                    FontSize="24" FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
                    Margin="0,0,0,5"/>
@@ -24,7 +24,7 @@
                    Foreground="{DynamicResource TextSecondaryBrush}"
                    Margin="0,0,0,15"/>
 
-        <GroupBox Grid.Row="2" Header="Окно для перевода"
+        <GroupBox Grid.Row="2" Header="{DynamicResource Strings.Main.WindowGroup}"
                   Style="{DynamicResource DarkGroupBoxStyle}"
                   Margin="0,0,0,15">
             <Grid>
@@ -34,16 +34,16 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
-                           Text="Выбери окно игры/программы из списка ниже. Игра должна быть запущена в оконном или borderless-режиме (полный экран не подходит)."
+                           Text="{DynamicResource Strings.Main.WindowHelp}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            TextWrapping="Wrap"
                            Margin="0,0,0,10"/>
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-                    <Button Content="Обновить список"
+                    <Button Content="{DynamicResource Strings.Main.RefreshList}"
                             Command="{Binding RefreshWindowsCommand}"
                             Padding="12,6" Margin="0,0,10,0"
-                            ToolTip="Пересканировать список открытых окон"/>
-                    <TextBlock Text="Выбрано: " VerticalAlignment="Center"
+                            ToolTip="{DynamicResource Strings.Main.RefreshList.Tooltip}"/>
+                    <TextBlock Text="{DynamicResource Strings.Main.SelectedLabel}" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <TextBlock Text="{Binding SelectedWindowTitle}" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
@@ -75,30 +75,30 @@
                     Foreground="{DynamicResource PrimaryForegroundBrush}"
                     Margin="0,0,10,0"
                     ToolTip="Ctrl+Shift+T"/>
-            <Button Content="Обновить статистику"
+            <Button Content="{DynamicResource Strings.Main.RefreshStats}"
                     Command="{Binding RefreshStatsCommand}"
                     Padding="12,8"/>
         </StackPanel>
 
-        <GroupBox Grid.Row="4" Header="Статистика"
+        <GroupBox Grid.Row="4" Header="{DynamicResource Strings.Main.StatsGroup}"
                   Style="{DynamicResource DarkGroupBoxStyle}">
             <StackPanel Margin="5">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                    <TextBlock Text="Переведено символов сегодня: "
+                    <TextBlock Text="{DynamicResource Strings.Main.CharsToday}"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="{Binding CharactersTranslatedToday}"
                                Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                    <TextBlock Text="Попадания в кэш: "
+                    <TextBlock Text="{DynamicResource Strings.Main.CacheHit}"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:F1}%}"
                                Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Среднее время на фрейм: "
+                    <TextBlock Text="{DynamicResource Strings.Main.FrameTime}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
-                               ToolTip="OCR + перевод + отрисовка оверлея, скользящее среднее"/>
+                               ToolTip="{DynamicResource Strings.Main.FrameTime.Tooltip}"/>
                     <TextBlock Text="{Binding FrameTimeText}"
                                Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
                 </StackPanel>

@@ -86,6 +86,25 @@ public class SettingsViewModel : BaseViewModel
     public ObservableCollection<EngineOption> AppThemes { get; } = new(
         ThemeManager.Available.Select(t => new EngineOption(t.Id, t.DisplayName)));
 
+    /// <summary>UI languages — driven by LanguageManager.Available.</summary>
+    public ObservableCollection<EngineOption> AppLanguages { get; } = new(
+        LanguageManager.Available.Select(l => new EngineOption(l.Id, l.DisplayName)));
+
+    private string _selectedAppLanguage = LanguageManager.Russian;
+    public string SelectedAppLanguage
+    {
+        get => _selectedAppLanguage;
+        set
+        {
+            if (SetProperty(ref _selectedAppLanguage, value))
+            {
+                // Live-apply so the user sees the UI re-render the moment
+                // they pick a language. Save just persists the choice.
+                LanguageManager.Apply(value);
+            }
+        }
+    }
+
     public string SelectedAppTheme
     {
         get => _selectedAppTheme;
@@ -618,6 +637,10 @@ public class SettingsViewModel : BaseViewModel
         SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EnginePaddle : c.OcrEngine;
         UseBestTessdata = c.UseBestTessdata;
         SelectedAppTheme = string.IsNullOrWhiteSpace(c.AppTheme) ? ThemeManager.Dark : c.AppTheme;
+        // Direct field assign — setter would call LanguageManager.Apply()
+        // again redundantly (Apply already ran in App.OnStartup).
+        _selectedAppLanguage = string.IsNullOrWhiteSpace(c.UiLanguage) ? LanguageManager.Russian : c.UiLanguage;
+        OnPropertyChanged(nameof(SelectedAppLanguage));
         CloseToTray = c.CloseToTray;
         CheckForUpdatesOnStartup = c.CheckForUpdatesOnStartup;
         // Source-of-truth for autostart is the registry, not the config —
@@ -809,6 +832,7 @@ public class SettingsViewModel : BaseViewModel
         c.OverlayCornerRadius = OverlayCornerRadius;
         c.FontSizeMode = FontSizeMode;
         c.AppTheme = SelectedAppTheme;
+        c.UiLanguage = SelectedAppLanguage;
         c.CloseToTray = CloseToTray;
         c.CheckForUpdatesOnStartup = CheckForUpdatesOnStartup;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;

@@ -140,7 +140,7 @@ public partial class MainWindow : Window
             if (!_settings.Config.CloseToTrayBalloonShown)
             {
                 _tray?.ShowBalloon("Erney's Translate Tool",
-                    "Программа свёрнута в трей — кликни иконку чтобы открыть, или ПКМ → «Выход».");
+                    LanguageManager.Get("Strings.Tray.MinimisedBalloon"));
                 _settings.Config.CloseToTrayBalloonShown = true;
                 _settings.Save();
             }
@@ -174,13 +174,13 @@ public partial class MainWindow : Window
                 {
                     _pendingUpdate = result;
                     _tray?.SetStickyState(TrayIconState.Attention);
-                    _tray?.ShowBalloon("Доступно обновление",
-                        $"Версия {result.Latest} готова к установке. Открой программу чтобы обновиться.");
+                    _tray?.ShowBalloon(LanguageManager.Get("Strings.Tray.UpdateBalloonTitle"),
+                        LanguageManager.Format("Strings.Tray.UpdateDeferredBody", result.Latest!));
                 }
                 else
                 {
-                    _tray?.ShowBalloon("Доступно обновление",
-                        $"Версия {result.Latest} вышла. Открой «О программе» чтобы установить.");
+                    _tray?.ShowBalloon(LanguageManager.Get("Strings.Tray.UpdateBalloonTitle"),
+                        LanguageManager.Format("Strings.Tray.UpdateBalloonBody", result.Latest!));
                     ShowUpdateDialog(result);
                 }
                 break;

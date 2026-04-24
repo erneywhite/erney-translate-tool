@@ -1,7 +1,7 @@
 <Window x:Class="ErneyTranslateTool.Views.Dialogs.UpdateAvailableDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Доступно обновление"
+        Title="{DynamicResource Strings.UpdateDlg.Title}"
         Width="640" Height="560"
         MinWidth="500" MinHeight="420"
         WindowStartupLocation="CenterOwner"
@@ -20,7 +20,7 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="0,0,0,4">
             <TextBlock x:Name="TitleText"
-                       Text="Доступна новая версия"
+                       Text="{DynamicResource Strings.UpdateDlg.Heading}"
                        FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock x:Name="SubtitleText"
@@ -31,7 +31,7 @@
 
         <!-- Notes label -->
         <TextBlock Grid.Row="1"
-                   Text="Что нового:"
+                   Text="{DynamicResource Strings.UpdateDlg.WhatsNew}"
                    Margin="0,16,0,6"
                    FontSize="13" FontWeight="SemiBold"
                    Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -64,7 +64,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" x:Name="ProgressLabel"
-                           Text="Скачивание…"
+                           Text="{DynamicResource Strings.UpdateDlg.Downloading}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            FontSize="12"/>
                 <TextBlock Grid.Column="1" x:Name="ProgressPercent"
@@ -91,19 +91,19 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0" x:Name="OpenPageButton"
-                    Content="Открыть страницу релиза"
+                    Content="{DynamicResource Strings.UpdateDlg.OpenPage}"
                     Padding="12,7"
                     HorizontalAlignment="Left"
                     Click="OnOpenPageClick"/>
 
             <Button Grid.Column="1" x:Name="LaterButton"
-                    Content="Не сейчас"
+                    Content="{DynamicResource Strings.UpdateDlg.Later}"
                     Padding="14,7"
                     Margin="0,0,8,0"
                     Click="OnLaterClick"/>
 
             <Button Grid.Column="2" x:Name="InstallButton"
-                    Content="Обновить сейчас"
+                    Content="{DynamicResource Strings.UpdateDlg.InstallNow}"
                     Padding="18,7"
                     FontWeight="SemiBold"
                     Background="{DynamicResource PrimaryBrush}"
@@ -113,7 +113,7 @@
                     Click="OnInstallClick"/>
 
             <Button Grid.Column="3" x:Name="CancelButton"
-                    Content="Отмена"
+                    Content="{DynamicResource Strings.Common.Cancel}"
                     Padding="14,7"
                     Margin="8,0,0,0"
                     Visibility="Collapsed"

@@ -120,23 +120,23 @@ public class TrayIconManager : IDisposable
     {
         var menu = new System.Windows.Controls.ContextMenu();
 
-        var open = new System.Windows.Controls.MenuItem { Header = "Открыть" };
+        var open = new System.Windows.Controls.MenuItem { Header = LanguageManager.Get("Strings.Tray.Open") };
         open.Click += (_, _) => ShowMainWindow();
         menu.Items.Add(open);
 
         menu.Items.Add(new System.Windows.Controls.Separator());
 
-        var toggleTranslate = new System.Windows.Controls.MenuItem { Header = "Запустить / остановить перевод" };
+        var toggleTranslate = new System.Windows.Controls.MenuItem { Header = LanguageManager.Get("Strings.Tray.Toggle") };
         toggleTranslate.Click += (_, _) => _mainVm.ToggleFromHotkeyAsync().FireAndForgetSafeAsync();
         menu.Items.Add(toggleTranslate);
 
-        var toggleOverlay = new System.Windows.Controls.MenuItem { Header = "Показать / скрыть оверлей" };
+        var toggleOverlay = new System.Windows.Controls.MenuItem { Header = LanguageManager.Get("Strings.Tray.ToggleOverlay") };
         toggleOverlay.Click += (_, _) => _mainVm.ToggleOverlayFromHotkey();
         menu.Items.Add(toggleOverlay);
 
         menu.Items.Add(new System.Windows.Controls.Separator());
 
-        var exit = new System.Windows.Controls.MenuItem { Header = "Выход" };
+        var exit = new System.Windows.Controls.MenuItem { Header = LanguageManager.Get("Strings.Tray.Exit") };
         exit.Click += (_, _) =>
         {
             _logger.Information("Exit requested via tray menu");
@@ -155,20 +155,20 @@ public class TrayIconManager : IDisposable
             // Don't bracket the active-profile line with "Default" — most
             // users never create profiles and the line would just be noise.
             var profileLine = !_profiles.ActiveProfile.IsDefault
-                ? $"\nПрофиль: {_profiles.ActiveProfile.Name}"
+                ? LanguageManager.Format("Strings.Tray.ProfileLine", _profiles.ActiveProfile.Name)
                 : string.Empty;
-            var stats = $"\nПереведено сегодня: {_settings.Config.CharactersTranslatedToday:N0} симв." +
-                        $"\nПопадания в кэш: {_settings.GetCacheHitRate():F1}%";
+            var stats = LanguageManager.Format("Strings.Tray.StatsLine",
+                _settings.Config.CharactersTranslatedToday, _settings.GetCacheHitRate());
 
             // Highlight sticky attention/error in the tooltip so a glance
             // tells the user *why* the icon is yellow/red.
             var headline = state switch
             {
-                TrayIconState.Attention   => "Erney's Translate Tool — есть уведомление (открой окно)",
-                TrayIconState.Error       => "Erney's Translate Tool — ошибка (открой окно)",
-                TrayIconState.Paused      => $"Erney's Translate Tool — пауза (окно «{_engine.TargetWindowTitle}» свёрнуто)",
-                TrayIconState.Translating => $"Erney's Translate Tool — перевод активен\n{_engine.TargetWindowTitle}",
-                _                         => "Erney's Translate Tool — ожидание",
+                TrayIconState.Attention   => LanguageManager.Get("Strings.Tray.HeadlineAttention"),
+                TrayIconState.Error       => LanguageManager.Get("Strings.Tray.HeadlineError"),
+                TrayIconState.Paused      => LanguageManager.Format("Strings.Tray.HeadlinePaused", _engine.TargetWindowTitle),
+                TrayIconState.Translating => LanguageManager.Format("Strings.Tray.HeadlineActive", _engine.TargetWindowTitle),
+                _                         => LanguageManager.Get("Strings.Tray.HeadlineIdle"),
             };
             _icon.ToolTipText = headline + profileLine + stats;
 
