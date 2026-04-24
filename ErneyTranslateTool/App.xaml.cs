@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Threading;
 using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Core.Ocr;
+using ErneyTranslateTool.Core.Updates;
 using ErneyTranslateTool.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -132,6 +133,7 @@ public partial class App : Application
         services.AddSingleton<HotkeyService>();
         services.AddSingleton<WindowPickerService>();
         services.AddSingleton<TranslationEngine>();
+        services.AddSingleton<UpdateChecker>();
 
         // ViewModels
         services.AddSingleton<ViewModels.MainViewModel>();

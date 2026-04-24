@@ -59,6 +59,13 @@ public class AppConfig
     /// </summary>
     public string AppTheme { get; set; } = "Dark";
 
+    /// <summary>When true, the [×] button minimises to tray instead of exiting.</summary>
+    public bool CloseToTray { get; set; } = true;
+
+    /// <summary>When true, the app pings GitHub Releases on startup to look
+    /// for a newer version. Failed checks are silent.</summary>
+    public bool CheckForUpdatesOnStartup { get; set; } = true;
+
     /// <summary>
     /// Selected window handle (HWND) for capture, stored as long because
     /// System.Text.Json refuses to serialize IntPtr. Round-trip via the
