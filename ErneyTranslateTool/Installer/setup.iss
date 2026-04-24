@@ -79,13 +79,5 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Запустить {#MyAppName}
 Type: filesandordirs; Name: "{app}\logs"
 Type: filesandordirs; Name: "{app}\tessdata"
 
-[Code]
-function InitializeSetup(): Boolean;
-begin
-  Result := True;
-  if not IsWindowsVersionOrNewer(10, 0, 17763) then
-  begin
-    MsgBox('Требуется Windows 10 версии 1809 или новее.', mbError, MB_OK);
-    Result := False;
-  end;
-end;
+; Минимальная версия Windows контролируется через MinVersion= в [Setup] —
+; Inno Setup сам остановит установку и покажет нативное сообщение.

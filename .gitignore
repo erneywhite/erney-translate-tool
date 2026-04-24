@@ -5,6 +5,9 @@
 # Local-only test scratchpads
 /captureTest/
 
+# Inno Setup compiler output (release artefacts uploaded to GitHub Releases)
+/ErneyTranslateTool/Installer/Output/
+
 # Visual Studio
 .vs/
 *.user
