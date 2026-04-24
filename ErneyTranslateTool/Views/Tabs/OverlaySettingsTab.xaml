@@ -56,6 +56,41 @@
                 </StackPanel>
             </GroupBox>
 
+            <GroupBox Header="Анимация и авто-скрытие" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <CheckBox Content="Плавное появление переводов (fade-in ~0.2 сек)"
+                              IsChecked="{Binding OverlayFadeInEnabled}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
+                              Margin="0,0,0,12"/>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="Скрывать оверлей если текст не меняется:"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding AutoHideOptions}"
+                                  SelectedItem="{Binding SelectedAutoHideOption}"
+                                  DisplayMemberPath="DisplayName"
+                                  Width="240"
+                                  HorizontalAlignment="Left"/>
+                    </Grid>
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               Margin="0,8,0,0">
+                        Если содержимое перевода не меняется заданное время — оверлей плавно
+                        скрывается и не закрывает уже прочитанный диалог. Появится снова сам,
+                        как только OCR увидит новый текст.
+                    </TextBlock>
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="Готовые темы оверлея" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
                     <TextBlock Text="Один клик — применятся фон, цвет текста, прозрачность и скругление углов."

@@ -55,6 +55,23 @@ public class AppConfig
     public double OverlayCornerRadius { get; set; } = 4;
 
     /// <summary>
+    /// When true, newly-appearing translation labels fade in over ~180 ms
+    /// instead of popping into existence. Pure visual sugar — has no
+    /// effect on translation accuracy or performance.
+    /// </summary>
+    public bool OverlayFadeInEnabled { get; set; } = true;
+
+    /// <summary>
+    /// If the OCR result hasn't changed for this many seconds, the
+    /// overlay fades out so it stops covering the game's static UI
+    /// (long dialogue you've already read, idle menu, etc.). The next
+    /// content change brings it back. 0 = never auto-hide.
+    /// Default 30 seconds: long enough to read a paragraph, short
+    /// enough that an unchanging menu doesn't keep covering the screen.
+    /// </summary>
+    public int OverlayAutoHideAfterSeconds { get; set; } = 30;
+
+    /// <summary>
     /// Application theme id ("Dark", "Light", "Nord"). See ThemeManager.
     /// </summary>
     public string AppTheme { get; set; } = "Dark";

@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using ErneyTranslateTool.Models;
 
 namespace ErneyTranslateTool.Views;
@@ -39,10 +41,21 @@ public partial class OverlayWindow : Window
     // (no Clear/Add flicker, no re-layout).
     private readonly Dictionary<string, Border> _activeBorders = new(StringComparer.Ordinal);
 
+    // Auto-hide: starts/restarts whenever SetRegions arrives with new
+    // content (different fingerprint). When it ticks, the canvas fades
+    // out. Next content change cancels the fade and brings it back.
+    private readonly DispatcherTimer _autoHideTimer = new();
+    // Animation durations chosen subjectively: 180 ms feels "snappy but
+    // smooth"; the auto-hide fade is a touch slower so the disappearance
+    // doesn't yank attention away.
+    private static readonly Duration FadeInDuration  = new(TimeSpan.FromMilliseconds(180));
+    private static readonly Duration FadeOutDuration = new(TimeSpan.FromMilliseconds(400));
+
     public OverlayWindow()
     {
         InitializeComponent();
         SourceInitialized += OnSourceInitialized;
+        _autoHideTimer.Tick += OnAutoHideTick;
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -106,8 +119,18 @@ public partial class OverlayWindow : Window
             && RegionCanvas.Children.Count > 0)
         {
             _lastByOriginal = next;
+            // Same content as last frame — don't reset the auto-hide
+            // timer (this is exactly the "static text" case that the
+            // feature is for), don't touch the canvas.
             return;
         }
+
+        // Fresh content arrived. Cancel any in-flight fade-out and
+        // make sure the canvas is fully opaque again before we draw
+        // the new borders.
+        RegionCanvas.BeginAnimation(UIElement.OpacityProperty, null);
+        RegionCanvas.Opacity = 1.0;
+        RestartAutoHide(cfg.OverlayAutoHideAfterSeconds);
 
         // If only style changed (theme switch / colour tweak), wipe and
         // rebuild — every Border has its old brushes baked in.
@@ -203,6 +226,17 @@ public partial class OverlayWindow : Window
             Canvas.SetTop(border, s.Rect.Y);
             RegionCanvas.Children.Add(border);
             _activeBorders[s.Text] = border;
+
+            // Fade-in only fires for newly-created borders — diff path
+            // (border existed last frame, just repositioned) skips this
+            // branch via the `continue` above, so unchanged labels don't
+            // re-animate every frame.
+            if (cfg.OverlayFadeInEnabled)
+            {
+                border.Opacity = 0;
+                border.BeginAnimation(UIElement.OpacityProperty,
+                    new DoubleAnimation(0.0, 1.0, FadeInDuration));
+            }
         }
 
         // Drop borders whose translations no longer appear in this frame.
@@ -224,6 +258,29 @@ public partial class OverlayWindow : Window
         Top = windowRect.Top;
         Width = Math.Max(1, windowRect.Width);
         Height = Math.Max(1, windowRect.Height);
+    }
+
+    /// <summary>
+    /// (Re)arm the auto-hide timer. Stops any prior schedule first; passing
+    /// 0 (or a negative value) leaves it stopped — that's how the user's
+    /// "never auto-hide" preference flows through.
+    /// </summary>
+    private void RestartAutoHide(int seconds)
+    {
+        _autoHideTimer.Stop();
+        if (seconds <= 0) return;
+        _autoHideTimer.Interval = TimeSpan.FromSeconds(seconds);
+        _autoHideTimer.Start();
+    }
+
+    private void OnAutoHideTick(object? sender, EventArgs e)
+    {
+        _autoHideTimer.Stop();
+        // Fade the whole overlay canvas to invisible — keeps the click-through
+        // window itself alive (no need to recreate borders), so when the
+        // next content change arrives we just snap Opacity back to 1.
+        var fade = new DoubleAnimation(RegionCanvas.Opacity, 0.0, FadeOutDuration);
+        RegionCanvas.BeginAnimation(UIElement.OpacityProperty, fade);
     }
 
     private static double Snap(double v) => Math.Round(v / SnapGrid) * SnapGrid;

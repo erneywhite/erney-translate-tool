@@ -56,6 +56,8 @@ public class SettingsViewModel : BaseViewModel
     private bool _closeToTray = true;
     private bool _checkForUpdatesOnStartup = true;
     private bool _autoStartWithWindows;
+    private bool _overlayFadeInEnabled = true;
+    private AutoHideOption? _selectedAutoHideOption;
 
     private static Brush MakeBrush(string hex)
     {
@@ -128,6 +130,30 @@ public class SettingsViewModel : BaseViewModel
                 else AutoStartManager.Disable(_logger);
             }
         }
+    }
+
+    /// <summary>Bound to AppConfig.OverlayFadeInEnabled — saved on next Save click.</summary>
+    public bool OverlayFadeInEnabled
+    {
+        get => _overlayFadeInEnabled;
+        set => SetProperty(ref _overlayFadeInEnabled, value);
+    }
+
+    /// <summary>Predefined auto-hide intervals + an "off" entry. 0 means never auto-hide.</summary>
+    public ObservableCollection<AutoHideOption> AutoHideOptions { get; } = new()
+    {
+        new(0,   "Никогда"),
+        new(10,  "10 секунд"),
+        new(30,  "30 секунд (по умолчанию)"),
+        new(60,  "1 минута"),
+        new(120, "2 минуты"),
+        new(300, "5 минут"),
+    };
+
+    public AutoHideOption? SelectedAutoHideOption
+    {
+        get => _selectedAutoHideOption;
+        set => SetProperty(ref _selectedAutoHideOption, value);
     }
 
     /// <summary>Pre-baked overlay colour combinations users can pick with one click.</summary>
@@ -515,6 +541,10 @@ public class SettingsViewModel : BaseViewModel
         _autoStartWithWindows = AutoStartManager.IsEnabled(_logger);
         OnPropertyChanged(nameof(AutoStartWithWindows));
 
+        OverlayFadeInEnabled = c.OverlayFadeInEnabled;
+        SelectedAutoHideOption = AutoHideOptions.FirstOrDefault(o => o.Seconds == c.OverlayAutoHideAfterSeconds)
+            ?? AutoHideOptions.First(o => o.Seconds == 30);
+
         // Match the saved limit to one of our preset options; fall back to
         // 200 MB if the stored value isn't in the dropdown (manual edit).
         SelectedCacheSizeOption = CacheSizeOptions.FirstOrDefault(o => o.Mb == c.MaxCacheSizeMb)
@@ -688,6 +718,9 @@ public class SettingsViewModel : BaseViewModel
         c.CheckForUpdatesOnStartup = CheckForUpdatesOnStartup;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
+        c.OverlayFadeInEnabled = OverlayFadeInEnabled;
+        if (SelectedAutoHideOption != null)
+            c.OverlayAutoHideAfterSeconds = SelectedAutoHideOption.Seconds;
     }
 
     private void Save()
@@ -732,6 +765,7 @@ public record OcrLanguageOption(string Tag, string DisplayName);
 public record EngineOption(string Id, string DisplayName);
 public record OverlayPreset(string Name, string Background, string Text, double Opacity, double CornerRadius);
 public record CacheSizeOption(int Mb, string DisplayName);
+public record AutoHideOption(int Seconds, string DisplayName);
 
 public class TessdataItem : BaseViewModel
 {
