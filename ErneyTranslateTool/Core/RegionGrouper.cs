@@ -62,13 +62,14 @@ public static class RegionGrouper
         var hRatio = Math.Min(lb.Height, cb.Height) / Math.Max(lb.Height, cb.Height);
         if (hRatio < 0.65) return false;
 
-        // Roughly comparable widths. A speaker-name banner ("Emily" in a
-        // narrow ornate box) sits just above the dialog body but is often
-        // 5-10x narrower — without this check the grouper would merge them
-        // into one giant overlay covering both. A real wrapped paragraph,
-        // even with a short last line, usually keeps width ratio above ~0.4.
-        var wRatio = Math.Min(lb.Width, cb.Width) / Math.Max(lb.Width, cb.Width);
-        if (wRatio < 0.4) return false;
+        // Directional width check. A narrow box on top of a much wider one
+        // is the "speaker name above dialog" pattern — don't merge those.
+        // The opposite (wide line followed by a short tail like one wrapped
+        // word) is just the end of a paragraph and SHOULD merge, otherwise
+        // the translator only sees the first line and the trailing word
+        // gets translated in isolation ("...маленькой" + "девочка." instead
+        // of "...маленькой девочкой").
+        if (lb.Width < cb.Width * 0.4) return false;
 
         // Candidate sits below `last` with a gap no bigger than ~1.3 line
         // heights — covers normal line spacing (0.3-0.6 H) plus a generous
