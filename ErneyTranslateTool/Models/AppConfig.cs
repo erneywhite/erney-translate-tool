@@ -62,6 +62,10 @@ public class AppConfig
     /// <summary>When true, the [×] button minimises to tray instead of exiting.</summary>
     public bool CloseToTray { get; set; } = true;
 
+    /// <summary>One-shot flag: have we shown the "minimised to tray" balloon
+    /// at least once? Set to true after the first close so we don't nag.</summary>
+    public bool CloseToTrayBalloonShown { get; set; } = false;
+
     /// <summary>When true, the app pings GitHub Releases on startup to look
     /// for a newer version. Failed checks are silent.</summary>
     public bool CheckForUpdatesOnStartup { get; set; } = true;

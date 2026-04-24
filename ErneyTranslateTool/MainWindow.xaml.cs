@@ -86,8 +86,16 @@ public partial class MainWindow : Window
         {
             e.Cancel = true;
             Hide();
-            _tray?.ShowBalloon("Erney's Translate Tool",
-                "Программа свёрнута в трей — кликни иконку чтобы открыть, или ПКМ → «Выход».");
+
+            // Only show the explanation balloon the first time — after that
+            // the user knows the pattern and the popup just becomes noise.
+            if (!_settings.Config.CloseToTrayBalloonShown)
+            {
+                _tray?.ShowBalloon("Erney's Translate Tool",
+                    "Программа свёрнута в трей — кликни иконку чтобы открыть, или ПКМ → «Выход».");
+                _settings.Config.CloseToTrayBalloonShown = true;
+                _settings.Save();
+            }
         }
     }
 
