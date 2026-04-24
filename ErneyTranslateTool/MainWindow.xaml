@@ -36,11 +36,17 @@
                 <StackPanel DockPanel.Dock="Top"
                             Orientation="Horizontal"
                             Margin="14,18,14,14">
-                    <Image Source="pack://application:,,,/Resources/Icons/app.ico"
-                           Width="32" Height="32"
+                    <!-- High-res PNG logo (256+ px source) downscaled to 36
+                         with HighQuality interpolation. Replaces the
+                         previous app.ico-based image which was visibly
+                         soft because the embedded 32x32 ICO frame got
+                         used directly. -->
+                    <Image Source="pack://application:,,,/Resources/Icons/app-logo.png"
+                           Width="36" Height="36"
                            Margin="0,0,10,0"
                            VerticalAlignment="Center"
-                           RenderOptions.BitmapScalingMode="HighQuality"/>
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           SnapsToDevicePixels="True"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Erney's"
                                    FontWeight="Bold" FontSize="15"

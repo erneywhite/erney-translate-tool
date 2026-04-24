@@ -161,7 +161,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">The "Default" profile cannot be deleted</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.12 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.13 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Check for updates</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub repository</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">What is it</sys:String>
