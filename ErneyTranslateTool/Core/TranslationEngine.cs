@@ -74,6 +74,14 @@ public class TranslationEngine : IDisposable
     private void OnCapturePauseChanged(object? sender, bool isPaused)
     {
         if (!IsRunning) return;
+        // The capture loop stops feeding us frames while the window is
+        // iconic, but the overlay is its own WPF window — without an
+        // explicit Hide() it sticks around showing the last translation
+        // until the next frame arrives. Race-y in particular at the
+        // moment of minimisation: an in-flight frame can sneak through
+        // and reposition the overlay to (-32000,-32000), which is why
+        // a second minimise "fixed" the visual but left the bug latent.
+        if (isPaused) _overlay.Hide();
         StatusUpdated?.Invoke(this, isPaused
             ? $"⏸ Окно «{TargetWindowTitle}» свёрнуто — пауза"
             : $"Перевод активен: {TargetWindowTitle}");

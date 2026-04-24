@@ -155,6 +155,7 @@ public partial class App : Application
         services.AddSingleton(sp => new CacheRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
         services.AddSingleton(sp => new HistoryRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
         services.AddSingleton(sp => new TessdataManager(AppDataPath, sp.GetRequiredService<ILogger>()));
+        services.AddSingleton(sp => new Data.GlossaryRepository(AppDataPath, sp.GetRequiredService<ILogger>()));
 
         // Core services
         services.AddSingleton<CaptureService>();
@@ -164,6 +165,7 @@ public partial class App : Application
         services.AddSingleton<HotkeyService>();
         services.AddSingleton<WindowPickerService>();
         services.AddSingleton<TranslationEngine>();
+        services.AddSingleton<Core.Glossary.GlossaryApplier>();
         services.AddSingleton<UpdateChecker>();
         services.AddSingleton<UpdateDownloader>();
 
@@ -171,6 +173,7 @@ public partial class App : Application
         services.AddSingleton<ViewModels.MainViewModel>();
         services.AddSingleton<ViewModels.SettingsViewModel>();
         services.AddSingleton<ViewModels.HistoryViewModel>();
+        services.AddSingleton<ViewModels.GlossaryViewModel>();
 
         services.AddSingleton<MainWindow>();
     }
