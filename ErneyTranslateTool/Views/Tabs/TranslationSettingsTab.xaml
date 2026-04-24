@@ -383,29 +383,47 @@
             </GroupBox>
 
             <GroupBox Header="{DynamicResource Strings.TS.Hotkeys}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="220"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <StackPanel Margin="5">
+                    <!-- v1.0.14: HotkeyCaptureBox replaces the old plain TextBox.
+                         Click → press combo → it's saved AND re-registered with
+                         Win32 immediately (no restart needed — that was the
+                         "I changed it but it doesn't work" v1.0.13 bug). -->
+                    <TextBlock Text="{DynamicResource Strings.TS.HotkeysHelp}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,10"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyToggle}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="0" Grid.Column="1"
-                             Text="{Binding ToggleTranslationHotkey, UpdateSourceTrigger=PropertyChanged}"
-                             Margin="0,0,0,8"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyToggle}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="0" Grid.Column="1"
+                                                   Hotkey="{Binding ToggleTranslationHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   Margin="0,0,0,8"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyOverlay}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="1" Grid.Column="1"
-                             Text="{Binding ToggleOverlayHotkey, UpdateSourceTrigger=PropertyChanged}"/>
-                </Grid>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyOverlay}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="1" Grid.Column="1"
+                                                   Hotkey="{Binding ToggleOverlayHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyPause}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="2" Grid.Column="1"
+                                                   Hotkey="{Binding PauseTranslationHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </StackPanel>
             </GroupBox>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

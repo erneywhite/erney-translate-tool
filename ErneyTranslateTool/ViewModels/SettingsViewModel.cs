@@ -53,6 +53,7 @@ public class SettingsViewModel : BaseViewModel
     private string _fontSizeMode = "Auto";
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
+    private string _pauseTranslationHotkey = string.Empty;
     private string _selectedOcrEngine = OcrService.EnginePaddle;
     private OcrLanguageOption? _selectedOcrLanguage;
     private string _saveStatus = string.Empty;
@@ -463,16 +464,61 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _fontSizeMode, value);
     }
 
+    /// <summary>
+    /// Raised whenever any of the three hotkey strings changes. MainWindow
+    /// listens and re-runs RegisterHotkeys() so the new combo takes effect
+    /// immediately without a restart — fixes the v1.0.13 bug where the
+    /// stored string updated but the live registration didn't.
+    /// </summary>
+    public event EventHandler? HotkeysChanged;
+
     public string ToggleTranslationHotkey
     {
         get => _toggleTranslationHotkey;
-        set => SetProperty(ref _toggleTranslationHotkey, value);
+        set
+        {
+            if (SetProperty(ref _toggleTranslationHotkey, value))
+            {
+                _appSettings.Config.ToggleTranslationHotkey = value ?? string.Empty;
+                _appSettings.Save();
+                HotkeysChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
     }
 
     public string ToggleOverlayHotkey
     {
         get => _toggleOverlayHotkey;
-        set => SetProperty(ref _toggleOverlayHotkey, value);
+        set
+        {
+            if (SetProperty(ref _toggleOverlayHotkey, value))
+            {
+                _appSettings.Config.ToggleOverlayHotkey = value ?? string.Empty;
+                _appSettings.Save();
+                HotkeysChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Optional pause/resume hotkey. Empty = unset (no global registration).
+    /// Doesn't tear down the engine — just freezes frame processing while
+    /// keeping the capture window, profile, OCR backend and LLM context
+    /// intact. Useful in long sessions when you want a "shut up for a sec"
+    /// chord during cutscenes.
+    /// </summary>
+    public string PauseTranslationHotkey
+    {
+        get => _pauseTranslationHotkey;
+        set
+        {
+            if (SetProperty(ref _pauseTranslationHotkey, value))
+            {
+                _appSettings.Config.PauseTranslationHotkey = value ?? string.Empty;
+                _appSettings.Save();
+                HotkeysChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
     }
 
     public string SelectedOcrEngine
@@ -633,8 +679,15 @@ public class SettingsViewModel : BaseViewModel
         ManualFontSize = c.ManualFontSize;
         OverlayCornerRadius = c.OverlayCornerRadius;
         FontSizeMode = c.FontSizeMode;
-        ToggleTranslationHotkey = c.ToggleTranslationHotkey;
-        ToggleOverlayHotkey = c.ToggleOverlayHotkey;
+        // Direct field assign — setter would trigger HotkeysChanged + Save
+        // on every load. We just want to mirror the persisted value into
+        // the VM without re-registering.
+        _toggleTranslationHotkey = c.ToggleTranslationHotkey;
+        OnPropertyChanged(nameof(ToggleTranslationHotkey));
+        _toggleOverlayHotkey = c.ToggleOverlayHotkey;
+        OnPropertyChanged(nameof(ToggleOverlayHotkey));
+        _pauseTranslationHotkey = c.PauseTranslationHotkey;
+        OnPropertyChanged(nameof(PauseTranslationHotkey));
 
         SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EnginePaddle : c.OcrEngine;
         UseBestTessdata = c.UseBestTessdata;
@@ -845,6 +898,7 @@ public class SettingsViewModel : BaseViewModel
         c.CheckForUpdatesOnStartup = CheckForUpdatesOnStartup;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
+        c.PauseTranslationHotkey = PauseTranslationHotkey ?? string.Empty;
     }
 
     private void Save()

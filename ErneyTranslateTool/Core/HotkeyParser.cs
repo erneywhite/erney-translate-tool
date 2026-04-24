@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Input;
 
@@ -58,5 +59,33 @@ public static class HotkeyParser
 
         virtualKey = KeyInterop.VirtualKeyFromKey(key);
         return virtualKey != 0;
+    }
+
+    /// <summary>
+    /// Render a WPF <see cref="ModifierKeys"/> + <see cref="Key"/> pair back
+    /// into the canonical "Ctrl+Shift+T" string format used by
+    /// <see cref="TryParse"/>. The HotkeyCaptureBox UserControl uses this
+    /// to convert the user's key-press into a stored, parse-friendly value.
+    /// Returns empty string if there's no real (non-modifier) key — there's
+    /// nothing useful to serialise without one.
+    /// </summary>
+    public static string Format(ModifierKeys modifiers, Key key)
+    {
+        if (key == Key.None) return string.Empty;
+        // Ignore the standalone modifier keys themselves — those land in the
+        // modifiers bitmask, not the key slot.
+        if (key is Key.LeftCtrl or Key.RightCtrl
+                 or Key.LeftShift or Key.RightShift
+                 or Key.LeftAlt or Key.RightAlt
+                 or Key.LWin or Key.RWin)
+            return string.Empty;
+
+        var parts = new List<string>(4);
+        if (modifiers.HasFlag(ModifierKeys.Control)) parts.Add("Ctrl");
+        if (modifiers.HasFlag(ModifierKeys.Alt)) parts.Add("Alt");
+        if (modifiers.HasFlag(ModifierKeys.Shift)) parts.Add("Shift");
+        if (modifiers.HasFlag(ModifierKeys.Windows)) parts.Add("Win");
+        parts.Add(key.ToString());
+        return string.Join("+", parts);
     }
 }

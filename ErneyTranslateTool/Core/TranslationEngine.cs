@@ -44,6 +44,15 @@ public class TranslationEngine : IDisposable
     public IntPtr TargetWindowHandle { get; private set; }
     public string TargetWindowTitle { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// True when the user explicitly paused the engine (via hotkey or
+    /// menu). Different from <see cref="CaptureService.IsPaused"/> which
+    /// pauses automatically when the target window is iconic — they
+    /// compose: a user-paused + iconic window stays paused, and resuming
+    /// only flips the user flag.
+    /// </summary>
+    public bool IsUserPaused { get; private set; }
+
     /// <summary>Last completed frame's end-to-end processing time in ms (0 if none yet).</summary>
     public long LastFrameMs => _lastFrameMs;
 
@@ -52,6 +61,8 @@ public class TranslationEngine : IDisposable
 
     public event EventHandler? StateChanged;
     public event EventHandler<string>? StatusUpdated;
+    /// <summary>Raised when <see cref="IsUserPaused"/> flips. Tray + main VM listen so the icon and status text stay accurate.</summary>
+    public event EventHandler<bool>? UserPauseChanged;
 
     public TranslationEngine(
         CaptureService capture,
@@ -154,6 +165,13 @@ public class TranslationEngine : IDisposable
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
         IsRunning = false;
+        // Clear user-pause on stop so the next Start doesn't silently
+        // inherit it and leave the user wondering why nothing's happening.
+        if (IsUserPaused)
+        {
+            IsUserPaused = false;
+            UserPauseChanged?.Invoke(this, false);
+        }
         StatusUpdated?.Invoke(this, LanguageManager.Get("Strings.Engine.Stopped"));
         StateChanged?.Invoke(this, EventArgs.Empty);
         _logger.Information("Engine stopped");
@@ -167,8 +185,50 @@ public class TranslationEngine : IDisposable
             _overlay.UpdatePosition(TargetWindowHandle);
     }
 
+    /// <summary>
+    /// Toggle the user-pause flag. While paused, OnFrameCaptured drops
+    /// frames immediately (preserving the OCR backend, LLM context, profile
+    /// and stats — only the per-frame work is suspended), and the overlay
+    /// is hidden so it doesn't display a stale translation indefinitely.
+    /// No-op when the engine is stopped — there's nothing to pause.
+    /// </summary>
+    public void TogglePause()
+    {
+        if (!IsRunning) return;
+        IsUserPaused = !IsUserPaused;
+        if (IsUserPaused)
+        {
+            _overlay.Hide();
+            StatusUpdated?.Invoke(this, LanguageManager.Format("Strings.Engine.UserPaused", TargetWindowTitle));
+        }
+        else
+        {
+            // Reset the dedup hash so the very next frame is treated as
+            // novel — otherwise an unchanged scene would be skipped and
+            // the user would see no overlay until something moves.
+            _lastFrameHash = 0;
+            // Reproduce the same status string StartAsync emits — profile
+            // name is shown when one's active, plain title otherwise.
+            var profile = _profiles.ActiveProfile;
+            StatusUpdated?.Invoke(this, profile.IsDefault
+                ? LanguageManager.Format("Strings.Engine.Active", TargetWindowTitle)
+                : LanguageManager.Format("Strings.Engine.ActiveWithProfile", TargetWindowTitle, profile.Name));
+        }
+        UserPauseChanged?.Invoke(this, IsUserPaused);
+    }
+
     private async void OnFrameCaptured(object? sender, Bitmap bitmap)
     {
+        // User-pause early-out: throw the frame away without taking the
+        // single-flight slot, so the moment the user resumes the next
+        // frame can land immediately. No state mutation here — capture
+        // service keeps polling, OCR/LLM/overlay just skip work.
+        if (IsUserPaused)
+        {
+            bitmap.Dispose();
+            return;
+        }
+
         // Single-flight: drop frames if previous still being processed.
         if (Interlocked.Exchange(ref _processingFlag, 1) == 1)
         {

@@ -5,8 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Core.Glossary;
 using ErneyTranslateTool.Models;
 using ErneyTranslateTool.Data;
+using ErneyTranslateTool.Views.Dialogs;
 using Microsoft.Win32;
 
 namespace ErneyTranslateTool.ViewModels;
@@ -14,20 +17,31 @@ namespace ErneyTranslateTool.ViewModels;
 public class HistoryViewModel : BaseViewModel
 {
     private readonly HistoryRepository _historyRepository;
+    private readonly GlossaryRepository _glossaryRepository;
+    private readonly GlossaryApplier _glossaryApplier;
+    private readonly AppSettings _settings;
     private SessionHistory? _selectedSession;
     private string _searchQuery = string.Empty;
 
     public ObservableCollection<SessionHistory> Sessions { get; } = new();
     public ObservableCollection<TranslationEntry> SessionEntries { get; } = new();
 
-    public HistoryViewModel(HistoryRepository historyRepository)
+    public HistoryViewModel(
+        HistoryRepository historyRepository,
+        GlossaryRepository glossaryRepository,
+        GlossaryApplier glossaryApplier,
+        AppSettings settings)
     {
         _historyRepository = historyRepository;
+        _glossaryRepository = glossaryRepository;
+        _glossaryApplier = glossaryApplier;
+        _settings = settings;
 
         RefreshCommand = new RelayCommand(_ => Refresh());
         ClearHistoryCommand = new RelayCommand(_ => ClearHistory());
         ExportSessionCommand = new RelayCommand(_ => ExportSession(), _ => SelectedSession != null);
         SearchCommand = new RelayCommand(_ => DoSearch());
+        AddToGlossaryCommand = new RelayCommand(p => AddToGlossary(p as TranslationEntry));
 
         Refresh();
     }
@@ -57,6 +71,14 @@ public class HistoryViewModel : BaseViewModel
     public ICommand ClearHistoryCommand { get; }
     public ICommand ExportSessionCommand { get; }
     public ICommand SearchCommand { get; }
+    /// <summary>
+    /// Right-click → "Add to glossary" entry point. Takes the
+    /// <see cref="TranslationEntry"/> the user clicked on as parameter,
+    /// pops the prefilled <see cref="AddToGlossaryDialog"/>, and on
+    /// confirmation writes a new rule + invalidates the live applier so
+    /// the next translation immediately sees it.
+    /// </summary>
+    public ICommand AddToGlossaryCommand { get; }
 
     public void Refresh()
     {
@@ -148,4 +170,37 @@ public class HistoryViewModel : BaseViewModel
     }
 
     private static string Csv(string s) => "\"" + (s ?? string.Empty).Replace("\"", "\"\"") + "\"";
+
+    /// <summary>
+    /// Open the prefilled glossary dialog for a history row, persist on
+    /// confirmation, and invalidate the live <see cref="GlossaryApplier"/>
+    /// so the rule fires from the very next translation. The dialog
+    /// pre-trims sentences for the user — they just chop down to the
+    /// proper noun and confirm.
+    /// </summary>
+    private void AddToGlossary(TranslationEntry? entry)
+    {
+        if (entry == null) return;
+        var dlg = new AddToGlossaryDialog(
+            entry.OriginalText ?? string.Empty,
+            entry.TranslatedText ?? string.Empty,
+            _settings.Config.TargetLanguage)
+        {
+            Owner = Application.Current?.MainWindow
+        };
+        if (dlg.ShowDialog() != true || dlg.Result == null) return;
+
+        try
+        {
+            _glossaryRepository.Add(dlg.Result);
+            _glossaryApplier.Invalidate();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                LanguageManager.Format("Strings.AddToGlossary.SaveErrorFmt", ex.Message),
+                LanguageManager.Get("Strings.AddToGlossary.Title"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
 }

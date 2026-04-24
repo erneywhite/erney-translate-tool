@@ -85,6 +85,7 @@ public class TrayIconManager : IDisposable
         // capture loop's pause/resume transitions.
         _engine.StateChanged += (_, _) => RefreshIconAndTooltip();
         _engine.StatusUpdated += (_, _) => RefreshIconAndTooltip();
+        _engine.UserPauseChanged += (_, _) => RefreshIconAndTooltip();
         _capture.PauseStateChanged += (_, _) => RefreshIconAndTooltip();
         _profiles.ActiveProfileChanged += (_, _) => RefreshIconAndTooltip();
         RefreshIconAndTooltip();
@@ -100,7 +101,11 @@ public class TrayIconManager : IDisposable
     {
         if (_stickyState == TrayIconState.Attention || _stickyState == TrayIconState.Error)
             return _stickyState;
-        if (_engine.IsRunning && _capture.IsPaused) return TrayIconState.Paused;
+        // User-initiated pause counts the same as window-iconic pause —
+        // both leave the engine alive but processing nothing, and the user
+        // benefits from the same blinking dot to remember they paused on
+        // purpose.
+        if (_engine.IsRunning && (_capture.IsPaused || _engine.IsUserPaused)) return TrayIconState.Paused;
         return _engine.IsRunning ? TrayIconState.Translating : TrayIconState.Idle;
     }
 

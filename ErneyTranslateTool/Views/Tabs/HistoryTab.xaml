@@ -69,6 +69,7 @@
             </ListBox>
 
             <DataGrid Grid.Column="1"
+                      x:Name="EntriesGrid"
                       ItemsSource="{Binding SessionEntries}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
@@ -78,6 +79,30 @@
                       RowBackground="{DynamicResource BackgroundBrush}"
                       AlternatingRowBackground="{DynamicResource AlternateRowBrush}"
                       BorderBrush="{DynamicResource BorderBrush}">
+                <!-- v1.0.14: right-click any row → "Add to glossary" so the
+                     user can promote a misbehaving translation into a
+                     permanent rule without leaving the history view.
+                     The RowStyle EventSetter selects the right-clicked row
+                     first (WPF DataGrid doesn't do this by default), then
+                     the ContextMenu on the grid itself reads SelectedItem
+                     and dispatches the VM command. ContextMenu sits outside
+                     the visual tree so we resolve everything via
+                     RelativeSource AncestorType=ContextMenu →
+                     PlacementTarget (= the DataGrid) → DataContext / SelectedItem. -->
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
+                        <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnRowRightClick"/>
+                    </Style>
+                </DataGrid.RowStyle>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{DynamicResource Strings.History.AddToGlossary}"
+                                  Command="{Binding PlacementTarget.DataContext.AddToGlossaryCommand,
+                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem,
+                                                             RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{DynamicResource Strings.History.ColTime}" Width="120"
                                         Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"/>
