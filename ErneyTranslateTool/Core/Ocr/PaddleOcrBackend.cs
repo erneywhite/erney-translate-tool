@@ -42,12 +42,30 @@ public class PaddleOcrBackend : IOcrBackend
 
     public string CurrentLanguageTag => _currentLanguage;
 
+    /// <summary>
+    /// Curated PaddleOCR model catalog. We pick V5 for Chinese (newest model
+    /// family available), V4 for everything that has it, V3 for Latin /
+    /// Cyrillic / Traditional Chinese (only published as V3 right now).
+    ///
+    /// Latin/Cyrillic models cover their whole script family at once — one
+    /// "latin" pick handles German, French, Spanish, Italian, Portuguese,
+    /// Polish, Dutch, etc.; one "cyrillic" pick handles Russian, Ukrainian,
+    /// Bulgarian, Belarusian, etc.
+    /// </summary>
     private static readonly (string Tag, string Display, OnlineFullModels Model)[] AvailableLangs =
     {
-        ("en", "Английский", OnlineFullModels.EnglishV4),
-        ("zh", "Китайский", OnlineFullModels.ChineseV4),
-        ("ja", "Японский", OnlineFullModels.JapanV4),
-        ("ko", "Корейский", OnlineFullModels.KoreanV4),
+        ("en",      "Английский",                                OnlineFullModels.EnglishV4),
+        ("zh",      "Китайский (упрощённый)",                    OnlineFullModels.ChineseV5),
+        ("zh-tra",  "Китайский (традиционный)",                  OnlineFullModels.TraditionalChineseV3),
+        ("ja",      "Японский",                                  OnlineFullModels.JapanV4),
+        ("ko",      "Корейский",                                 OnlineFullModels.KoreanV4),
+        ("latin",   "Латинский шрифт (DE / FR / ES / IT / PT / PL / NL / …)", OnlineFullModels.LatinV3),
+        ("cyrillic","Кириллица (RU / UK / BG / BE / SR …)",      OnlineFullModels.CyrillicV3),
+        ("ar",      "Арабский",                                  OnlineFullModels.ArabicV4),
+        ("hi",      "Хинди / Деванагари",                        OnlineFullModels.DevanagariV4),
+        ("te",      "Телугу",                                    OnlineFullModels.TeluguV4),
+        ("ta",      "Тамильский",                                OnlineFullModels.TamilV4),
+        ("kn",      "Каннада",                                   OnlineFullModels.KannadaV4),
     };
 
     public PaddleOcrBackend(ILogger logger, string preferredLanguage)
