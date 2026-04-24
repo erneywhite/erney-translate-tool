@@ -124,6 +124,44 @@
                 </StackPanel>
             </GroupBox>
 
+            <Border Background="#FFFBE6"
+                    BorderBrush="#F59E0B"
+                    BorderThickness="2"
+                    CornerRadius="10"
+                    Padding="20"
+                    Margin="0,0,0,18">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="☕  Понравилась программа?"
+                                   FontSize="18" FontWeight="Bold"
+                                   Foreground="#78350F"/>
+                        <TextBlock Text="Программа полностью бесплатная и open-source. Если хочется поддержать разработку — можно угостить кофе."
+                                   Foreground="#92400E"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Padding="18,12"
+                            Margin="20,0,0,0"
+                            FontWeight="Bold"
+                            FontSize="14"
+                            Background="#F59E0B"
+                            Foreground="#FFFFFF"
+                            BorderBrush="#D97706"
+                            BorderThickness="1"
+                            Cursor="Hand"
+                            Click="OnDonateClick"
+                            ToolTip="Откроет страницу с вариантами поддержки в браузере">
+                        ☕  Купить мне кофе
+                    </Button>
+                </Grid>
+            </Border>
+
             <Border Background="#3D3D1A1A"
                     BorderBrush="#FFD32F2F"
                     BorderThickness="1"

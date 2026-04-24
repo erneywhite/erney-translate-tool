@@ -28,4 +28,16 @@ public partial class AboutTab : UserControl
         }
         catch { /* ignore */ }
     }
+
+    private void OnDonateClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://dalink.to/toristarm")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch { /* ignore */ }
+    }
 }
