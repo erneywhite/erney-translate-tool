@@ -7,7 +7,7 @@
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
 
-    <Grid Margin="20">
+    <Grid Margin="28,20,28,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>

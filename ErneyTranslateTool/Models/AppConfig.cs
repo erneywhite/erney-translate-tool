@@ -55,6 +55,11 @@ public class AppConfig
     public double OverlayCornerRadius { get; set; } = 4;
 
     /// <summary>
+    /// Application theme id ("Dark", "Light", "Nord"). See ThemeManager.
+    /// </summary>
+    public string AppTheme { get; set; } = "Dark";
+
+    /// <summary>
     /// Selected window handle (HWND) for capture, stored as long because
     /// System.Text.Json refuses to serialize IntPtr. Round-trip via the
     /// helper property below.

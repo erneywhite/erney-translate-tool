@@ -6,7 +6,7 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900"
              Background="{DynamicResource BackgroundBrush}">
-    <Grid Margin="20">
+    <Grid Margin="28,20,28,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>

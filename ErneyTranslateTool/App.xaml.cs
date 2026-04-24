@@ -81,6 +81,9 @@ public partial class App : Application
             Settings = new AppSettings(AppDataPath, Logger);
             Settings.Load();
 
+            // Apply the persisted UI theme before any window is shown.
+            ThemeManager.Apply(Settings.Config.AppTheme);
+
             var services = new ServiceCollection();
             ConfigureServices(services);
             Services = services.BuildServiceProvider();

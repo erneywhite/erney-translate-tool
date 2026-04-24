@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== Nord-inspired palette (cool dark blue) ===== -->
+
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#2E3440"/>
+    <SolidColorBrush x:Key="BackgroundLightBrush" Color="#3B4252"/>
+    <SolidColorBrush x:Key="BackgroundDarkBrush" Color="#242933"/>
+    <SolidColorBrush x:Key="AlternateRowBrush" Color="#353B48"/>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#88C0D0"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#81A1C1"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="#8FBCBB"/>
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#2E3440"/>
+
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#4C566A"/>
+    <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#5E81AC"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#ECEFF4"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#ECEFF4"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#D8DEE9"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="#7B8794"/>
+
+    <SolidColorBrush x:Key="BorderBrush" Color="#434C5E"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="#4C566A"/>
+
+    <SolidColorBrush x:Key="SuccessBrush" Color="#A3BE8C"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#EBCB8B"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#BF616A"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#5E81AC"/>
+
+    <SolidColorBrush x:Key="HeaderBrush" Color="#3B4252"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#3B4252"/>
+
+</ResourceDictionary>

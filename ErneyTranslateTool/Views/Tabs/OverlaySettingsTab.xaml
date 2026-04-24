@@ -6,18 +6,33 @@
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="20">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
         <StackPanel>
-            <TextBlock Text="Настройки оверлея"
+            <TextBlock Text="Настройки оверлея и интерфейса"
                        FontSize="24" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,5"/>
-            <TextBlock Text="Внешний вид «таблички» с переводом, которая накладывается поверх английского текста."
+            <TextBlock Text="Внешний вид «таблички» с переводом и тема самой программы."
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,15"/>
 
-            <GroupBox Header="Готовые темы" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="Тема программы" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Цветовая палитра самого окна программы (применяется сразу):"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Margin="0,0,0,8"/>
+                    <ComboBox ItemsSource="{Binding AppThemes}"
+                              SelectedValue="{Binding SelectedAppTheme}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
+                              Width="280" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Готовые темы оверлея" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
                     <TextBlock Text="Один клик — применятся фон, цвет текста, прозрачность и скругление углов."
                                Foreground="{DynamicResource TextSecondaryBrush}"
