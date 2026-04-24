@@ -16,6 +16,8 @@
     <ApplicationIcon>Resources\Icons\app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <!-- Drop .NET satellite resource bundles for languages we don't ship UI in -->
+    <SatelliteResourceLanguages>ru;en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
