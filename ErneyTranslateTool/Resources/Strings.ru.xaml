@@ -76,6 +76,8 @@
     <sys:String x:Key="Strings.TS.UseContext.Tooltip">Помогает LLM правильно обрабатывать местоимения и продолжающиеся диалоги</sys:String>
     <sys:String x:Key="Strings.TS.ContextSize">Размер контекста:</sys:String>
     <sys:String x:Key="Strings.TS.ContextSize.Tooltip">Сколько предыдущих переводов передавать каждый раз. Больше = лучше контекст, но дороже</sys:String>
+    <sys:String x:Key="Strings.TS.UseStreaming">Стриминг перевода (текст появляется по мере генерации)</sys:String>
+    <sys:String x:Key="Strings.TS.UseStreaming.Tooltip">Включено по умолчанию. Первые символы появляются через ~200 мс вместо полной задержки в 1-2 сек. Выключи если в твоей сети SSE буферизуется (некоторые корпоративные прокси) или если хочется поведения «вся фраза появляется разом».</sys:String>
     <sys:String x:Key="Strings.TS.TestConnection">Проверить соединение</sys:String>
 
     <sys:String x:Key="Strings.TS.Fallback">Резервный провайдер</sys:String>
@@ -169,7 +171,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.14 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.15 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>

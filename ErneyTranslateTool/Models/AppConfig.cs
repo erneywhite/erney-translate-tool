@@ -50,6 +50,15 @@ public class AppConfig
     public int LlmContextSize { get; set; } = 3;
 
     /// <summary>
+    /// When true, LLM providers stream the translation token-by-token via SSE
+    /// instead of waiting for the full response. The overlay updates as the
+    /// text arrives — first visible characters appear ~200 ms after the
+    /// request leaves instead of after a full 1-2 sec round-trip. No effect
+    /// on non-LLM providers (DeepL/MyMemory/Google/Libre) or on cache hits.
+    /// </summary>
+    public bool UseStreamingLlm { get; set; } = true;
+
+    /// <summary>
     /// Target translation language code (e.g., "RU", "EN", "JA").
     /// </summary>
     public string TargetLanguage { get; set; } = "RU";

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -24,7 +27,7 @@ namespace ErneyTranslateTool.Core.Translators;
 /// + a required <c>anthropic-version</c> header rather than a Bearer
 /// token.</para>
 /// </summary>
-public class AnthropicTranslator : ITranslator
+public class AnthropicTranslator : IStreamingTranslator
 {
     private const string EndpointUrl = "https://api.anthropic.com/v1/messages";
     /// <summary>Required by Anthropic — pinned to a known stable date so we don't break if they ship a breaking version bump.</summary>
@@ -132,6 +135,105 @@ public class AnthropicTranslator : ITranslator
         }
     }
 
+    /// <summary>
+    /// Streaming counterpart to <see cref="TranslateAsync"/>. Anthropic's
+    /// SSE format is more verbose than OpenAI's — it sends typed events
+    /// (<c>message_start</c>, <c>content_block_start</c>,
+    /// <c>content_block_delta</c>, <c>content_block_stop</c>,
+    /// <c>message_delta</c>, <c>message_stop</c>) and we only care about
+    /// the text-delta payloads:
+    /// <code>
+    /// event: content_block_delta
+    /// data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Доб"}}
+    /// </code>
+    /// Each yield carries the FULL accumulated translation. LLM context
+    /// is updated only at end-of-stream.
+    /// </summary>
+    public async IAsyncEnumerable<string> TranslateStreamAsync(
+        string text, string targetLanguage,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(text)) yield break;
+
+        var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
+        var (system, messages) = BuildPayload(text, targetName);
+
+        var request = new MessagesRequest
+        {
+            Model = _model,
+            System = system,
+            Messages = messages,
+            Temperature = _temperature,
+            MaxTokens = 1000,
+            Stream = true,
+        };
+
+        using var content = JsonContent.Create(request,
+            options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+        using var req = new HttpRequestMessage(HttpMethod.Post, EndpointUrl) { Content = content };
+        // ResponseHeadersRead so the body stream stays open for chunked reads
+        // instead of being fully buffered before we get a chance to look.
+        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"Anthropic API {(int)resp.StatusCode}: {Truncate(body, 300)}");
+        }
+
+        var accumulated = new StringBuilder();
+        await using var stream = await resp.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrEmpty(line)) continue;
+            // We can ignore the "event:" line entirely — the type is also
+            // inside the JSON payload as the "type" field.
+            if (!line.StartsWith("data:")) continue;
+
+            var payload = line.Substring(5).Trim();
+            if (string.IsNullOrEmpty(payload)) continue;
+
+            string? delta = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(payload);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("type", out var typeEl)) continue;
+                var type = typeEl.GetString();
+                if (type != "content_block_delta") continue;
+
+                if (root.TryGetProperty("delta", out var deltaEl)
+                    && deltaEl.TryGetProperty("type", out var deltaTypeEl)
+                    && deltaTypeEl.GetString() == "text_delta"
+                    && deltaEl.TryGetProperty("text", out var textEl)
+                    && textEl.ValueKind == JsonValueKind.String)
+                {
+                    delta = textEl.GetString();
+                }
+            }
+            catch (JsonException)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(delta)) continue;
+            accumulated.Append(delta);
+            var snapshot = accumulated.ToString();
+            // Same leading-space defence as OpenAI — Claude rarely does it
+            // but no reason not to be safe.
+            yield return accumulated.Length == delta.Length ? snapshot.TrimStart() : snapshot;
+        }
+
+        var final = accumulated.ToString().Trim();
+        if (!string.IsNullOrEmpty(final))
+            RememberContext(text, final);
+    }
+
     public async Task<(bool Ok, string Message)> VerifyAsync(CancellationToken ct = default)
     {
         try
@@ -186,6 +288,10 @@ public class AnthropicTranslator : ITranslator
         [JsonPropertyName("messages")] public List<MessagePart> Messages { get; set; } = new();
         [JsonPropertyName("temperature")] public double Temperature { get; set; }
         [JsonPropertyName("max_tokens")] public int MaxTokens { get; set; }
+        // Default null → JsonIgnoreCondition.WhenWritingNull keeps it out
+        // of the regular non-streaming request. Set to true by
+        // TranslateStreamAsync.
+        [JsonPropertyName("stream")] public bool? Stream { get; set; }
     }
 
     private class MessagePart
