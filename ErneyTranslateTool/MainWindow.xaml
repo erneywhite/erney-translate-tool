@@ -7,7 +7,7 @@
         MinHeight="500" MinWidth="800"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BackgroundBrush}">
-    <TabControl Margin="0">
+    <TabControl Margin="8,8,8,8" Padding="0">
         <TabItem Header="Главная">
             <tabs:MainTab DataContext="{Binding MainVM}"/>
         </TabItem>

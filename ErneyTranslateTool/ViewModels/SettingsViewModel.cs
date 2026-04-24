@@ -46,6 +46,7 @@ public class SettingsViewModel : BaseViewModel
     private bool _useBestTessdata = true;
     private string _ocrStatus = string.Empty;
     private Brush _ocrStatusColor = MakeBrush("#9CA3AF");
+    private string _selectedAppTheme = "Dark";
 
     private static Brush MakeBrush(string hex)
     {
@@ -61,6 +62,24 @@ public class SettingsViewModel : BaseViewModel
     public ObservableCollection<EngineOption> OcrEngines { get; }
     public ObservableCollection<OcrLanguageOption> OcrLanguages { get; } = new();
     public ObservableCollection<TessdataItem> TessdataCatalog { get; } = new();
+
+    /// <summary>App-wide UI themes (whole window colour palette).</summary>
+    public ObservableCollection<EngineOption> AppThemes { get; } = new(
+        ThemeManager.Available.Select(t => new EngineOption(t.Id, t.DisplayName)));
+
+    public string SelectedAppTheme
+    {
+        get => _selectedAppTheme;
+        set
+        {
+            if (SetProperty(ref _selectedAppTheme, value))
+            {
+                // Live-apply the moment the user picks a theme — Save just
+                // persists the choice. Better UX than waiting for Save.
+                ThemeManager.Apply(value);
+            }
+        }
+    }
 
     /// <summary>Pre-baked overlay colour combinations users can pick with one click.</summary>
     public ObservableCollection<OverlayPreset> OverlayPresets { get; } = new()
@@ -361,6 +380,7 @@ public class SettingsViewModel : BaseViewModel
 
         SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EnginePaddle : c.OcrEngine;
         UseBestTessdata = c.UseBestTessdata;
+        SelectedAppTheme = string.IsNullOrWhiteSpace(c.AppTheme) ? ThemeManager.Dark : c.AppTheme;
     }
 
     public void RefreshOcrLanguages()
@@ -525,6 +545,7 @@ public class SettingsViewModel : BaseViewModel
         c.ManualFontSize = ManualFontSize;
         c.OverlayCornerRadius = OverlayCornerRadius;
         c.FontSizeMode = FontSizeMode;
+        c.AppTheme = SelectedAppTheme;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
     }
