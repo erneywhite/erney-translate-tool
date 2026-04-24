@@ -20,6 +20,9 @@
         <TabItem Header="История">
             <tabs:HistoryTab DataContext="{Binding HistoryVM}"/>
         </TabItem>
+        <TabItem Header="Глоссарий">
+            <tabs:GlossaryTab DataContext="{Binding GlossaryVM}"/>
+        </TabItem>
         <TabItem Header="О программе">
             <tabs:AboutTab/>
         </TabItem>

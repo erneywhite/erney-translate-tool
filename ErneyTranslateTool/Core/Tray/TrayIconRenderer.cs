@@ -2,7 +2,6 @@ using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -13,14 +12,17 @@ namespace ErneyTranslateTool.Core.Tray;
 /// <summary>
 /// State of the tray icon — selects which colored "status dot" is overlaid
 /// on the base app icon. Slack/Discord pattern: one glance tells you whether
-/// the app is doing something useful, idle, needs attention, or errored.
+/// the app is doing something useful, idle, paused, needs attention, or
+/// errored.
 /// </summary>
 public enum TrayIconState
 {
-    /// <summary>No active translation, nothing pending — gray dot (default).</summary>
+    /// <summary>App is open but translation is off — gray dot.</summary>
     Idle,
     /// <summary>Engine actively translating — green dot.</summary>
     Translating,
+    /// <summary>Engine running but target window is minimised — gray dot, the manager will blink it.</summary>
+    Paused,
     /// <summary>Something needs the user (e.g. update available) — amber dot.</summary>
     Attention,
     /// <summary>Recoverable error happened — red dot.</summary>
@@ -29,21 +31,25 @@ public enum TrayIconState
 
 /// <summary>
 /// Renders the tray icon by overlaying a colored circle on the base app icon.
-/// Renderings are cached per-state so we only do the GDI work once per
-/// process lifetime.
+/// Renderings are cached per state so we only do the GDI work once per
+/// process lifetime. The "blink off" frame for paused mode is also cached.
 /// </summary>
 public static class TrayIconRenderer
 {
-    // Lazy per-state cache. Bitmaps + Icons are cleaned up when the process
-    // exits — they're tiny (~32x32 ARGB) so leaking them isn't a concern.
+    // Lazy per-state cache. Bitmaps + ImageSources are tiny (~32x32 ARGB)
+    // so even leaking them on shutdown isn't a concern.
     private static readonly System.Windows.Media.ImageSource?[] _cache =
         new System.Windows.Media.ImageSource?[Enum.GetValues(typeof(TrayIconState)).Length];
 
+    // Separate cache for the "blink off" frame — base icon with no dot
+    // at all. Used by the manager's blink timer to alternate against
+    // Paused so the user sees a pulsing gray dot.
+    private static System.Windows.Media.ImageSource? _blankCache;
+
     /// <summary>
-    /// Returns the cached <see cref="System.Windows.Media.ImageSource"/> for
-    /// the given state, building it on first request. Always returns null
-    /// if the base icon can't be loaded — callers should keep using
-    /// whatever they already had.
+    /// Returns the cached image for a state, building it on first request.
+    /// Always returns null if the base icon can't be loaded — callers
+    /// should keep using whatever they had.
     /// </summary>
     public static System.Windows.Media.ImageSource? GetIconFor(TrayIconState state)
     {
@@ -67,6 +73,27 @@ public static class TrayIconRenderer
     }
 
     /// <summary>
+    /// Variant of <see cref="GetIconFor"/> that paints no dot at all.
+    /// Used by the blink timer as the "off" half of a paused-state pulse.
+    /// </summary>
+    public static System.Windows.Media.ImageSource? GetBlankIcon()
+    {
+        if (_blankCache != null) return _blankCache;
+        try
+        {
+            using var baseBmp = LoadBaseBitmap(32);
+            if (baseBmp == null) return null;
+            using var copy = new Bitmap(baseBmp);
+            _blankCache = ConvertToBitmapSource(copy);
+            return _blankCache;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Load the embedded app.ico into a 32-bit ARGB Bitmap of the requested
     /// size. The .ico ships with multiple sizes — System.Drawing picks the
     /// closest match.
@@ -74,8 +101,8 @@ public static class TrayIconRenderer
     private static Bitmap? LoadBaseBitmap(int size)
     {
         // Try the resource pack URI first (works once WPF Application is
-        // alive); fall back to walking the on-disk Resources folder for the
-        // (rare) case we're called pre-Application.
+        // alive); fall back to walking the on-disk Resources folder for
+        // the (rare) case we're called pre-Application.
         Stream? stream = null;
         try
         {
@@ -104,10 +131,11 @@ public static class TrayIconRenderer
     }
 
     /// <summary>
-    /// Paint a colored dot in the bottom-right corner of a copy of the base
-    /// bitmap. Dot diameter is ~38 % of the icon — large enough to be
-    /// readable at the standard 16x16 tray render, small enough that the
-    /// app glyph stays recognisable.
+    /// Paint a colored dot in the TOP-RIGHT corner of a copy of the base
+    /// bitmap. Top-right because that's the universal "badge" position
+    /// (notification dots on macOS, iOS, Slack mentions, ...). Idle uses
+    /// gray so the badge is always present and the user can tell the app
+    /// is alive even when nothing's happening.
     /// </summary>
     private static Bitmap ComposeWithDot(Bitmap baseBmp, TrayIconState state)
     {
@@ -120,27 +148,30 @@ public static class TrayIconRenderer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.DrawImage(baseBmp, 0, 0, w, h);
 
-            // Idle is the "no badge" state — return the bare icon.
-            if (state == TrayIconState.Idle) return result;
-
             var dotColor = state switch
             {
                 TrayIconState.Translating => Color.FromArgb(0xFF, 0x10, 0xB9, 0x81), // green
+                TrayIconState.Paused      => Color.FromArgb(0xFF, 0x9C, 0xA3, 0xAF), // gray
+                TrayIconState.Idle        => Color.FromArgb(0xFF, 0x9C, 0xA3, 0xAF), // gray
                 TrayIconState.Attention   => Color.FromArgb(0xFF, 0xF5, 0x9E, 0x0B), // amber
                 TrayIconState.Error       => Color.FromArgb(0xFF, 0xEF, 0x44, 0x44), // red
                 _                         => Color.Gray,
             };
 
-            // Diameter ~38 % so it's punchy at 16x16 (≈6 px) and at 32x32 (≈12 px).
-            var d = (int)Math.Round(w * 0.38);
-            // Bottom-right corner; leave a 1-px gap so the dot doesn't
-            // touch the icon edge (looks crisper).
+            // Diameter ~44 % so the dot is punchy at 16x16 (≈7 px) and
+            // very obvious at 32x32 (≈14 px). Bigger than v1.0.4 because
+            // a few users couldn't see the smaller version.
+            var d = (int)Math.Round(w * 0.44);
+
+            // Top-right corner with a 1-px gap from each edge so the
+            // outline reads as a clean badge, not a clipped circle.
             var x = w - d - 1;
-            var y = h - d - 1;
+            var y = 1;
 
             // White outline so the dot stays visible regardless of the
-            // taskbar colour (dark by default, but users can change it).
-            using (var outline = new SolidBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)))
+            // taskbar colour (works on light, dark, and accent-coloured
+            // taskbars equally well).
+            using (var outline = new SolidBrush(Color.White))
                 g.FillEllipse(outline, x - 1, y - 1, d + 2, d + 2);
             using (var fill = new SolidBrush(dotColor))
                 g.FillEllipse(fill, x, y, d, d);

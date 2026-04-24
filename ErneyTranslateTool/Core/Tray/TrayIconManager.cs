@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Windows.Threading;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.ViewModels;
 using Hardcodet.Wpf.TaskbarNotification;
@@ -19,6 +20,7 @@ public class TrayIconManager : IDisposable
     private readonly Window _mainWindow;
     private readonly MainViewModel _mainVm;
     private readonly TranslationEngine _engine;
+    private readonly CaptureService _capture;
     private readonly AppSettings _settings;
     private readonly ILogger _logger;
     private bool _disposed;
@@ -27,17 +29,24 @@ public class TrayIconManager : IDisposable
     // get clobbered by Idle ↔ Translating churn. Cleared once the user
     // opens the main window.
     private TrayIconState _stickyState = TrayIconState.Idle;
+    // Drives the Paused-state pulse: alternates icon between "with gray
+    // dot" and "no dot" every ~700 ms so the user can tell paused apart
+    // from idle (which is a steady gray dot).
+    private readonly DispatcherTimer _blinkTimer;
+    private bool _blinkOn;
 
     /// <summary>Raised when the user opens the main window via tray click/menu — owners use this to flush any pending modals deferred during a tray-only start.</summary>
     public event EventHandler? MainWindowOpened;
     public event EventHandler? ExitRequested;
 
     public TrayIconManager(Window mainWindow, MainViewModel mainVm,
-        TranslationEngine engine, AppSettings settings, ILogger logger)
+        TranslationEngine engine, CaptureService capture,
+        AppSettings settings, ILogger logger)
     {
         _mainWindow = mainWindow;
         _mainVm = mainVm;
         _engine = engine;
+        _capture = capture;
         _settings = settings;
         _logger = logger;
 
@@ -55,21 +64,34 @@ public class TrayIconManager : IDisposable
         _icon.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
         _icon.ContextMenu = BuildMenu();
 
+        _blinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+        _blinkTimer.Tick += (_, _) =>
+        {
+            _blinkOn = !_blinkOn;
+            ApplyIcon(ComputeState());
+        };
+
         // Keep tooltip + icon up to date as engine state and stats change.
+        // PauseStateChanged is the new signal — needs its own subscription
+        // because StateChanged only fires for Start/Stop, not for the
+        // capture loop's pause/resume transitions.
         _engine.StateChanged += (_, _) => RefreshIconAndTooltip();
         _engine.StatusUpdated += (_, _) => RefreshIconAndTooltip();
+        _capture.PauseStateChanged += (_, _) => RefreshIconAndTooltip();
         RefreshIconAndTooltip();
     }
 
     /// <summary>
     /// Compute the current effective tray-icon state. "Sticky" attention/error
-    /// wins over the engine's idle/translating because the user explicitly
-    /// hasn't acknowledged it yet.
+    /// wins over engine state because the user hasn't acknowledged them yet.
+    /// Otherwise the precedence is: paused (running but window iconic) →
+    /// translating → idle.
     /// </summary>
     private TrayIconState ComputeState()
     {
         if (_stickyState == TrayIconState.Attention || _stickyState == TrayIconState.Error)
             return _stickyState;
+        if (_engine.IsRunning && _capture.IsPaused) return TrayIconState.Paused;
         return _engine.IsRunning ? TrayIconState.Translating : TrayIconState.Idle;
     }
 
@@ -125,27 +147,55 @@ public class TrayIconManager : IDisposable
     {
         Application.Current?.Dispatcher.Invoke(() =>
         {
-            var running = _engine.IsRunning;
+            var state = ComputeState();
             var stats = $"\nПереведено сегодня: {_settings.Config.CharactersTranslatedToday:N0} симв." +
                         $"\nПопадания в кэш: {_settings.GetCacheHitRate():F1}%";
 
             // Highlight sticky attention/error in the tooltip so a glance
             // tells the user *why* the icon is yellow/red.
-            var headline = _stickyState switch
+            var headline = state switch
             {
-                TrayIconState.Attention => "Erney's Translate Tool — есть уведомление (открой окно)",
-                TrayIconState.Error     => "Erney's Translate Tool — ошибка (открой окно)",
-                _ => running
-                    ? $"Erney's Translate Tool — перевод активен\n{_engine.TargetWindowTitle}"
-                    : "Erney's Translate Tool — ожидание",
+                TrayIconState.Attention   => "Erney's Translate Tool — есть уведомление (открой окно)",
+                TrayIconState.Error       => "Erney's Translate Tool — ошибка (открой окно)",
+                TrayIconState.Paused      => $"Erney's Translate Tool — пауза (окно «{_engine.TargetWindowTitle}» свёрнуто)",
+                TrayIconState.Translating => $"Erney's Translate Tool — перевод активен\n{_engine.TargetWindowTitle}",
+                _                         => "Erney's Translate Tool — ожидание",
             };
             _icon.ToolTipText = headline + stats;
 
-            // Swap the icon to the badged variant; falls back transparently
-            // if the renderer can't produce one.
-            var rendered = TrayIconRenderer.GetIconFor(ComputeState());
-            if (rendered != null) _icon.IconSource = rendered;
+            // Start/stop the pulse alongside the paused state — no point
+            // burning a timer tick while the user can see a steady dot.
+            if (state == TrayIconState.Paused)
+            {
+                if (!_blinkTimer.IsEnabled)
+                {
+                    _blinkOn = true; // start the cycle on the visible half
+                    _blinkTimer.Start();
+                }
+            }
+            else
+            {
+                if (_blinkTimer.IsEnabled) _blinkTimer.Stop();
+                _blinkOn = false;
+            }
+
+            ApplyIcon(state);
         });
+    }
+
+    /// <summary>
+    /// Push the right pre-rendered icon into <see cref="_icon"/>. For Paused
+    /// we alternate between the dotted variant and the bare app icon based
+    /// on <see cref="_blinkOn"/> so the dot pulses.
+    /// </summary>
+    private void ApplyIcon(TrayIconState state)
+    {
+        System.Windows.Media.ImageSource? rendered;
+        if (state == TrayIconState.Paused && !_blinkOn)
+            rendered = TrayIconRenderer.GetBlankIcon();
+        else
+            rendered = TrayIconRenderer.GetIconFor(state);
+        if (rendered != null) _icon.IconSource = rendered;
     }
 
     public void ShowBalloon(string title, string message)
@@ -174,6 +224,7 @@ public class TrayIconManager : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
+        _blinkTimer.Stop();
         _icon.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);

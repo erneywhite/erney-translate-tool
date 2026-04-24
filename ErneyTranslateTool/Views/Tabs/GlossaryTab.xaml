@@ -1,0 +1,123 @@
+<UserControl x:Class="ErneyTranslateTool.Views.Tabs.GlossaryTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="{DynamicResource BackgroundBrush}">
+    <Grid Margin="28,20,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Глоссарий имён собственных"
+                   FontSize="24" FontWeight="Bold"
+                   Foreground="{DynamicResource TextPrimaryBrush}"
+                   Margin="0,0,0,5"/>
+        <TextBlock Grid.Row="1" TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextSecondaryBrush}"
+                   Margin="0,0,0,12">
+            Заведи правило «Оригинал → Перевод» — после ответа переводчика программа подменит каждое
+            вхождение в финальном тексте. Полезно для имён персонажей, локаций, артефактов в играх,
+            которые автоперевод путает (например, «Geralt» → «Геральт», «Kaer Morhen» → «Каэр Морхен»).
+            Правила привязаны к языку перевода: «RU» применяются только при переводе на русский.
+        </TextBlock>
+
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <CheckBox Grid.Column="0"
+                      Content="Использовать глоссарий"
+                      IsChecked="{Binding GlossaryEnabled}"
+                      Foreground="{DynamicResource TextPrimaryBrush}"
+                      VerticalAlignment="Center"
+                      ToolTip="Главный тогл — выключи, если нужно быстро отключить замены без удаления правил"/>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Добавить" Command="{Binding AddCommand}"
+                        Padding="14,6" Margin="0,0,8,0"/>
+                <Button Content="Импорт..." Command="{Binding ImportCommand}"
+                        Padding="14,6" Margin="0,0,8,0"/>
+                <Button Content="Экспорт..." Command="{Binding ExportCommand}"
+                        Padding="14,6" Margin="0,0,8,0"/>
+                <Button Content="Сохранить"
+                        Command="{Binding SaveCommand}"
+                        Padding="18,6" FontWeight="SemiBold"
+                        Background="{DynamicResource PrimaryBrush}"
+                        Foreground="{DynamicResource PrimaryForegroundBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <DataGrid Grid.Row="3"
+                  ItemsSource="{Binding Entries}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  Background="{DynamicResource InputBackgroundBrush}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  BorderBrush="{DynamicResource BorderBrush}"
+                  RowBackground="{DynamicResource InputBackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource AlternateRowBrush}"
+                  HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
+                  RowHeaderWidth="0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Оригинал (что заменяем)"
+                                    Binding="{Binding SourceText, UpdateSourceTrigger=LostFocus}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Перевод (на что меняем)"
+                                    Binding="{Binding TargetText, UpdateSourceTrigger=LostFocus}"
+                                    Width="*"/>
+                <DataGridTextColumn Header="Язык"
+                                    Binding="{Binding TargetLanguage, UpdateSourceTrigger=LostFocus}"
+                                    Width="60"/>
+                <DataGridCheckBoxColumn Header="Регистр"
+                                        Binding="{Binding IsCaseSensitive, UpdateSourceTrigger=PropertyChanged}"
+                                        Width="70"/>
+                <DataGridCheckBoxColumn Header="Слово"
+                                        Binding="{Binding IsWholeWord, UpdateSourceTrigger=PropertyChanged}"
+                                        Width="70"/>
+                <DataGridTextColumn Header="Заметка"
+                                    Binding="{Binding Notes, UpdateSourceTrigger=LostFocus}"
+                                    Width="160"/>
+                <DataGridTemplateColumn Header="" Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="Удалить"
+                                    Padding="8,3"
+                                    Background="Transparent"
+                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                    Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                       Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       VerticalAlignment="Center"
+                       FontSize="11"/>
+            <Button Grid.Column="1" Content="Обновить"
+                    Command="{Binding RefreshCommand}"
+                    Padding="12,5"/>
+        </Grid>
+    </Grid>
+</UserControl>

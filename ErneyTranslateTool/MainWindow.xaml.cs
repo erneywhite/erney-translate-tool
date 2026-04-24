@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly HotkeyService _hotkeys;
     private readonly AppSettings _settings;
     private readonly TranslationEngine _engine;
+    private readonly CaptureService _capture;
     private readonly UpdateChecker _updateChecker;
     private readonly UpdateDownloader _updateDownloader;
     private readonly ILogger _logger;
@@ -29,14 +30,17 @@ public partial class MainWindow : Window
     public MainViewModel MainVM { get; }
     public SettingsViewModel SettingsVM { get; }
     public HistoryViewModel HistoryVM { get; }
+    public GlossaryViewModel GlossaryVM { get; }
 
     public MainWindow(
         MainViewModel mainVm,
         SettingsViewModel settingsVm,
         HistoryViewModel historyVm,
+        GlossaryViewModel glossaryVm,
         HotkeyService hotkeys,
         AppSettings settings,
         TranslationEngine engine,
+        CaptureService capture,
         UpdateChecker updateChecker,
         UpdateDownloader updateDownloader,
         ILogger logger)
@@ -45,9 +49,11 @@ public partial class MainWindow : Window
         MainVM = mainVm;
         SettingsVM = settingsVm;
         HistoryVM = historyVm;
+        GlossaryVM = glossaryVm;
         _hotkeys = hotkeys;
         _settings = settings;
         _engine = engine;
+        _capture = capture;
         _updateChecker = updateChecker;
         _updateDownloader = updateDownloader;
         _logger = logger;
@@ -63,7 +69,7 @@ public partial class MainWindow : Window
         _hotkeys.Initialize(this);
         RegisterHotkeys();
 
-        _tray = new TrayIconManager(this, MainVM, _engine, _settings, _logger);
+        _tray = new TrayIconManager(this, MainVM, _engine, _capture, _settings, _logger);
         _tray.ExitRequested += (_, _) => RealExit();
         _tray.MainWindowOpened += (_, _) => FlushPendingDialogs();
 

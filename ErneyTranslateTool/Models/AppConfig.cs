@@ -202,4 +202,12 @@ public class AppConfig
     /// 3-letter codes — kept as a separate field for clarity.
     /// </summary>
     public string PaddleLanguage { get; set; } = "en";
+
+    /// <summary>
+    /// Master kill-switch for the proper-noun glossary. When false, no
+    /// post-translation replacement happens at all — useful as a quick
+    /// "did the glossary just break my translations?" check without
+    /// having to delete rules.
+    /// </summary>
+    public bool GlossaryEnabled { get; set; } = true;
 }

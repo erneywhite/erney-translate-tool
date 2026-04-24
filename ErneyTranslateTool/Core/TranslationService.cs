@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using ErneyTranslateTool.Core.Glossary;
 using ErneyTranslateTool.Core.Translators;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
@@ -19,18 +20,20 @@ public class TranslationService : IDisposable
     private readonly AppSettings _settings;
     private readonly CacheRepository _cache;
     private readonly HistoryRepository _history;
+    private readonly GlossaryApplier _glossary;
     private ITranslator? _translator;
     private bool _disposed;
     private DateTime _lastRateLimitWarning = DateTime.MinValue;
     private int _consecutiveFailures;
 
     public TranslationService(ILogger logger, AppSettings settings,
-        CacheRepository cache, HistoryRepository history)
+        CacheRepository cache, HistoryRepository history, GlossaryApplier glossary)
     {
         _logger = logger;
         _settings = settings;
         _cache = cache;
         _history = history;
+        _glossary = glossary;
     }
 
     /// <summary>
@@ -137,7 +140,15 @@ public class TranslationService : IDisposable
                 }
 
                 if (!string.IsNullOrWhiteSpace(region.TranslatedText))
+                {
+                    // Apply glossary AFTER both the cache and freshly-translated
+                    // paths so updates to rules take effect immediately, even
+                    // for already-cached entries. The applier is a no-op when
+                    // glossary is disabled or has no matching rules, so the
+                    // hot-path cost is essentially a dictionary lookup.
+                    region.TranslatedText = _glossary.Apply(region.TranslatedText, targetLanguage);
                     translatedRegions.Add(region);
+                }
             }
             catch (OperationCanceledException) { break; }
             catch (Exception ex)
