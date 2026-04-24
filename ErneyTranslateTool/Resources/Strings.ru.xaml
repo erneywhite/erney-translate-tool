@@ -23,14 +23,19 @@
     <sys:String x:Key="Strings.Common.Close">Закрыть</sys:String>
     <sys:String x:Key="Strings.Common.Got">Понятно</sys:String>
 
-    <!-- Tabs -->
+    <!-- Tabs (sidebar labels — short so nothing gets clipped) -->
     <sys:String x:Key="Strings.Tab.Main">Главная</sys:String>
-    <sys:String x:Key="Strings.Tab.TranslationSettings">Настройки перевода</sys:String>
-    <sys:String x:Key="Strings.Tab.OverlaySettings">Настройки оверлея</sys:String>
+    <sys:String x:Key="Strings.Tab.TranslationSettings">Перевод</sys:String>
+    <sys:String x:Key="Strings.Tab.OverlaySettings">Оверлей</sys:String>
     <sys:String x:Key="Strings.Tab.History">История</sys:String>
     <sys:String x:Key="Strings.Tab.Glossary">Глоссарий</sys:String>
     <sys:String x:Key="Strings.Tab.Profiles">Профили</sys:String>
+    <sys:String x:Key="Strings.Tab.AppSettings">Программа</sys:String>
     <sys:String x:Key="Strings.Tab.About">О программе</sys:String>
+
+    <!-- App settings (separated from Overlay tab in v1.0.12 hotfix) -->
+    <sys:String x:Key="Strings.AppSettings.Title">Настройки программы</sys:String>
+    <sys:String x:Key="Strings.AppSettings.Subtitle">Параметры самой программы: тема, язык, автозапуск, поведение окна.</sys:String>
 
     <!-- MainTab -->
     <sys:String x:Key="Strings.Main.Title">Главная</sys:String>

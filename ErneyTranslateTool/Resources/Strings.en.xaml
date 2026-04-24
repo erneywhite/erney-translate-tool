@@ -21,14 +21,19 @@
     <sys:String x:Key="Strings.Common.Close">Close</sys:String>
     <sys:String x:Key="Strings.Common.Got">Got it</sys:String>
 
-    <!-- Tabs -->
+    <!-- Tabs (sidebar labels) -->
     <sys:String x:Key="Strings.Tab.Main">Main</sys:String>
     <sys:String x:Key="Strings.Tab.TranslationSettings">Translation</sys:String>
     <sys:String x:Key="Strings.Tab.OverlaySettings">Overlay</sys:String>
     <sys:String x:Key="Strings.Tab.History">History</sys:String>
     <sys:String x:Key="Strings.Tab.Glossary">Glossary</sys:String>
     <sys:String x:Key="Strings.Tab.Profiles">Profiles</sys:String>
+    <sys:String x:Key="Strings.Tab.AppSettings">App</sys:String>
     <sys:String x:Key="Strings.Tab.About">About</sys:String>
+
+    <!-- App settings -->
+    <sys:String x:Key="Strings.AppSettings.Title">App settings</sys:String>
+    <sys:String x:Key="Strings.AppSettings.Subtitle">Application-level preferences: theme, language, autostart, window behaviour.</sys:String>
 
     <!-- MainTab -->
     <sys:String x:Key="Strings.Main.Title">Main</sys:String>

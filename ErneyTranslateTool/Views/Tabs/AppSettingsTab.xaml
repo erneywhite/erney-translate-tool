@@ -1,0 +1,82 @@
+<UserControl x:Class="ErneyTranslateTool.Views.Tabs.AppSettingsTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="800"
+             Background="{DynamicResource BackgroundBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
+        <StackPanel>
+            <TextBlock Text="{DynamicResource Strings.AppSettings.Title}"
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       Margin="0,0,0,5"/>
+            <TextBlock Text="{DynamicResource Strings.AppSettings.Subtitle}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,15"/>
+
+            <GroupBox Header="{DynamicResource Strings.OS.AppTheme}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock Text="{DynamicResource Strings.OS.AppThemeHelp}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Margin="0,0,0,8"/>
+                    <ComboBox ItemsSource="{Binding AppThemes}"
+                              SelectedValue="{Binding SelectedAppTheme}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
+                              Width="320" HorizontalAlignment="Left"
+                              Margin="0,0,0,12"/>
+
+                    <TextBlock Text="{DynamicResource Strings.OS.AppLanguage}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding AppLanguages}"
+                              SelectedValue="{Binding SelectedAppLanguage}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
+                              Width="320" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="{DynamicResource Strings.OS.Behavior}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <CheckBox Content="{DynamicResource Strings.OS.CloseToTray}"
+                              IsChecked="{Binding CloseToTray}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
+                              Margin="0,0,0,8"/>
+                    <TextBlock Text="{DynamicResource Strings.OS.CloseToTrayHint}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               Margin="22,0,0,10"/>
+                    <CheckBox Content="{DynamicResource Strings.OS.CheckUpdates}"
+                              IsChecked="{Binding CheckForUpdatesOnStartup}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="{DynamicResource Strings.OS.AutoStart}"
+                              IsChecked="{Binding AutoStartWithWindows}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="{DynamicResource Strings.OS.AutoStartHint}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               Margin="22,0,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="{DynamicResource Strings.OS.SaveBtn}"
+                        Command="{Binding SaveCommand}"
+                        Style="{DynamicResource PrimaryButtonStyle}"/>
+                <TextBlock Text="{Binding SaveStatus}"
+                           Foreground="{DynamicResource SuccessBrush}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="15,0,0,0"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

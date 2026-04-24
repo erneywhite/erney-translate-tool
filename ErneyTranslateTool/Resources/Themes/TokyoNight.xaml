@@ -15,6 +15,11 @@
     <SolidColorBrush x:Key="PrimaryLightBrush" Color="#BB9AF7"/>           <!-- soft lavender -->
     <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#1A1B26"/>
 
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#7AA2F7" Offset="0"/>      <!-- electric blue -->
+        <GradientStop Color="#BB9AF7" Offset="1"/>      <!-- lavender -->
+    </LinearGradientBrush>
+
     <SolidColorBrush x:Key="SecondaryBrush" Color="#414868"/>
     <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#565F89"/>
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#C0CAF5"/>

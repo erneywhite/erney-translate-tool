@@ -15,6 +15,11 @@
     <SolidColorBrush x:Key="PrimaryLightBrush" Color="#F5C2E7"/>           <!-- pink (accent) -->
     <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#1E1E2E"/>
 
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#CBA6F7" Offset="0"/>      <!-- mauve -->
+        <GradientStop Color="#F5C2E7" Offset="1"/>      <!-- pink -->
+    </LinearGradientBrush>
+
     <SolidColorBrush x:Key="SecondaryBrush" Color="#45475A"/>              <!-- surface1 -->
     <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#585B70"/>         <!-- surface2 -->
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#CDD6F4"/>

@@ -13,6 +13,11 @@
     <SolidColorBrush x:Key="PrimaryLightBrush" Color="#A78BFA"/>
     <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFF"/>
 
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#7C3AED" Offset="0"/>
+        <GradientStop Color="#A78BFA" Offset="1"/>
+    </LinearGradientBrush>
+
     <SolidColorBrush x:Key="SecondaryBrush" Color="#D1D5DB"/>
     <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#9CA3AF"/>
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#1F2937"/>

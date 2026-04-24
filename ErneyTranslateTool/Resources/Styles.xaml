@@ -82,19 +82,16 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
+                    <!-- Background pulled from a per-theme PrimaryGradientBrush
+                         resource. Defined inline in each Themes/*.xaml so it
+                         tracks the active palette without resorting to a
+                         Binding-on-Color (which WPF disallows because Binding
+                         itself isn't a DependencyObject). -->
                     <Border x:Name="border"
                             CornerRadius="12"
                             Padding="{TemplateBinding Padding}"
+                            Background="{DynamicResource PrimaryGradientBrush}"
                             SnapsToDevicePixels="True">
-                        <Border.Background>
-                            <!-- Gradient = "this is the important action".
-                                 Picks up the active theme's primary +
-                                 primary-light brushes via the visual tree. -->
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="{Binding Source={DynamicResource PrimaryBrush}, Path=Color}" Offset="0"/>
-                                <GradientStop Color="{Binding Source={DynamicResource PrimaryLightBrush}, Path=Color}" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Border.Background>
                         <Border.Effect>
                             <DropShadowEffect Color="#000000"
                                               ShadowDepth="2"
