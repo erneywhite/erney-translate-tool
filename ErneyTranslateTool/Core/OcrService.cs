@@ -43,7 +43,7 @@ public class OcrService : IDisposable
         {
             _backend?.Dispose();
             var engine = _settings.Config.OcrEngine;
-            if (string.IsNullOrWhiteSpace(engine)) engine = EngineTesseract;
+            if (string.IsNullOrWhiteSpace(engine)) engine = EnginePaddle;
 
             if (engine == EngineWindows)
             {
