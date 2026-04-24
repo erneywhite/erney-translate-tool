@@ -44,6 +44,16 @@ public class ProfilesViewModel : BaseViewModel
         _manager.ActiveProfileChanged += (_, p) =>
         {
             ActiveProfileName = p.Name;
+            // Marshal to UI thread — TranslationEngine.StartAsync runs on
+            // a worker, the resulting auto-create raises us off-thread.
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                // Refresh the list when an auto-created profile shows up
+                // (or anything else mutates the row) so the DataGrid
+                // doesn't lag behind reality.
+                if (!Profiles.Any(x => x.Id == p.Id))
+                    Refresh();
+            });
         };
         ActiveProfileName = _manager.ActiveProfile.Name;
 

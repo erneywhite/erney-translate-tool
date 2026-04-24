@@ -63,6 +63,8 @@
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
                   HeadersVisibility="Column"
+                  IsReadOnly="False"
+                  SelectionUnit="Cell"
                   GridLinesVisibility="Horizontal"
                   Background="{DynamicResource InputBackgroundBrush}"
                   Foreground="{DynamicResource TextPrimaryBrush}"

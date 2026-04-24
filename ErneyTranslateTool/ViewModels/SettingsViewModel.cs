@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Core.Ocr;
+using ErneyTranslateTool.Core.Profiles;
 using ErneyTranslateTool.Core.Startup;
 using ErneyTranslateTool.Core.Translators;
 using ErneyTranslateTool.Data;
@@ -24,6 +25,7 @@ public class SettingsViewModel : BaseViewModel
     private readonly OcrService _ocrService;
     private readonly TessdataManager _tessdata;
     private readonly CacheRepository _cache;
+    private readonly ProfileManager _profiles;
     private readonly ILogger _logger;
 
     private string _selectedProvider = TranslatorFactory.ProviderMyMemory;
@@ -147,6 +149,7 @@ public class SettingsViewModel : BaseViewModel
         OcrService ocrService,
         TessdataManager tessdata,
         CacheRepository cache,
+        ProfileManager profiles,
         ILogger logger)
     {
         _appSettings = appSettings;
@@ -154,6 +157,7 @@ public class SettingsViewModel : BaseViewModel
         _ocrService = ocrService;
         _tessdata = tessdata;
         _cache = cache;
+        _profiles = profiles;
         _logger = logger;
 
         Providers = new ObservableCollection<ProviderOption>(
@@ -697,7 +701,15 @@ public class SettingsViewModel : BaseViewModel
             _translationService.Reload();
             _ocrService.Reload();
 
-            ShowTransientStatus("Сохранено ✓");
+            // Mirror the profile-affecting subset of AppConfig back into
+            // the active profile so the user's tweaks "stick" to the game
+            // they were playing — not just the global config.
+            _profiles.SaveActiveProfileFromCurrentConfig();
+
+            var profileName = _profiles.ActiveProfile.IsDefault
+                ? "По умолчанию"
+                : _profiles.ActiveProfile.Name;
+            ShowTransientStatus($"Сохранено ✓ (профиль: {profileName})");
         }
         catch (Exception ex)
         {
