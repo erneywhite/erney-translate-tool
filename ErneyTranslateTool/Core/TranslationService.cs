@@ -99,6 +99,29 @@ public class TranslationService : IDisposable
 
             try
             {
+                // Step 1 (highest priority): exact glossary match. If the
+                // user defined "Music → тестик", an OCR result of "Music"
+                // bypasses both the cache and the translator entirely. We
+                // also DON'T cache the result because glossary rules are
+                // user-editable at any moment, and the cache key is the
+                // raw original text — caching here would shadow rule edits.
+                if (_glossary.TryGetExactMatch(region.OriginalText, targetLanguage, out var glossaryHit))
+                {
+                    region.TranslatedText = glossaryHit;
+                    region.IsFromCache = false;
+                    // Record in history with a "glossary" pseudo-source so the
+                    // user can see in the History tab why something didn't
+                    // match the live translator's output.
+                    _history.AddTranslation(
+                        region.OriginalText,
+                        region.TranslatedText,
+                        "glossary",
+                        false);
+                    if (!string.IsNullOrWhiteSpace(region.TranslatedText))
+                        translatedRegions.Add(region);
+                    continue;
+                }
+
                 var cached = _cache.GetTranslation(region.OriginalText, targetLanguage);
                 if (!string.IsNullOrEmpty(cached))
                 {
@@ -141,11 +164,13 @@ public class TranslationService : IDisposable
 
                 if (!string.IsNullOrWhiteSpace(region.TranslatedText))
                 {
-                    // Apply glossary AFTER both the cache and freshly-translated
-                    // paths so updates to rules take effect immediately, even
-                    // for already-cached entries. The applier is a no-op when
-                    // glossary is disabled or has no matching rules, so the
-                    // hot-path cost is essentially a dictionary lookup.
+                    // Step 4 (post-process): apply word-boundary replacements
+                    // to whatever we got from cache or translator. Catches
+                    // partial matches like a "Geralt → Геральт из Ривии" rule
+                    // when OCR fed us "I am Geralt" — Step 1 missed because
+                    // the source wasn't an exact whole-text match, but Step 4
+                    // still upgrades the translated "Я Геральт" → "Я Геральт
+                    // из Ривии".
                     region.TranslatedText = _glossary.Apply(region.TranslatedText, targetLanguage);
                     translatedRegions.Add(region);
                 }

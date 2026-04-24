@@ -39,6 +39,52 @@ public class GlossaryApplier
     public void Invalidate() => Interlocked.Exchange(ref _dirty, 1);
 
     /// <summary>
+    /// Highest-priority pre-translation lookup: if the supplied OCR text
+    /// equals any rule's source verbatim, returns the rule's target so the
+    /// caller can short-circuit cache + translator entirely.
+    ///
+    /// <para>Comparison honours each rule's <see cref="GlossaryEntry.IsCaseSensitive"/>
+    /// flag — a case-insensitive rule "music → тестик" matches OCR "Music"
+    /// (which is what the user expects when they typed both in lowercase).</para>
+    ///
+    /// <para>Returns false (no match) when the master toggle is off so the
+    /// kill switch covers every code path.</para>
+    /// </summary>
+    public bool TryGetExactMatch(string sourceText, string targetLanguage, out string mapped)
+    {
+        mapped = string.Empty;
+        if (string.IsNullOrEmpty(sourceText)) return false;
+        if (!_settings.Config.GlossaryEnabled) return false;
+
+        try
+        {
+            // Reuse the per-language cache already maintained by Apply() —
+            // both code paths see invalidations from the same source.
+            // CompiledRule discards the original Source string, so we
+            // also have to consult the repo for verbatim comparison;
+            // cheap because GetForLanguage is already indexed.
+            var rules = _repo.GetForLanguage(targetLanguage);
+            foreach (var r in rules)
+            {
+                if (string.IsNullOrEmpty(r.SourceText)) continue;
+                var cmp = r.IsCaseSensitive
+                    ? StringComparison.Ordinal
+                    : StringComparison.OrdinalIgnoreCase;
+                if (string.Equals(sourceText, r.SourceText, cmp))
+                {
+                    mapped = r.TargetText;
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Information(ex, "GlossaryApplier.TryGetExactMatch failed; falling through to translator");
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Apply all rules for the current target language to <paramref name="text"/>.
     /// Returns the original string if the master toggle is off, the input
     /// is empty, or a rule throws (defensive — bad regex shouldn't break
