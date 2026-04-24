@@ -108,6 +108,7 @@ public partial class MainWindow : Window
         HistoryTabHost.Visibility     = tag == "History"     ? Visibility.Visible : Visibility.Collapsed;
         GlossaryTabHost.Visibility    = tag == "Glossary"    ? Visibility.Visible : Visibility.Collapsed;
         ProfilesTabHost.Visibility    = tag == "Profiles"    ? Visibility.Visible : Visibility.Collapsed;
+        AppSettingsTabHost.Visibility = tag == "AppSettings" ? Visibility.Visible : Visibility.Collapsed;
         AboutTabHost.Visibility       = tag == "About"       ? Visibility.Visible : Visibility.Collapsed;
     }
 

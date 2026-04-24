@@ -13,6 +13,12 @@
     <SolidColorBrush x:Key="PrimaryLightBrush" Color="#8B5CF6"/>
     <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFF"/>
 
+    <!-- Diagonal gradient used by PrimaryButtonStyle (call-to-action). -->
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#7C3AED" Offset="0"/>
+        <GradientStop Color="#8B5CF6" Offset="1"/>
+    </LinearGradientBrush>
+
     <SolidColorBrush x:Key="SecondaryBrush" Color="#4B5563"/>
     <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#6B7280"/>
     <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#FFFFFF"/>

@@ -17,58 +17,6 @@
                        TextWrapping="Wrap"
                        Margin="0,0,0,15"/>
 
-            <GroupBox Header="{DynamicResource Strings.OS.AppTheme}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <StackPanel Margin="5">
-                    <TextBlock Text="{DynamicResource Strings.OS.AppThemeHelp}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               FontSize="11"
-                               Margin="0,0,0,8"/>
-                    <ComboBox ItemsSource="{Binding AppThemes}"
-                              SelectedValue="{Binding SelectedAppTheme}"
-                              SelectedValuePath="Id"
-                              DisplayMemberPath="DisplayName"
-                              Width="280" HorizontalAlignment="Left"
-                              Margin="0,0,0,10"/>
-
-                    <!-- Language picker — sits with the theme picker because
-                         both swap a merged ResourceDictionary at runtime. -->
-                    <TextBlock Text="{DynamicResource Strings.OS.AppLanguage}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
-                               Margin="0,0,0,4"/>
-                    <ComboBox ItemsSource="{Binding AppLanguages}"
-                              SelectedValue="{Binding SelectedAppLanguage}"
-                              SelectedValuePath="Id"
-                              DisplayMemberPath="DisplayName"
-                              Width="280" HorizontalAlignment="Left"/>
-                </StackPanel>
-            </GroupBox>
-
-            <GroupBox Header="{DynamicResource Strings.OS.Behavior}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <StackPanel Margin="5">
-                    <CheckBox Content="{DynamicResource Strings.OS.CloseToTray}"
-                              IsChecked="{Binding CloseToTray}"
-                              Foreground="{DynamicResource TextPrimaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <TextBlock Text="{DynamicResource Strings.OS.CloseToTrayHint}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
-                               Margin="22,0,0,10"/>
-                    <CheckBox Content="{DynamicResource Strings.OS.CheckUpdates}"
-                              IsChecked="{Binding CheckForUpdatesOnStartup}"
-                              Foreground="{DynamicResource TextPrimaryBrush}"
-                              Margin="0,0,0,8"/>
-                    <CheckBox Content="{DynamicResource Strings.OS.AutoStart}"
-                              IsChecked="{Binding AutoStartWithWindows}"
-                              Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{DynamicResource Strings.OS.AutoStartHint}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               FontSize="11"
-                               Margin="22,0,0,0"/>
-                </StackPanel>
-            </GroupBox>
-
             <GroupBox Header="{DynamicResource Strings.OS.Presets}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
                     <TextBlock Text="{DynamicResource Strings.OS.PresetsHelp}"
