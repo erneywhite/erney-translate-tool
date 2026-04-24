@@ -70,6 +70,25 @@
                 </StackPanel>
             </GroupBox>
 
+            <GroupBox Header="Резервный провайдер" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,8">
+                        Если основной провайдер не отвечает несколько запросов подряд (упал, лимит исчерпан, нет интернета),
+                        программа автоматически переключится на резервный. Каждую минуту пробует основной снова —
+                        как только он восстановится, возвращается к нему. Учётные данные у обоих провайдеров общие
+                        (DeepL ключ, MyMemory email, LibreTranslate URL/ключ) — задаются в блоке выше.
+                    </TextBlock>
+                    <ComboBox ItemsSource="{Binding FallbackProviders}"
+                              SelectedValue="{Binding SelectedFallbackProvider}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
+                              Width="380"
+                              HorizontalAlignment="Left"/>
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="Целевой язык перевода" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
                     <ComboBox ItemsSource="{Binding TargetLanguages}"

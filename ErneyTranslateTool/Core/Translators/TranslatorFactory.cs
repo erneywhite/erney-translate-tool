@@ -33,9 +33,18 @@ public static class TranslatorFactory
     /// human-readable error if required credentials are missing.
     /// </summary>
     public static ITranslator? Create(AppSettings settings, ILogger logger, out string? error)
+        => Create(settings.Config.TranslationProvider, settings, logger, out error);
+
+    /// <summary>
+    /// Build a translator for a specific provider id, regardless of the
+    /// settings' primary one. Used by the fallback-provider machinery so
+    /// the same factory can produce both ends of the dual-translator pair
+    /// from one shared bag of credentials.
+    /// </summary>
+    public static ITranslator? Create(string? providerId, AppSettings settings, ILogger logger, out string? error)
     {
         error = null;
-        var provider = settings.Config.TranslationProvider;
+        var provider = providerId;
         if (string.IsNullOrWhiteSpace(provider))
             provider = ProviderMyMemory;
 

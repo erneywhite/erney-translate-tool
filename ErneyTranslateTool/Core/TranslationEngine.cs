@@ -74,6 +74,14 @@ public class TranslationEngine : IDisposable
 
         _capture.FrameCaptured += OnFrameCaptured;
         _capture.PauseStateChanged += OnCapturePauseChanged;
+        _translation.FallbackStateChanged += OnFallbackStateChanged;
+    }
+
+    private void OnFallbackStateChanged(object? sender, string message)
+    {
+        // Surface the switch in the main status line so the user knows
+        // why the active provider name suddenly changed in the tooltip.
+        if (IsRunning) StatusUpdated?.Invoke(this, message);
     }
 
     private void OnCapturePauseChanged(object? sender, bool isPaused)
@@ -277,6 +285,7 @@ public class TranslationEngine : IDisposable
         if (_disposed) return;
         _capture.FrameCaptured -= OnFrameCaptured;
         _capture.PauseStateChanged -= OnCapturePauseChanged;
+        _translation.FallbackStateChanged -= OnFallbackStateChanged;
         if (IsRunning)
             StopAsync().GetAwaiter().GetResult();
         _disposed = true;
