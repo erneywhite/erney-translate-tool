@@ -11,9 +11,13 @@
          СТИЛИ ДЛЯ BUTTON
          ======================================== -->
     
+    <!-- v1.0.12 redesign: soft buttons with subtle drop shadow + 12px
+         radius (Win11 native feel). The base style targets all buttons;
+         use PrimaryButtonStyle key for the call-to-action variant with a
+         gradient fill (Start/Stop on the Main tab). -->
     <Style x:Key="DarkButtonStyle" TargetType="Button">
-        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource SecondaryBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
         <Setter Property="BorderBrush" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="15,8"/>
@@ -27,31 +31,112 @@
                            Background="{TemplateBinding Background}"
                            BorderBrush="{TemplateBinding BorderBrush}"
                            BorderThickness="{TemplateBinding BorderThickness}"
-                           CornerRadius="6"
-                           Padding="{TemplateBinding Padding}">
+                           CornerRadius="10"
+                           Padding="{TemplateBinding Padding}"
+                           SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <!-- Subtle bottom shadow — gives buttons a tiny
+                                 "lifted" feel without looking heavy. -->
+                            <DropShadowEffect Color="#000000"
+                                              ShadowDepth="1"
+                                              Direction="270"
+                                              BlurRadius="3"
+                                              Opacity="0.18"/>
+                        </Border.Effect>
                         <ContentPresenter HorizontalAlignment="Center"
                                          VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryHoverBrush}"/>
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource SecondaryHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="border" Property="Background" Value="#5B21B6"/>
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource SecondaryHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="border" Property="Background" Value="{DynamicResource SecondaryBrush}"/>
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
                             <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
+                            <Setter TargetName="border" Property="Effect" Value="{x:Null}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
-    
-    <Style x:Key="{x:Type Button}" TargetType="Button" BasedOn="{StaticResource DarkButtonStyle}">
-        <Setter Property="Background" Value="{DynamicResource SecondaryBrush}"/>
-        <Setter Property="Foreground" Value="{DynamicResource SecondaryForegroundBrush}"/>
+
+    <Style x:Key="{x:Type Button}" TargetType="Button" BasedOn="{StaticResource DarkButtonStyle}"/>
+
+    <!-- Primary call-to-action button: gradient fill from primary to
+         primary-light + slightly stronger shadow. Use sparingly — one
+         per screen so it stays "the obvious next action". -->
+    <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="22,10"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            CornerRadius="12"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <Border.Background>
+                            <!-- Gradient = "this is the important action".
+                                 Picks up the active theme's primary +
+                                 primary-light brushes via the visual tree. -->
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="{Binding Source={DynamicResource PrimaryBrush}, Path=Color}" Offset="0"/>
+                                <GradientStop Color="{Binding Source={DynamicResource PrimaryLightBrush}, Path=Color}" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000"
+                                              ShadowDepth="2"
+                                              Direction="270"
+                                              BlurRadius="6"
+                                              Opacity="0.30"/>
+                        </Border.Effect>
+                        <ContentPresenter HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#000000"
+                                                      ShadowDepth="3"
+                                                      Direction="270"
+                                                      BlurRadius="9"
+                                                      Opacity="0.42"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#000000"
+                                                      ShadowDepth="0"
+                                                      BlurRadius="2"
+                                                      Opacity="0.20"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
+                            <Setter TargetName="border" Property="Effect" Value="{x:Null}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     
     <!-- ========================================
@@ -74,7 +159,7 @@
                            Background="{TemplateBinding Background}"
                            BorderBrush="{TemplateBinding BorderBrush}"
                            BorderThickness="{TemplateBinding BorderThickness}"
-                           CornerRadius="4">
+                           CornerRadius="8">
                         <ScrollViewer x:Name="PART_ContentHost"
                                      Margin="5,0"
                                      VerticalAlignment="Center"/>
@@ -126,7 +211,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"/>
+                                CornerRadius="8"/>
 
                         <ContentPresenter Grid.Column="0"
                                           Margin="10,0,4,0"
@@ -165,7 +250,7 @@
                             <Border Background="{DynamicResource BackgroundLightBrush}"
                                     BorderBrush="{DynamicResource BorderBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="4"
+                                    CornerRadius="8"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ScrollViewer MaxHeight="240">
                                     <ItemsPresenter/>
@@ -217,41 +302,59 @@
          СТИЛИ ДЛЯ GROUPBOX
          ======================================== -->
     
+    <!-- v1.0.12 redesign: card-style GroupBox. Single rounded panel with
+         a soft drop shadow; the header lives inside as a heading rather
+         than a separate stripe with its own border. Looks more "modern
+         dashboard card" than "old-school grouping". -->
     <Style x:Key="DarkGroupBoxStyle" TargetType="GroupBox">
-        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-        <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="Padding" Value="15"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="18"/>
         <Setter Property="Margin" Value="0,0,0,15"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="GroupBox">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Border Grid.Row="0"
-                               Background="{DynamicResource BackgroundLightBrush}"
-                               BorderBrush="{TemplateBinding BorderBrush}"
-                               BorderThickness="{TemplateBinding BorderThickness}"
-                               CornerRadius="4,4,0,0"
-                               Padding="10,5">
+                    <Border CornerRadius="12"
+                            Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000"
+                                              ShadowDepth="2"
+                                              Direction="270"
+                                              BlurRadius="8"
+                                              Opacity="0.18"/>
+                        </Border.Effect>
+                        <StackPanel>
                             <ContentPresenter ContentSource="Header"
                                              TextElement.FontWeight="SemiBold"
-                                             TextElement.FontSize="14"/>
-                        </Border>
-                        <Border Grid.Row="1"
-                               Background="{TemplateBinding Background}"
-                               BorderBrush="{TemplateBinding BorderBrush}"
-                               BorderThickness="{TemplateBinding BorderThickness}"
-                               CornerRadius="0,0,4,4"
-                               Padding="{TemplateBinding Padding}">
+                                             TextElement.FontSize="14"
+                                             TextElement.Foreground="{DynamicResource TextPrimaryBrush}"
+                                             Margin="0,0,0,12"/>
                             <ContentPresenter/>
-                        </Border>
-                    </Grid>
+                        </StackPanel>
+                    </Border>
                 </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ModernCardStyle — like DarkGroupBoxStyle but без header (для
+         статистических карточек на главной, у которых заголовок и
+         содержимое верстаются вручную). -->
+    <Style x:Key="ModernCardStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
+        <Setter Property="Padding" Value="18"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect Color="#000000"
+                                  ShadowDepth="2"
+                                  Direction="270"
+                                  BlurRadius="8"
+                                  Opacity="0.18"/>
             </Setter.Value>
         </Setter>
     </Style>
@@ -401,10 +504,10 @@
                     <Grid>
                         <Border x:Name="PART_Track"
                                Background="{TemplateBinding Background}"
-                               CornerRadius="4"/>
+                               CornerRadius="6"/>
                         <Border x:Name="PART_Indicator"
                                Background="{TemplateBinding Foreground}"
-                               CornerRadius="4"
+                               CornerRadius="6"
                                HorizontalAlignment="Left"/>
                     </Grid>
                 </ControlTemplate>
@@ -516,7 +619,7 @@
                                Background="{DynamicResource InputBackgroundBrush}"
                                BorderBrush="{DynamicResource BorderBrush}"
                                BorderThickness="1"
-                               CornerRadius="3">
+                               CornerRadius="5">
                             <Path x:Name="checkMark"
                                  Data="M3,6 L7,10 L14,3"
                                  Stroke="{DynamicResource PrimaryForegroundBrush}"

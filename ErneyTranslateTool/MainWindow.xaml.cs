@@ -80,9 +80,35 @@ public partial class MainWindow : Window
         _tray.ExitRequested += (_, _) => RealExit();
         _tray.MainWindowOpened += (_, _) => FlushPendingDialogs();
 
+        // Sidebar starts on Main — same as the old TabControl default.
+        // Selecting an item raises SelectionChanged which flips the
+        // visible content panel.
+        if (NavList.Items.Count > 0) NavList.SelectedIndex = 0;
+
         // Background update check on startup. Failures are silent.
         if (_settings.Config.CheckForUpdatesOnStartup)
             _ = CheckForUpdatesAsync(showAlways: false);
+    }
+
+    /// <summary>
+    /// Sidebar nav handler. Maps the selected item's <c>Tag</c> to one
+    /// of the pre-instantiated tab UserControls and flips its
+    /// Visibility, leaving all the others Collapsed. Keeping every tab
+    /// alive (rather than reconstructing) preserves their internal
+    /// state across navigation, same as the old TabControl behaviour.
+    /// </summary>
+    private void OnNavSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (NavList.SelectedItem is not System.Windows.Controls.ListBoxItem item) return;
+        var tag = item.Tag as string ?? string.Empty;
+
+        MainTabHost.Visibility        = tag == "Main"        ? Visibility.Visible : Visibility.Collapsed;
+        TranslationTabHost.Visibility = tag == "Translation" ? Visibility.Visible : Visibility.Collapsed;
+        OverlayTabHost.Visibility     = tag == "Overlay"     ? Visibility.Visible : Visibility.Collapsed;
+        HistoryTabHost.Visibility     = tag == "History"     ? Visibility.Visible : Visibility.Collapsed;
+        GlossaryTabHost.Visibility    = tag == "Glossary"    ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesTabHost.Visibility    = tag == "Profiles"    ? Visibility.Visible : Visibility.Collapsed;
+        AboutTabHost.Visibility       = tag == "About"       ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>
@@ -187,24 +213,26 @@ public partial class MainWindow : Window
 
             case UpdateCheckOutcome.UpToDate:
                 if (showAlways)
-                    MessageBox.Show($"У тебя последняя версия ({result.Current}).",
-                        "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(
+                        LanguageManager.Format("Strings.UpdateCheck.UpToDateFmt", result.Current),
+                        LanguageManager.Get("Strings.UpdateCheck.Title"),
+                        MessageBoxButton.OK, MessageBoxImage.Information);
                 break;
 
             case UpdateCheckOutcome.NoReleases:
                 if (showAlways)
                     MessageBox.Show(
-                        $"В репозитории пока нет опубликованных релизов.\n" +
-                        $"У тебя dev-сборка версии {result.Current}.",
-                        "Обновление", MessageBoxButton.OK, MessageBoxImage.Information);
+                        LanguageManager.Format("Strings.UpdateCheck.NoReleasesFmt", result.Current),
+                        LanguageManager.Get("Strings.UpdateCheck.Title"),
+                        MessageBoxButton.OK, MessageBoxImage.Information);
                 break;
 
             case UpdateCheckOutcome.Error:
                 if (showAlways)
                     MessageBox.Show(
-                        $"Не удалось проверить обновления.\n\n" +
-                        $"Подробности: {result.ErrorMessage}",
-                        "Обновление", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        LanguageManager.Format("Strings.UpdateCheck.ErrorFmt", result.ErrorMessage),
+                        LanguageManager.Get("Strings.UpdateCheck.Title"),
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
                 break;
         }
     }

@@ -569,26 +569,28 @@ public class SettingsViewModel : BaseViewModel
             var mb = bytes / 1024.0 / 1024.0;
             var limit = _appSettings.Config.MaxCacheSizeMb;
             CacheStatsText = limit > 0
-                ? $"{entries:N0} записей · {mb:F1} МБ из {limit} МБ"
-                : $"{entries:N0} записей · {mb:F1} МБ (без лимита)";
+                ? LanguageManager.Format("Strings.Cache.LimitFmt", entries, mb, limit)
+                : LanguageManager.Format("Strings.Cache.UnlimitedFmt", entries, mb);
         }
         catch
         {
-            CacheStatsText = "Не удалось прочитать статистику кэша";
+            CacheStatsText = LanguageManager.Get("Strings.Cache.ReadFailed");
         }
     }
 
     private void ClearCache()
     {
         if (MessageBox.Show(
-                "Полностью очистить кэш переводов? Все сохранённые переводы будут удалены, " +
-                "повторные переводы пойдут заново через провайдер.",
-                "Очистка кэша", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                LanguageManager.Get("Strings.Cache.ConfirmBody"),
+                LanguageManager.Get("Strings.Cache.ConfirmTitle"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question)
             != MessageBoxResult.Yes) return;
 
         var deleted = _cache.ClearCache();
         RefreshCacheStats();
-        MessageBox.Show($"Удалено записей: {deleted:N0}.", "Кэш очищен",
+        MessageBox.Show(
+            LanguageManager.Format("Strings.Cache.DoneBodyFmt", deleted),
+            LanguageManager.Get("Strings.Cache.DoneTitle"),
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -722,7 +724,9 @@ public class SettingsViewModel : BaseViewModel
         try
         {
             item.IsBusy = true;
-            item.StatusText = UseBestTessdata ? "Скачивание (best)..." : "Скачивание...";
+            item.StatusText = UseBestTessdata
+                ? LanguageManager.Get("Strings.OcrDownload.DownloadingBest")
+                : LanguageManager.Get("Strings.OcrDownload.Downloading");
             await _tessdata.DownloadLanguageAsync(item.Code, UseBestTessdata);
             item.IsInstalled = true;
             item.StatusText = string.Empty;
@@ -730,8 +734,10 @@ public class SettingsViewModel : BaseViewModel
         }
         catch (Exception ex)
         {
-            item.StatusText = $"Ошибка: {ex.Message}";
-            MessageBox.Show($"Не удалось скачать {item.Code}: {ex.Message}", "Ошибка",
+            item.StatusText = LanguageManager.Format("Strings.Settings.SaveErrorFmt", ex.Message);
+            MessageBox.Show(
+                LanguageManager.Format("Strings.OcrDownload.FailedFmt", item.Code, ex.Message),
+                LanguageManager.Get("Strings.OcrDownload.ErrorTitle"),
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
@@ -743,8 +749,10 @@ public class SettingsViewModel : BaseViewModel
     private void DeleteLanguage(TessdataItem? item)
     {
         if (item == null || !item.IsInstalled) return;
-        if (MessageBox.Show($"Удалить пакет {item.DisplayName} ({item.Code})?",
-                "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+        if (MessageBox.Show(
+                LanguageManager.Format("Strings.OcrDownload.DeleteConfirmFmt", item.DisplayName, item.Code),
+                LanguageManager.Get("Strings.OcrDownload.DeleteConfirmTitle"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         if (_tessdata.DeleteLanguage(item.Code))
@@ -860,13 +868,13 @@ public class SettingsViewModel : BaseViewModel
             _profiles.SaveActiveProfileFromCurrentConfig();
 
             var profileName = _profiles.ActiveProfile.IsDefault
-                ? "По умолчанию"
+                ? LanguageManager.Get("Strings.Settings.DefaultProfile")
                 : _profiles.ActiveProfile.Name;
-            ShowTransientStatus($"Сохранено ✓ (профиль: {profileName})");
+            ShowTransientStatus(LanguageManager.Format("Strings.Settings.SavedFmt", profileName));
         }
         catch (Exception ex)
         {
-            ShowTransientStatus("Ошибка: " + ex.Message);
+            ShowTransientStatus(LanguageManager.Format("Strings.Settings.SaveErrorFmt", ex.Message));
         }
     }
 

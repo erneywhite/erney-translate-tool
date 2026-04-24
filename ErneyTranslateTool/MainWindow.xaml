@@ -3,31 +3,142 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:tabs="clr-namespace:ErneyTranslateTool.Views.Tabs"
         Title="Erney's Translate Tool"
-        Height="700" Width="1000"
-        MinHeight="500" MinWidth="800"
+        Height="720" Width="1080"
+        MinHeight="540" MinWidth="900"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BackgroundBrush}">
-    <TabControl Margin="8,8,8,8" Padding="0">
-        <TabItem Header="{DynamicResource Strings.Tab.Main}">
-            <tabs:MainTab DataContext="{Binding MainVM}"/>
-        </TabItem>
-        <TabItem Header="{DynamicResource Strings.Tab.TranslationSettings}">
-            <tabs:TranslationSettingsTab DataContext="{Binding SettingsVM}"/>
-        </TabItem>
-        <TabItem Header="{DynamicResource Strings.Tab.OverlaySettings}">
-            <tabs:OverlaySettingsTab DataContext="{Binding SettingsVM}"/>
-        </TabItem>
-        <TabItem Header="{DynamicResource Strings.Tab.History}">
-            <tabs:HistoryTab DataContext="{Binding HistoryVM}"/>
-        </TabItem>
-        <TabItem Header="{DynamicResource Strings.Tab.Glossary}">
-            <tabs:GlossaryTab DataContext="{Binding GlossaryVM}"/>
-        </TabItem>
-        <TabItem Header="{DynamicResource Strings.Tab.Profiles}">
-            <tabs:ProfilesTab DataContext="{Binding ProfilesVM}"/>
-        </TabItem>
-        <TabItem Header="{DynamicResource Strings.Tab.About}">
-            <tabs:AboutTab/>
-        </TabItem>
-    </TabControl>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="180"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar navigation. The selection drives which UserControl is
+             shown in the right pane via the Tag-bound discriminator below. -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource BackgroundDarkBrush}"
+                Padding="0">
+            <DockPanel LastChildFill="True">
+                <!-- Top brand line. -->
+                <StackPanel DockPanel.Dock="Top" Margin="14,18,14,12">
+                    <TextBlock Text="Erney's"
+                               FontWeight="Bold" FontSize="16"
+                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="Translate Tool"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+
+                <ListBox x:Name="NavList"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         SelectionChanged="OnNavSelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="14,10"/>
+                            <Setter Property="Margin" Value="6,2"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="b"
+                                                CornerRadius="10"
+                                                Background="Transparent"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="b" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                                <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+
+                    <ListBoxItem Tag="Main">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🏠" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Main}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Translation">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🔤" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.TranslationSettings}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Overlay">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🪟" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.OverlaySettings}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="History">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📜" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.History}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Glossary">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="📚" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Glossary}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Profiles">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="🎮" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Profiles}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="About">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="ℹ️" FontSize="14" Margin="0,0,10,0"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.About}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Content host: switches the visible tab UserControl based on
+             the selected sidebar item. Keeping all instances loaded so
+             tab state (scroll positions, selected items, edited fields)
+             is preserved when the user navigates away and back — same
+             behaviour as the previous TabControl. -->
+        <Grid Grid.Column="1">
+            <tabs:MainTab x:Name="MainTabHost"
+                          DataContext="{Binding MainVM}"
+                          Visibility="Visible"/>
+            <tabs:TranslationSettingsTab x:Name="TranslationTabHost"
+                                         DataContext="{Binding SettingsVM}"
+                                         Visibility="Collapsed"/>
+            <tabs:OverlaySettingsTab x:Name="OverlayTabHost"
+                                     DataContext="{Binding SettingsVM}"
+                                     Visibility="Collapsed"/>
+            <tabs:HistoryTab x:Name="HistoryTabHost"
+                             DataContext="{Binding HistoryVM}"
+                             Visibility="Collapsed"/>
+            <tabs:GlossaryTab x:Name="GlossaryTabHost"
+                              DataContext="{Binding GlossaryVM}"
+                              Visibility="Collapsed"/>
+            <tabs:ProfilesTab x:Name="ProfilesTabHost"
+                              DataContext="{Binding ProfilesVM}"
+                              Visibility="Collapsed"/>
+            <tabs:AboutTab x:Name="AboutTabHost"
+                           Visibility="Collapsed"/>
+        </Grid>
+    </Grid>
 </Window>

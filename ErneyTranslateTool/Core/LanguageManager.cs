@@ -27,6 +27,14 @@ public static class LanguageManager
 
     public static string CurrentId => _currentId;
 
+    /// <summary>
+    /// Raised after the active strings dictionary has been swapped. Code-
+    /// constructed UI (tray menu items, MessageBox text captured into local
+    /// variables, etc.) listens for this and re-pulls its strings — XAML
+    /// {DynamicResource} bindings update automatically without help.
+    /// </summary>
+    public static event EventHandler? LanguageChanged;
+
     public static void Apply(string languageId)
     {
         if (string.IsNullOrWhiteSpace(languageId)) languageId = Russian;
@@ -55,6 +63,8 @@ public static class LanguageManager
         // Insert near the front so subsequent merged dictionaries (themes,
         // styles) can override anything that uses the same key.
         dicts.Insert(0, newDict);
+
+        LanguageChanged?.Invoke(null, EventArgs.Empty);
     }
 
     /// <summary>
