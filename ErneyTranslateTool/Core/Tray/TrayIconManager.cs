@@ -22,7 +22,14 @@ public class TrayIconManager : IDisposable
     private readonly AppSettings _settings;
     private readonly ILogger _logger;
     private bool _disposed;
+    // Anything sticky we showed while the user wasn't looking — Attention
+    // (e.g. "update available") survives engine state changes so it doesn't
+    // get clobbered by Idle ↔ Translating churn. Cleared once the user
+    // opens the main window.
+    private TrayIconState _stickyState = TrayIconState.Idle;
 
+    /// <summary>Raised when the user opens the main window via tray click/menu — owners use this to flush any pending modals deferred during a tray-only start.</summary>
+    public event EventHandler? MainWindowOpened;
     public event EventHandler? ExitRequested;
 
     public TrayIconManager(Window mainWindow, MainViewModel mainVm,
@@ -36,7 +43,10 @@ public class TrayIconManager : IDisposable
 
         _icon = new TaskbarIcon
         {
-            IconSource = LoadIcon(),
+            // Idle = clean app icon, no badge. Renderer falls back to null
+            // if loading fails — Hardcodet will then just show no icon
+            // until RefreshIconAndTooltip retries on the first state change.
+            IconSource = TrayIconRenderer.GetIconFor(TrayIconState.Idle),
             ToolTipText = "Erney's Translate Tool",
             Visibility = Visibility.Visible,
         };
@@ -51,18 +61,33 @@ public class TrayIconManager : IDisposable
         RefreshIconAndTooltip();
     }
 
-    private System.Windows.Media.ImageSource? LoadIcon()
+    /// <summary>
+    /// Compute the current effective tray-icon state. "Sticky" attention/error
+    /// wins over the engine's idle/translating because the user explicitly
+    /// hasn't acknowledged it yet.
+    /// </summary>
+    private TrayIconState ComputeState()
     {
-        try
-        {
-            var uri = new Uri("pack://application:,,,/Resources/Icons/app.ico", UriKind.Absolute);
-            return System.Windows.Media.Imaging.BitmapFrame.Create(uri);
-        }
-        catch (Exception ex)
-        {
-            _logger.Warning(ex, "Could not load tray icon");
-            return null;
-        }
+        if (_stickyState == TrayIconState.Attention || _stickyState == TrayIconState.Error)
+            return _stickyState;
+        return _engine.IsRunning ? TrayIconState.Translating : TrayIconState.Idle;
+    }
+
+    /// <summary>
+    /// Pin a sticky state (e.g. "update available" → Attention). It survives
+    /// engine on/off until <see cref="ClearStickyState"/> is called or the
+    /// user opens the main window.
+    /// </summary>
+    public void SetStickyState(TrayIconState state)
+    {
+        _stickyState = state;
+        RefreshIconAndTooltip();
+    }
+
+    public void ClearStickyState()
+    {
+        _stickyState = TrayIconState.Idle;
+        RefreshIconAndTooltip();
     }
 
     private System.Windows.Controls.ContextMenu BuildMenu()
@@ -103,9 +128,23 @@ public class TrayIconManager : IDisposable
             var running = _engine.IsRunning;
             var stats = $"\nПереведено сегодня: {_settings.Config.CharactersTranslatedToday:N0} симв." +
                         $"\nПопадания в кэш: {_settings.GetCacheHitRate():F1}%";
-            _icon.ToolTipText = running
-                ? $"Erney's Translate Tool — перевод активен\n{_engine.TargetWindowTitle}{stats}"
-                : $"Erney's Translate Tool — ожидание{stats}";
+
+            // Highlight sticky attention/error in the tooltip so a glance
+            // tells the user *why* the icon is yellow/red.
+            var headline = _stickyState switch
+            {
+                TrayIconState.Attention => "Erney's Translate Tool — есть уведомление (открой окно)",
+                TrayIconState.Error     => "Erney's Translate Tool — ошибка (открой окно)",
+                _ => running
+                    ? $"Erney's Translate Tool — перевод активен\n{_engine.TargetWindowTitle}"
+                    : "Erney's Translate Tool — ожидание",
+            };
+            _icon.ToolTipText = headline + stats;
+
+            // Swap the icon to the badged variant; falls back transparently
+            // if the renderer can't produce one.
+            var rendered = TrayIconRenderer.GetIconFor(ComputeState());
+            if (rendered != null) _icon.IconSource = rendered;
         });
     }
 
@@ -123,6 +162,13 @@ public class TrayIconManager : IDisposable
         _mainWindow.Activate();
         _mainWindow.Topmost = true;
         _mainWindow.Topmost = false;
+
+        // Acknowledge any pending notification — once the user has the
+        // window open they can see whatever it was for themselves.
+        if (_stickyState != TrayIconState.Idle)
+            ClearStickyState();
+
+        MainWindowOpened?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose()

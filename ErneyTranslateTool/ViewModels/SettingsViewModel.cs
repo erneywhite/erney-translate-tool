@@ -9,9 +9,11 @@ using System.Windows.Input;
 using System.Windows.Media;
 using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Core.Ocr;
+using ErneyTranslateTool.Core.Startup;
 using ErneyTranslateTool.Core.Translators;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
+using Serilog;
 
 namespace ErneyTranslateTool.ViewModels;
 
@@ -22,6 +24,7 @@ public class SettingsViewModel : BaseViewModel
     private readonly OcrService _ocrService;
     private readonly TessdataManager _tessdata;
     private readonly CacheRepository _cache;
+    private readonly ILogger _logger;
 
     private string _selectedProvider = TranslatorFactory.ProviderMyMemory;
     private string _deeplApiKey = string.Empty;
@@ -50,6 +53,7 @@ public class SettingsViewModel : BaseViewModel
     private string _selectedAppTheme = "Dark";
     private bool _closeToTray = true;
     private bool _checkForUpdatesOnStartup = true;
+    private bool _autoStartWithWindows;
 
     private static Brush MakeBrush(string hex)
     {
@@ -104,6 +108,26 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _checkForUpdatesOnStartup, value);
     }
 
+    /// <summary>
+    /// Mirrors the per-user HKCU\...\Run registry key. Backed by the registry
+    /// rather than AppConfig — the OS owns the truth for "autostart yes/no",
+    /// and other tools (msconfig, Autoruns) can flip it independently.
+    /// </summary>
+    public bool AutoStartWithWindows
+    {
+        get => _autoStartWithWindows;
+        set
+        {
+            if (SetProperty(ref _autoStartWithWindows, value))
+            {
+                // Apply immediately so the user can verify with Task Manager
+                // or msconfig without clicking "Save first".
+                if (value) AutoStartManager.Enable(_logger);
+                else AutoStartManager.Disable(_logger);
+            }
+        }
+    }
+
     /// <summary>Pre-baked overlay colour combinations users can pick with one click.</summary>
     public ObservableCollection<OverlayPreset> OverlayPresets { get; } = new()
     {
@@ -122,13 +146,15 @@ public class SettingsViewModel : BaseViewModel
         TranslationService translationService,
         OcrService ocrService,
         TessdataManager tessdata,
-        CacheRepository cache)
+        CacheRepository cache,
+        ILogger logger)
     {
         _appSettings = appSettings;
         _translationService = translationService;
         _ocrService = ocrService;
         _tessdata = tessdata;
         _cache = cache;
+        _logger = logger;
 
         Providers = new ObservableCollection<ProviderOption>(
             TranslatorFactory.AllProviders.Select(p =>
@@ -479,6 +505,11 @@ public class SettingsViewModel : BaseViewModel
         SelectedAppTheme = string.IsNullOrWhiteSpace(c.AppTheme) ? ThemeManager.Dark : c.AppTheme;
         CloseToTray = c.CloseToTray;
         CheckForUpdatesOnStartup = c.CheckForUpdatesOnStartup;
+        // Source-of-truth for autostart is the registry, not the config —
+        // setting field directly bypasses the property setter so we don't
+        // re-write to the registry while just reading state.
+        _autoStartWithWindows = AutoStartManager.IsEnabled(_logger);
+        OnPropertyChanged(nameof(AutoStartWithWindows));
 
         // Match the saved limit to one of our preset options; fall back to
         // 200 MB if the stored value isn't in the dropdown (manual edit).
