@@ -21,6 +21,10 @@ public partial class MainWindow : Window
     private readonly ILogger _logger;
     private TrayIconManager? _tray;
     private bool _allowRealClose;
+    // When started minimised we don't pop modals over a hidden window —
+    // we stash them here and flush when the user opens the main window.
+    private UpdateCheckResult? _pendingUpdate;
+    private Action? _pendingWhatsNew;
 
     public MainViewModel MainVM { get; }
     public SettingsViewModel SettingsVM { get; }
@@ -61,10 +65,38 @@ public partial class MainWindow : Window
 
         _tray = new TrayIconManager(this, MainVM, _engine, _settings, _logger);
         _tray.ExitRequested += (_, _) => RealExit();
+        _tray.MainWindowOpened += (_, _) => FlushPendingDialogs();
 
         // Background update check on startup. Failures are silent.
         if (_settings.Config.CheckForUpdatesOnStartup)
             _ = CheckForUpdatesAsync(showAlways: false);
+    }
+
+    /// <summary>
+    /// When the app started in tray-only mode and discovered an update or
+    /// just-upgraded notes, those were stashed instead of shown over a
+    /// hidden window. Flush them now that the user has opened the window.
+    /// </summary>
+    private void FlushPendingDialogs()
+    {
+        if (_pendingUpdate is { } up)
+        {
+            _pendingUpdate = null;
+            ShowUpdateDialog(up);
+        }
+        if (_pendingWhatsNew is { } wn)
+        {
+            _pendingWhatsNew = null;
+            // Run on dispatcher so it lands after the current ShowMainWindow
+            // call finishes activating us.
+            Dispatcher.BeginInvoke(wn);
+        }
+    }
+
+    /// <summary>Called by App at startup to schedule the "What's new" dialog for the first time the window opens (tray-only start case).</summary>
+    public void DeferWhatsNewDialog(Action showDialog)
+    {
+        _pendingWhatsNew = showDialog;
     }
 
     private void RegisterHotkeys()
@@ -121,9 +153,23 @@ public partial class MainWindow : Window
         switch (result.Outcome)
         {
             case UpdateCheckOutcome.UpdateAvailable:
-                _tray?.ShowBalloon("Доступно обновление",
-                    $"Версия {result.Latest} вышла. Открой «О программе» чтобы установить.");
-                ShowUpdateDialog(result);
+                // Two paths: visible window → modal dialog as before.
+                // Tray-only start → balloon + amber dot + stash, so we
+                // don't pop a modal over a hidden owner. The user will
+                // see it the moment they click the tray icon.
+                if (!IsVisible)
+                {
+                    _pendingUpdate = result;
+                    _tray?.SetStickyState(TrayIconState.Attention);
+                    _tray?.ShowBalloon("Доступно обновление",
+                        $"Версия {result.Latest} готова к установке. Открой программу чтобы обновиться.");
+                }
+                else
+                {
+                    _tray?.ShowBalloon("Доступно обновление",
+                        $"Версия {result.Latest} вышла. Открой «О программе» чтобы установить.");
+                    ShowUpdateDialog(result);
+                }
                 break;
 
             case UpdateCheckOutcome.UpToDate:

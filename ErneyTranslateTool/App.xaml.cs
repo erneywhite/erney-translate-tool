@@ -21,6 +21,14 @@ public partial class App : Application
     public AppSettings Settings { get; private set; } = null!;
     public ILogger Logger { get; private set; } = null!;
 
+    /// <summary>
+    /// True when launched with <c>--minimized</c> (the autostart entry sets
+    /// this). Tells <see cref="MainWindow"/> to start hidden in the tray
+    /// and tells the app-startup code to defer modal dialogs (update
+    /// notification, what's-new) until the user opens the window.
+    /// </summary>
+    public bool StartedMinimized { get; private set; }
+
     public static string AppDataPath { get; } = DetermineAppDataPath();
 
     /// <summary>
@@ -58,6 +66,11 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Detect autostart-minimised mode early; everything downstream
+        // (MainWindow visibility, dialog deferral) reads it.
+        StartedMinimized = e.Args != null && Array.Exists(e.Args, a =>
+            string.Equals(a, Core.Startup.AutoStartManager.MinimizedFlag, StringComparison.OrdinalIgnoreCase));
 
         Directory.CreateDirectory(AppDataPath);
         Directory.CreateDirectory(Path.Combine(AppDataPath, "logs"));
@@ -99,9 +112,24 @@ public partial class App : Application
 
             var mainWindow = Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
-            mainWindow.Show();
 
-            // Surface release notes once if the user just upgraded.
+            if (StartedMinimized)
+            {
+                // Show + Hide is the canonical WPF dance to construct a window
+                // and trigger Loaded (which builds the tray icon!) without
+                // ever rendering it on screen.
+                mainWindow.Show();
+                mainWindow.Hide();
+                Logger.Information("Started minimised — main window hidden, tray only");
+            }
+            else
+            {
+                mainWindow.Show();
+            }
+
+            // Surface release notes once if the user just upgraded — but if
+            // we started minimised, defer until the window is actually opened
+            // (the dialog would otherwise be invisible behind a hidden owner).
             _ = ShowWhatsNewIfUpdatedAsync(mainWindow);
 
             Logger.Information("Application started successfully");
@@ -215,7 +243,9 @@ public partial class App : Application
             Settings.Config.LastSeenReleaseVersion = currentStr;
             Settings.Save();
 
-            owner.Dispatcher.Invoke(() =>
+            // Build the show-action once and either run it now or stash it
+            // for the first window-open if we started in tray-only mode.
+            Action show = () =>
             {
                 var dlg = new Views.Dialogs.WhatsNewDialog(
                     displayVersion,
@@ -226,7 +256,16 @@ public partial class App : Application
                     Owner = owner
                 };
                 dlg.ShowDialog();
-            });
+            };
+
+            if (StartedMinimized && owner is MainWindow mw)
+            {
+                mw.DeferWhatsNewDialog(show);
+            }
+            else
+            {
+                owner.Dispatcher.Invoke(show);
+            }
         }
         catch (Exception ex)
         {

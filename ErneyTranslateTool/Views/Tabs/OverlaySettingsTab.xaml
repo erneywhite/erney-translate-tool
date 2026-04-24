@@ -44,7 +44,15 @@
                                Margin="22,0,0,10"/>
                     <CheckBox Content="Проверять обновления при запуске (фоном, тихо)"
                               IsChecked="{Binding CheckForUpdatesOnStartup}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
+                              Margin="0,0,0,8"/>
+                    <CheckBox Content="Запускать с Windows (свёрнутым в трей)"
+                              IsChecked="{Binding AutoStartWithWindows}"
                               Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    <TextBlock Text="При входе в Windows программа сразу появится в трее. Открыть — клик по иконке."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               Margin="22,0,0,0"/>
                 </StackPanel>
             </GroupBox>
 
