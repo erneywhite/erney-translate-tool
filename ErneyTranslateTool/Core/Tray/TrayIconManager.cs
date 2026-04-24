@@ -66,6 +66,11 @@ public class TrayIconManager : IDisposable
         _icon.TrayLeftMouseUp += (_, _) => ShowMainWindow();
         _icon.TrayMouseDoubleClick += (_, _) => ShowMainWindow();
         _icon.ContextMenu = BuildMenu();
+        // Rebuild the context menu and re-read the tooltip strings the
+        // moment the user flips the UI language (menu items capture their
+        // headers at construction time, so without this they'd stay
+        // Russian/English forever).
+        LanguageManager.LanguageChanged += OnLanguageChanged;
 
         _blinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
         _blinkTimer.Tick += (_, _) =>
@@ -152,14 +157,6 @@ public class TrayIconManager : IDisposable
         Application.Current?.Dispatcher.Invoke(() =>
         {
             var state = ComputeState();
-            // Don't bracket the active-profile line with "Default" — most
-            // users never create profiles and the line would just be noise.
-            var profileLine = !_profiles.ActiveProfile.IsDefault
-                ? LanguageManager.Format("Strings.Tray.ProfileLine", _profiles.ActiveProfile.Name)
-                : string.Empty;
-            var stats = LanguageManager.Format("Strings.Tray.StatsLine",
-                _settings.Config.CharactersTranslatedToday, _settings.GetCacheHitRate());
-
             // Highlight sticky attention/error in the tooltip so a glance
             // tells the user *why* the icon is yellow/red.
             var headline = state switch
@@ -167,10 +164,24 @@ public class TrayIconManager : IDisposable
                 TrayIconState.Attention   => LanguageManager.Get("Strings.Tray.HeadlineAttention"),
                 TrayIconState.Error       => LanguageManager.Get("Strings.Tray.HeadlineError"),
                 TrayIconState.Paused      => LanguageManager.Format("Strings.Tray.HeadlinePaused", _engine.TargetWindowTitle),
-                TrayIconState.Translating => LanguageManager.Format("Strings.Tray.HeadlineActive", _engine.TargetWindowTitle),
+                TrayIconState.Translating => LanguageManager.Format("Strings.Tray.HeadlineActiveFmt", _engine.TargetWindowTitle),
                 _                         => LanguageManager.Get("Strings.Tray.HeadlineIdle"),
             };
-            _icon.ToolTipText = headline + profileLine + stats;
+
+            // Build the multi-line tooltip in C# so Environment.NewLine
+            // (which actually renders as a line break in Windows tray
+            // tooltips) is the separator. Embedding &#x0a; in XAML
+            // resource strings does not survive the trip to the native
+            // tooltip API — they end up concatenated on a single line.
+            var lines = new System.Collections.Generic.List<string> { headline };
+            if (!_profiles.ActiveProfile.IsDefault)
+            {
+                lines.Add(LanguageManager.Format("Strings.Tray.ProfileLineFmt",
+                    _profiles.ActiveProfile.Name));
+            }
+            lines.Add(LanguageManager.Format("Strings.Tray.StatsLineFmt",
+                _settings.Config.CharactersTranslatedToday, _settings.GetCacheHitRate()));
+            _icon.ToolTipText = string.Join(Environment.NewLine, lines);
 
             // Start/stop the pulse alongside the paused state — no point
             // burning a timer tick while the user can see a steady dot.
@@ -230,9 +241,19 @@ public class TrayIconManager : IDisposable
         MainWindowOpened?.Invoke(this, EventArgs.Empty);
     }
 
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+        {
+            _icon.ContextMenu = BuildMenu();
+            RefreshIconAndTooltip();
+        });
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
+        LanguageManager.LanguageChanged -= OnLanguageChanged;
         _blinkTimer.Stop();
         _icon.Dispose();
         _disposed = true;

@@ -158,7 +158,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.11 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.12 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>
@@ -215,6 +215,75 @@
     <sys:String x:Key="Strings.WhatsNew.NoNotes">Описание изменений недоступно. Открой страницу релиза на GitHub для подробностей.</sys:String>
     <sys:String x:Key="Strings.WhatsNew.OpenGitHub">Открыть на GitHub</sys:String>
 
+    <!-- Update check messages (no-update / no-releases / error) -->
+    <sys:String x:Key="Strings.UpdateCheck.Title">Обновление</sys:String>
+    <sys:String x:Key="Strings.UpdateCheck.UpToDateFmt">У тебя последняя версия ({0}).</sys:String>
+    <sys:String x:Key="Strings.UpdateCheck.NoReleasesFmt">В репозитории пока нет опубликованных релизов.&#x0a;У тебя dev-сборка версии {0}.</sys:String>
+    <sys:String x:Key="Strings.UpdateCheck.ErrorFmt">Не удалось проверить обновления.&#x0a;&#x0a;Подробности: {0}</sys:String>
+
+    <!-- Cache management dialogs -->
+    <sys:String x:Key="Strings.Cache.ConfirmTitle">Очистка кэша</sys:String>
+    <sys:String x:Key="Strings.Cache.ConfirmBody">Полностью очистить кэш переводов? Все сохранённые переводы будут удалены, повторные переводы пойдут заново через провайдер.</sys:String>
+    <sys:String x:Key="Strings.Cache.DoneTitle">Кэш очищен</sys:String>
+    <sys:String x:Key="Strings.Cache.DoneBodyFmt">Удалено записей: {0:N0}.</sys:String>
+    <sys:String x:Key="Strings.Cache.ReadFailed">Не удалось прочитать статистику кэша</sys:String>
+    <sys:String x:Key="Strings.Cache.LimitFmt">{0:N0} записей · {1:F1} МБ из {2} МБ</sys:String>
+    <sys:String x:Key="Strings.Cache.UnlimitedFmt">{0:N0} записей · {1:F1} МБ (без лимита)</sys:String>
+
+    <!-- Glossary dialogs -->
+    <sys:String x:Key="Strings.Glossary.DeleteTitle">Удаление правила</sys:String>
+    <sys:String x:Key="Strings.Glossary.DeleteBodyFmt">Удалить правило «{0}» → «{1}»?</sys:String>
+    <sys:String x:Key="Strings.Glossary.AddedHint">Добавлено пустое правило — заполни поля «Оригинал» и «Перевод», затем «Сохранить».</sys:String>
+    <sys:String x:Key="Strings.Glossary.DeletedHint">Правило удалено.</sys:String>
+    <sys:String x:Key="Strings.Glossary.SavedFmt">Сохранено правил: {0}.</sys:String>
+    <sys:String x:Key="Strings.Glossary.LoadedFmt">Загружено правил: {0}</sys:String>
+    <sys:String x:Key="Strings.Glossary.ImportTitle">Импорт глоссария</sys:String>
+    <sys:String x:Key="Strings.Glossary.ImportFilter">JSON-файл глоссария (*.json)|*.json</sys:String>
+    <sys:String x:Key="Strings.Glossary.ImportEmptyHint">Файл пуст или не содержит правил.</sys:String>
+    <sys:String x:Key="Strings.Glossary.ImportedFmt">Импортировано правил: {0}.</sys:String>
+    <sys:String x:Key="Strings.Glossary.ImportErrorTitle">Ошибка импорта</sys:String>
+    <sys:String x:Key="Strings.Glossary.ImportErrorFmt">Не удалось импортировать: {0}</sys:String>
+    <sys:String x:Key="Strings.Glossary.ExportTitle">Экспорт глоссария</sys:String>
+    <sys:String x:Key="Strings.Glossary.ExportedFmt">Экспортировано правил: {0} в {1}.</sys:String>
+    <sys:String x:Key="Strings.Glossary.ExportErrorTitle">Ошибка экспорта</sys:String>
+    <sys:String x:Key="Strings.Glossary.ExportErrorFmt">Не удалось экспортировать: {0}</sys:String>
+
+    <!-- Profile dialogs -->
+    <sys:String x:Key="Strings.Profiles.DefaultDeleteTitle">Удаление профиля</sys:String>
+    <sys:String x:Key="Strings.Profiles.DefaultDeleteBody">Профиль «По умолчанию» нельзя удалить — он используется как fallback.</sys:String>
+    <sys:String x:Key="Strings.Profiles.DeleteBodyFmt">Удалить профиль «{0}»?</sys:String>
+    <sys:String x:Key="Strings.Profiles.DeletedHint">Профиль удалён.</sys:String>
+    <sys:String x:Key="Strings.Profiles.AddedHint">Добавлен пустой профиль — заполни поля «Имя» и «Шаблон совпадения», затем «Сохранить».</sys:String>
+    <sys:String x:Key="Strings.Profiles.CreatedFromCurrentFmt">Создан профиль из текущих настроек (id={0}). Не забудь задать «Имя» и «Шаблон совпадения», затем «Сохранить».</sys:String>
+    <sys:String x:Key="Strings.Profiles.AppliedFmt">Профиль «{0}» применён к текущим настройкам.</sys:String>
+    <sys:String x:Key="Strings.Profiles.SavedFmt">Сохранено профилей: {0}.</sys:String>
+    <sys:String x:Key="Strings.Profiles.CountFmt">Профилей: {0}</sys:String>
+    <sys:String x:Key="Strings.Profiles.NewGameDefault">Новая игра</sys:String>
+    <sys:String x:Key="Strings.Profiles.NewFromCurrentDefault">Новый из текущих настроек</sys:String>
+    <sys:String x:Key="Strings.Profiles.ImportFilter">JSON-файл профилей (*.json)|*.json</sys:String>
+    <sys:String x:Key="Strings.Profiles.ImportTitle">Импорт профилей</sys:String>
+    <sys:String x:Key="Strings.Profiles.ImportEmptyHint">Файл пуст или не содержит профилей.</sys:String>
+    <sys:String x:Key="Strings.Profiles.ImportedFmt">Импортировано профилей: {0}.</sys:String>
+    <sys:String x:Key="Strings.Profiles.ImportErrorTitle">Ошибка импорта</sys:String>
+    <sys:String x:Key="Strings.Profiles.ImportErrorFmt">Не удалось импортировать: {0}</sys:String>
+    <sys:String x:Key="Strings.Profiles.ExportTitle">Экспорт профилей</sys:String>
+    <sys:String x:Key="Strings.Profiles.ExportedFmt">Экспортировано профилей: {0} в {1}.</sys:String>
+    <sys:String x:Key="Strings.Profiles.ExportErrorTitle">Ошибка экспорта</sys:String>
+    <sys:String x:Key="Strings.Profiles.ExportErrorFmt">Не удалось экспортировать: {0}</sys:String>
+
+    <!-- Settings save toast -->
+    <sys:String x:Key="Strings.Settings.SavedFmt">Сохранено ✓ (профиль: {0})</sys:String>
+    <sys:String x:Key="Strings.Settings.DefaultProfile">По умолчанию</sys:String>
+    <sys:String x:Key="Strings.Settings.SaveErrorFmt">Ошибка: {0}</sys:String>
+
+    <!-- TessdataItem download statuses -->
+    <sys:String x:Key="Strings.OcrDownload.DownloadingBest">Скачивание (best)...</sys:String>
+    <sys:String x:Key="Strings.OcrDownload.Downloading">Скачивание...</sys:String>
+    <sys:String x:Key="Strings.OcrDownload.FailedFmt">Не удалось скачать {0}: {1}</sys:String>
+    <sys:String x:Key="Strings.OcrDownload.ErrorTitle">Ошибка</sys:String>
+    <sys:String x:Key="Strings.OcrDownload.DeleteConfirmTitle">Подтверждение</sys:String>
+    <sys:String x:Key="Strings.OcrDownload.DeleteConfirmFmt">Удалить пакет {0} ({1})?</sys:String>
+
     <!-- History -->
     <sys:String x:Key="Strings.History.Title">История переводов</sys:String>
     <sys:String x:Key="Strings.History.ExportSession">Экспорт сессии</sys:String>
@@ -242,10 +311,10 @@
     <sys:String x:Key="Strings.Tray.HeadlineAttention">Erney's Translate Tool — есть уведомление (открой окно)</sys:String>
     <sys:String x:Key="Strings.Tray.HeadlineError">Erney's Translate Tool — ошибка (открой окно)</sys:String>
     <sys:String x:Key="Strings.Tray.HeadlinePaused">Erney's Translate Tool — пауза (окно «{0}» свёрнуто)</sys:String>
-    <sys:String x:Key="Strings.Tray.HeadlineActive">Erney's Translate Tool — перевод активен&#x0a;{0}</sys:String>
+    <sys:String x:Key="Strings.Tray.HeadlineActiveFmt">Erney's Translate Tool — перевод активен ({0})</sys:String>
     <sys:String x:Key="Strings.Tray.HeadlineIdle">Erney's Translate Tool — ожидание</sys:String>
-    <sys:String x:Key="Strings.Tray.ProfileLine">&#x0a;Профиль: {0}</sys:String>
-    <sys:String x:Key="Strings.Tray.StatsLine">&#x0a;Переведено сегодня: {0} симв.&#x0a;Попадания в кэш: {1:F1}%</sys:String>
+    <sys:String x:Key="Strings.Tray.ProfileLineFmt">Профиль: {0}</sys:String>
+    <sys:String x:Key="Strings.Tray.StatsLineFmt">Переведено сегодня: {0:N0} симв.   ·   Попадания в кэш: {1:F1}%</sys:String>
     <sys:String x:Key="Strings.Tray.MinimisedBalloon">Программа свёрнута в трей — кликни иконку чтобы открыть, или ПКМ → «Выход».</sys:String>
     <sys:String x:Key="Strings.Tray.UpdateBalloonTitle">Доступно обновление</sys:String>
     <sys:String x:Key="Strings.Tray.UpdateBalloonBody">Версия {0} вышла. Открой «О программе» чтобы установить.</sys:String>

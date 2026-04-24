@@ -1,0 +1,37 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== Catppuccin Mocha — soft pastels on warm dark =====
+         Based on the official Catppuccin palette by Catppuccin Org
+         (https://github.com/catppuccin/catppuccin), MIT licensed. -->
+
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#1E1E2E"/>            <!-- base -->
+    <SolidColorBrush x:Key="BackgroundLightBrush" Color="#313244"/>       <!-- surface0 -->
+    <SolidColorBrush x:Key="BackgroundDarkBrush" Color="#181825"/>        <!-- mantle -->
+    <SolidColorBrush x:Key="AlternateRowBrush" Color="#252638"/>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#CBA6F7"/>                <!-- mauve -->
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#B4A0F0"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="#F5C2E7"/>           <!-- pink (accent) -->
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#1E1E2E"/>
+
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#45475A"/>              <!-- surface1 -->
+    <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#585B70"/>         <!-- surface2 -->
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#CDD6F4"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#CDD6F4"/>            <!-- text -->
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#A6ADC8"/>          <!-- subtext0 -->
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="#6C7086"/>           <!-- overlay0 -->
+
+    <SolidColorBrush x:Key="BorderBrush" Color="#45475A"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="#585B70"/>
+
+    <SolidColorBrush x:Key="SuccessBrush" Color="#A6E3A1"/>                <!-- green -->
+    <SolidColorBrush x:Key="WarningBrush" Color="#FAB387"/>                <!-- peach -->
+    <SolidColorBrush x:Key="ErrorBrush" Color="#F38BA8"/>                  <!-- red/pink -->
+    <SolidColorBrush x:Key="InfoBrush" Color="#89B4FA"/>                   <!-- blue -->
+
+    <SolidColorBrush x:Key="HeaderBrush" Color="#313244"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#313244"/>
+
+</ResourceDictionary>

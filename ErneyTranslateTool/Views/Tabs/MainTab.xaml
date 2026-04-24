@@ -11,27 +11,76 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="320"/>
+        </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{DynamicResource Strings.Main.Title}"
-                   FontSize="24" FontWeight="Bold"
+        <!-- Title + status -->
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2"
+                   Text="{DynamicResource Strings.Main.Title}"
+                   FontSize="26" FontWeight="Bold"
                    Foreground="{DynamicResource TextPrimaryBrush}"
-                   Margin="0,0,0,5"/>
-        <TextBlock Grid.Row="1" Text="{Binding StatusMessage}"
+                   Margin="0,0,0,4"/>
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2"
+                   Text="{Binding StatusMessage}"
                    Foreground="{DynamicResource TextSecondaryBrush}"
-                   Margin="0,0,0,15"/>
+                   Margin="0,0,0,18"/>
 
-        <GroupBox Grid.Row="2" Header="{DynamicResource Strings.Main.WindowGroup}"
-                  Style="{DynamicResource DarkGroupBoxStyle}"
-                  Margin="0,0,0,15">
+        <!-- Modern stat cards (right column) -->
+        <StackPanel Grid.Row="2" Grid.RowSpan="2" Grid.Column="1" Margin="18,0,0,0">
+            <Border Style="{DynamicResource ModernCardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Strings.Main.CharsToday}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"/>
+                    <TextBlock Text="{Binding CharactersTranslatedToday, StringFormat={}{0:N0}}"
+                               Foreground="{DynamicResource PrimaryBrush}"
+                               FontSize="32" FontWeight="Bold"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{DynamicResource ModernCardStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Strings.Main.CacheHit}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"/>
+                    <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:F1}%}"
+                               Foreground="{DynamicResource PrimaryBrush}"
+                               FontSize="32" FontWeight="Bold"
+                               Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{DynamicResource ModernCardStyle}">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Strings.Main.FrameTime}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               ToolTip="{DynamicResource Strings.Main.FrameTime.Tooltip}"/>
+                    <TextBlock Text="{Binding FrameTimeText}"
+                               Foreground="{DynamicResource PrimaryBrush}"
+                               FontSize="22" FontWeight="SemiBold"
+                               Margin="0,4,0,0"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Window picker card (left column) -->
+        <GroupBox Grid.Row="2" Grid.RowSpan="2" Grid.Column="0"
+                  Header="{DynamicResource Strings.Main.WindowGroup}"
+                  Style="{DynamicResource DarkGroupBoxStyle}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
                            Text="{DynamicResource Strings.Main.WindowHelp}"
@@ -41,12 +90,13 @@
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
                     <Button Content="{DynamicResource Strings.Main.RefreshList}"
                             Command="{Binding RefreshWindowsCommand}"
-                            Padding="12,6" Margin="0,0,10,0"
+                            Padding="14,8" Margin="0,0,12,0"
                             ToolTip="{DynamicResource Strings.Main.RefreshList.Tooltip}"/>
                     <TextBlock Text="{DynamicResource Strings.Main.SelectedLabel}" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <TextBlock Text="{Binding SelectedWindowTitle}" VerticalAlignment="Center"
-                               Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
+                               Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" MaxWidth="280"/>
                 </StackPanel>
                 <ListBox Grid.Row="2"
                          ItemsSource="{Binding Windows}"
@@ -64,45 +114,20 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+
+                <!-- Big call-to-action: Start / Stop. Uses the new
+                     PrimaryButtonStyle for the gradient + heavier shadow,
+                     plus a small helper button for stats refresh. -->
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
+                    <Button Content="{Binding ToggleButtonText}"
+                            Command="{Binding ToggleEngineCommand}"
+                            Style="{DynamicResource PrimaryButtonStyle}"
+                            ToolTip="Ctrl+Shift+T"/>
+                    <Button Content="{DynamicResource Strings.Main.RefreshStats}"
+                            Command="{Binding RefreshStatsCommand}"
+                            Padding="14,8" Margin="12,0,0,0"/>
+                </StackPanel>
             </Grid>
-        </GroupBox>
-
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,15">
-            <Button Content="{Binding ToggleButtonText}"
-                    Command="{Binding ToggleEngineCommand}"
-                    Padding="20,10" FontWeight="SemiBold"
-                    Background="{DynamicResource PrimaryBrush}"
-                    Foreground="{DynamicResource PrimaryForegroundBrush}"
-                    Margin="0,0,10,0"
-                    ToolTip="Ctrl+Shift+T"/>
-            <Button Content="{DynamicResource Strings.Main.RefreshStats}"
-                    Command="{Binding RefreshStatsCommand}"
-                    Padding="12,8"/>
-        </StackPanel>
-
-        <GroupBox Grid.Row="4" Header="{DynamicResource Strings.Main.StatsGroup}"
-                  Style="{DynamicResource DarkGroupBoxStyle}">
-            <StackPanel Margin="5">
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                    <TextBlock Text="{DynamicResource Strings.Main.CharsToday}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{Binding CharactersTranslatedToday}"
-                               Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                    <TextBlock Text="{DynamicResource Strings.Main.CacheHit}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:F1}%}"
-                               Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{DynamicResource Strings.Main.FrameTime}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               ToolTip="{DynamicResource Strings.Main.FrameTime.Tooltip}"/>
-                    <TextBlock Text="{Binding FrameTimeText}"
-                               Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold"/>
-                </StackPanel>
-            </StackPanel>
         </GroupBox>
     </Grid>
 </UserControl>

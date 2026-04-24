@@ -13,6 +13,8 @@ using ErneyTranslateTool.Models;
 using Microsoft.Win32;
 using Serilog;
 
+// Note: LanguageManager is in ErneyTranslateTool.Core, already in scope above.
+
 namespace ErneyTranslateTool.ViewModels;
 
 /// <summary>
@@ -86,7 +88,7 @@ public class GlossaryViewModel : BaseViewModel
         _glossaryEnabled = _settings.Config.GlossaryEnabled;
         OnPropertyChanged(nameof(GlossaryEnabled));
 
-        StatusMessage = $"Загружено правил: {Entries.Count}";
+        StatusMessage = LanguageManager.Format("Strings.Glossary.LoadedFmt", Entries.Count);
     }
 
     private void Add()
@@ -106,22 +108,23 @@ public class GlossaryViewModel : BaseViewModel
         _repo.Add(entry);
         Entries.Add(entry);
         _applier.Invalidate();
-        StatusMessage = "Добавлено пустое правило — заполни поля «Оригинал» и «Перевод», затем «Сохранить».";
+        StatusMessage = LanguageManager.Get("Strings.Glossary.AddedHint");
     }
 
     private void Delete(GlossaryEntry? entry)
     {
         if (entry == null) return;
         if (MessageBox.Show(
-                $"Удалить правило «{entry.SourceText}» → «{entry.TargetText}»?",
-                "Удаление правила", MessageBoxButton.YesNo, MessageBoxImage.Question)
+                LanguageManager.Format("Strings.Glossary.DeleteBodyFmt", entry.SourceText, entry.TargetText),
+                LanguageManager.Get("Strings.Glossary.DeleteTitle"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question)
             != MessageBoxResult.Yes) return;
 
         if (_repo.Delete(entry.Id))
         {
             Entries.Remove(entry);
             _applier.Invalidate();
-            StatusMessage = "Правило удалено.";
+            StatusMessage = LanguageManager.Get("Strings.Glossary.DeletedHint");
         }
     }
 
@@ -136,15 +139,15 @@ public class GlossaryViewModel : BaseViewModel
             else if (_repo.Update(e)) ok++;
         }
         _applier.Invalidate();
-        StatusMessage = $"Сохранено правил: {ok}.";
+        StatusMessage = LanguageManager.Format("Strings.Glossary.SavedFmt", ok);
     }
 
     private void Import()
     {
         var dlg = new OpenFileDialog
         {
-            Filter = "JSON-файл глоссария (*.json)|*.json",
-            Title = "Импорт глоссария",
+            Filter = LanguageManager.Get("Strings.Glossary.ImportFilter"),
+            Title = LanguageManager.Get("Strings.Glossary.ImportTitle"),
         };
         if (dlg.ShowDialog() != true) return;
 
@@ -155,7 +158,7 @@ public class GlossaryViewModel : BaseViewModel
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (imported == null || imported.Count == 0)
             {
-                StatusMessage = "Файл пуст или не содержит правил.";
+                StatusMessage = LanguageManager.Get("Strings.Glossary.ImportEmptyHint");
                 return;
             }
 
@@ -164,13 +167,15 @@ public class GlossaryViewModel : BaseViewModel
             foreach (var e in imported) { e.Id = 0; _repo.Add(e); }
             _applier.Invalidate();
             Refresh();
-            StatusMessage = $"Импортировано правил: {imported.Count}.";
+            StatusMessage = LanguageManager.Format("Strings.Glossary.ImportedFmt", imported.Count);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Glossary import failed");
-            MessageBox.Show($"Не удалось импортировать: {ex.Message}",
-                "Ошибка импорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LanguageManager.Format("Strings.Glossary.ImportErrorFmt", ex.Message),
+                LanguageManager.Get("Strings.Glossary.ImportErrorTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -178,9 +183,9 @@ public class GlossaryViewModel : BaseViewModel
     {
         var dlg = new SaveFileDialog
         {
-            Filter = "JSON-файл глоссария (*.json)|*.json",
+            Filter = LanguageManager.Get("Strings.Glossary.ImportFilter"),
             FileName = $"glossary-export-{DateTime.Now:yyyy-MM-dd}.json",
-            Title = "Экспорт глоссария",
+            Title = LanguageManager.Get("Strings.Glossary.ExportTitle"),
         };
         if (dlg.ShowDialog() != true) return;
 
@@ -189,13 +194,16 @@ public class GlossaryViewModel : BaseViewModel
             var json = JsonSerializer.Serialize(Entries.ToList(),
                 new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(dlg.FileName, json);
-            StatusMessage = $"Экспортировано правил: {Entries.Count} в {Path.GetFileName(dlg.FileName)}.";
+            StatusMessage = LanguageManager.Format("Strings.Glossary.ExportedFmt",
+                Entries.Count, Path.GetFileName(dlg.FileName));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Glossary export failed");
-            MessageBox.Show($"Не удалось экспортировать: {ex.Message}",
-                "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LanguageManager.Format("Strings.Glossary.ExportErrorFmt", ex.Message),
+                LanguageManager.Get("Strings.Glossary.ExportErrorTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }

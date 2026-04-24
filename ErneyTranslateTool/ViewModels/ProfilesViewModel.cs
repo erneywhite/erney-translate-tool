@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
+using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Core.Profiles;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
@@ -89,29 +90,29 @@ public class ProfilesViewModel : BaseViewModel
         Profiles.Clear();
         foreach (var p in _repo.GetAll())
             Profiles.Add(p);
-        StatusMessage = $"Профилей: {Profiles.Count}";
+        StatusMessage = LanguageManager.Format("Strings.Profiles.CountFmt", Profiles.Count);
     }
 
     private void AddBlank()
     {
         var p = new GameProfile
         {
-            Name = "Новая игра",
+            Name = LanguageManager.Get("Strings.Profiles.NewGameDefault"),
             MatchPattern = string.Empty,
         };
         _repo.Add(p);
         Profiles.Add(p);
-        StatusMessage = "Добавлен пустой профиль — заполни поля «Имя» и «Шаблон совпадения», затем «Сохранить».";
+        StatusMessage = LanguageManager.Get("Strings.Profiles.AddedHint");
     }
 
     private void CreateFromCurrent()
     {
         var p = _manager.CreateFromCurrentConfig(
-            "Новый из текущих настроек",
+            LanguageManager.Get("Strings.Profiles.NewFromCurrentDefault"),
             string.Empty,
             matchByProcess: false);
         Profiles.Add(p);
-        StatusMessage = $"Создан профиль из текущих настроек (id={p.Id}). Не забудь задать «Имя» и «Шаблон совпадения», затем «Сохранить».";
+        StatusMessage = LanguageManager.Format("Strings.Profiles.CreatedFromCurrentFmt", p.Id);
     }
 
     private void Delete(GameProfile? profile)
@@ -119,18 +120,22 @@ public class ProfilesViewModel : BaseViewModel
         if (profile == null) return;
         if (profile.IsDefault)
         {
-            MessageBox.Show("Профиль «По умолчанию» нельзя удалить — он используется как fallback.",
-                "Удаление профиля", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                LanguageManager.Get("Strings.Profiles.DefaultDeleteBody"),
+                LanguageManager.Get("Strings.Profiles.DefaultDeleteTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        if (MessageBox.Show($"Удалить профиль «{profile.Name}»?",
-                "Удаление профиля", MessageBoxButton.YesNo, MessageBoxImage.Question)
+        if (MessageBox.Show(
+                LanguageManager.Format("Strings.Profiles.DeleteBodyFmt", profile.Name),
+                LanguageManager.Get("Strings.Profiles.DefaultDeleteTitle"),
+                MessageBoxButton.YesNo, MessageBoxImage.Question)
             != MessageBoxResult.Yes) return;
 
         if (_repo.Delete(profile.Id))
         {
             Profiles.Remove(profile);
-            StatusMessage = "Профиль удалён.";
+            StatusMessage = LanguageManager.Get("Strings.Profiles.DeletedHint");
         }
     }
 
@@ -142,22 +147,22 @@ public class ProfilesViewModel : BaseViewModel
             if (p.Id == 0) _repo.Add(p);
             else if (_repo.Update(p)) ok++;
         }
-        StatusMessage = $"Сохранено профилей: {ok}.";
+        StatusMessage = LanguageManager.Format("Strings.Profiles.SavedFmt", ok);
     }
 
     private void ApplyNow(GameProfile? profile)
     {
         if (profile == null) return;
         _manager.ApplyProfile(profile);
-        StatusMessage = $"Профиль «{profile.Name}» применён к текущим настройкам.";
+        StatusMessage = LanguageManager.Format("Strings.Profiles.AppliedFmt", profile.Name);
     }
 
     private void Import()
     {
         var dlg = new OpenFileDialog
         {
-            Filter = "JSON-файл профилей (*.json)|*.json",
-            Title = "Импорт профилей",
+            Filter = LanguageManager.Get("Strings.Profiles.ImportFilter"),
+            Title = LanguageManager.Get("Strings.Profiles.ImportTitle"),
         };
         if (dlg.ShowDialog() != true) return;
 
@@ -168,7 +173,7 @@ public class ProfilesViewModel : BaseViewModel
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (imported == null || imported.Count == 0)
             {
-                StatusMessage = "Файл пуст или не содержит профилей.";
+                StatusMessage = LanguageManager.Get("Strings.Profiles.ImportEmptyHint");
                 return;
             }
 
@@ -181,13 +186,15 @@ public class ProfilesViewModel : BaseViewModel
                 if (_repo.Add(p) > 0) n++;
             }
             Refresh();
-            StatusMessage = $"Импортировано профилей: {n}.";
+            StatusMessage = LanguageManager.Format("Strings.Profiles.ImportedFmt", n);
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Profile import failed");
-            MessageBox.Show($"Не удалось импортировать: {ex.Message}",
-                "Ошибка импорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LanguageManager.Format("Strings.Profiles.ImportErrorFmt", ex.Message),
+                LanguageManager.Get("Strings.Profiles.ImportErrorTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -195,9 +202,9 @@ public class ProfilesViewModel : BaseViewModel
     {
         var dlg = new SaveFileDialog
         {
-            Filter = "JSON-файл профилей (*.json)|*.json",
+            Filter = LanguageManager.Get("Strings.Profiles.ImportFilter"),
             FileName = $"profiles-export-{DateTime.Now:yyyy-MM-dd}.json",
-            Title = "Экспорт профилей",
+            Title = LanguageManager.Get("Strings.Profiles.ExportTitle"),
         };
         if (dlg.ShowDialog() != true) return;
 
@@ -209,13 +216,16 @@ public class ProfilesViewModel : BaseViewModel
             var json = JsonSerializer.Serialize(toExport,
                 new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(dlg.FileName, json);
-            StatusMessage = $"Экспортировано профилей: {toExport.Count} в {Path.GetFileName(dlg.FileName)}.";
+            StatusMessage = LanguageManager.Format("Strings.Profiles.ExportedFmt",
+                toExport.Count, Path.GetFileName(dlg.FileName));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Profile export failed");
-            MessageBox.Show($"Не удалось экспортировать: {ex.Message}",
-                "Ошибка экспорта", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LanguageManager.Format("Strings.Profiles.ExportErrorFmt", ex.Message),
+                LanguageManager.Get("Strings.Profiles.ExportErrorTitle"),
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 }
