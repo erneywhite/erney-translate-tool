@@ -42,7 +42,7 @@
 - **Запуск с Windows (свёрнутым в трей)** — для тех кто играет регулярно
 - **6 тем программы** — Авто (по системе Windows, переключается на лету), Dark, Light, Nord, **Catppuccin Mocha** (мягкие пастели), **Tokyo Night** (электрический синий)
 - **Двуязычный интерфейс** — Русский / English, переключается на лету (без перезапуска)
-- **Современный sidebar-дизайн** — навигация слева с эмодзи-иконками, карточный дизайн с softer shadows, скругления 10-12px (Win11 native feel)
+- **Современный sidebar-дизайн** — навигация слева 8 разделов с иконками Segoe MDL2 Assets, карточный дизайн с softer shadows, скругления 10-12px (Win11 native feel)
 - **Глобальные горячие клавиши** — `Ctrl+Shift+T` старт/стоп, `Ctrl+Shift+H` скрыть оверлей
 - **Авто-пауза** при свёрнутом окне игры (статус-сообщение в окне + моргающая точка в трее)
 - **Live-статистика** — символы за день, hit rate кэша, среднее время на фрейм (OCR + перевод + отрисовка) обновляются раз в секунду пока движок работает
@@ -118,7 +118,7 @@
 
 Бывает что переводчик путает имена. «Geralt» сегодня — «Геральт», завтра — «Геральд», а в третий раз транскрибирует как «Жеральт». Глоссарий это лечит:
 
-1. **Настройки → Глоссарий → Добавить**
+1. **Глоссарий → Добавить**
 2. Заполняешь «Оригинал» = `Geralt`, «Перевод» = `Геральт`
 3. (Опционально) галка «Регистр», галка «Слово» (по умолчанию включена — `Mer` не подменит внутри `Merlin`)
 
@@ -185,7 +185,7 @@ ErneyTranslateTool/
 │   ├── HotkeyService           — глобальные хоткеи Win32 RegisterHotKey
 │   ├── OverlayManager          — управление click-through окном-оверлеем
 │   ├── RegionGrouper           — склейка соседних строк OCR в абзацы
-│   ├── ThemeManager            — переключение тем (Auto/Dark/Light/Nord), слежение за системной темой
+│   ├── ThemeManager            — переключение тем (Auto/Dark/Light/Nord/Catppuccin Mocha/Tokyo Night), слежение за системной темой
 │   ├── LanguageManager         — переключение языка UI (RU/EN) через ResourceDictionary swap
 │   ├── TranslationEngine       — пайплайн capture → OCR → translate → overlay
 │   ├── TranslationService      — оркестратор кэш + глоссарий + переводчик
@@ -228,9 +228,9 @@ ErneyTranslateTool/
 │   ├── OverlayWindow            — само click-through окно-оверлей
 │   ├── Controls/                — MaskedSecretBox (поле API-ключа с маскированием)
 │   ├── Dialogs/                 — UpdateAvailableDialog, WhatsNewDialog
-│   └── Tabs/                    — 7 вкладок UI
+│   └── Tabs/                    — 8 вкладок UI (Main, Translation, Overlay, History, Glossary, Profiles, AppSettings, About)
 ├── Resources/
-│   ├── Themes/                  — Dark, Light, Nord
+│   ├── Themes/                  — Dark, Light, Nord, CatppuccinMocha, TokyoNight
 │   ├── Styles.xaml              — общие стили WPF
 │   ├── Strings.ru.xaml          — все строки UI на русском
 │   └── Strings.en.xaml          — все строки UI на английском
