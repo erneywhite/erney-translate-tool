@@ -11,7 +11,43 @@
             <TextBlock Text="Настройки оверлея"
                        FontSize="24" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
-                       Margin="0,0,0,20"/>
+                       Margin="0,0,0,5"/>
+            <TextBlock Text="Внешний вид «таблички» с переводом, которая накладывается поверх английского текста."
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,15"/>
+
+            <GroupBox Header="Готовые темы" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock Text="Один клик — применятся фон, цвет текста, прозрачность и скругление углов."
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Margin="0,0,0,8"/>
+                    <ItemsControl ItemsSource="{Binding OverlayPresets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Margin="0,0,8,8"
+                                        Padding="14,8"
+                                        Background="{Binding Background}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        Command="{Binding DataContext.ApplyOverlayPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <TextBlock Text="{Binding Name}"
+                                               Foreground="{Binding Text}"
+                                               FontWeight="SemiBold"/>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </GroupBox>
 
             <GroupBox Header="Внешний вид" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <Grid Margin="5">
@@ -29,62 +65,91 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Шрифт:"
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Шрифт перевода:"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
                               ItemsSource="{Binding SystemFonts}"
                               SelectedItem="{Binding OverlayFontFamily}"
                               Margin="0,0,0,8"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Режим размера шрифта:"
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Размер шрифта:"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                              ItemsSource="{Binding FontSizeModes}"
-                              SelectedItem="{Binding FontSizeMode}"
-                              Margin="0,0,0,8"/>
-
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Размер шрифта (вручную):"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Slider Grid.Row="2" Grid.Column="1"
+                    <Slider Grid.Row="1" Grid.Column="1"
                             Minimum="8" Maximum="32"
                             Value="{Binding ManualFontSize}"
                             Margin="0,0,8,8"/>
-                    <TextBlock Grid.Row="2" Grid.Column="2"
+                    <TextBlock Grid.Row="1" Grid.Column="2"
                                Text="{Binding ManualFontSize, StringFormat={}{0:F0}}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Прозрачность фона:"
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Прозрачность фона:"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Slider Grid.Row="3" Grid.Column="1"
-                            Minimum="0.6" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    <Slider Grid.Row="2" Grid.Column="1"
+                            Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
                             Value="{Binding OverlayOpacity}"
                             Margin="0,0,8,8"/>
-                    <TextBlock Grid.Row="3" Grid.Column="2"
+                    <TextBlock Grid.Row="2" Grid.Column="2"
                                Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Цвет фона (HEX):"
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Скругление углов:"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
-                             Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}"
-                             FontFamily="Consolas"
-                             Margin="0,0,0,8"/>
+                    <Slider Grid.Row="3" Grid.Column="1"
+                            Minimum="0" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True"
+                            Value="{Binding OverlayCornerRadius}"
+                            Margin="0,0,8,8"/>
+                    <TextBlock Grid.Row="3" Grid.Column="2"
+                               Text="{Binding OverlayCornerRadius, StringFormat={}{0:F0} px}"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Цвет текста (HEX):"
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Цвет фона:"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <TextBox Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2"
-                             Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}"
-                             FontFamily="Consolas"/>
+                    <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas"/>
+                        <Border Grid.Column="1"
+                                Width="32" Height="28" Margin="8,0,0,0"
+                                Background="{Binding BackgroundColor}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"/>
+                    </Grid>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Цвет текста:"
+                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                    <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas"/>
+                        <Border Grid.Column="1"
+                                Width="32" Height="28" Margin="8,0,0,0"
+                                Background="{Binding TextColor}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"/>
+                    </Grid>
                 </Grid>
             </GroupBox>
 
             <GroupBox Header="Предпросмотр" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <Border Background="{Binding BackgroundColor}"
-                        Padding="12" CornerRadius="4"
+                        Padding="12"
+                        CornerRadius="{Binding OverlayCornerRadius}"
                         BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1">
+                        BorderThickness="1"
+                        Opacity="{Binding OverlayOpacity}">
                     <TextBlock Text="Пример переведённого текста"
                                Foreground="{Binding TextColor}"
                                FontFamily="{Binding OverlayFontFamily}"

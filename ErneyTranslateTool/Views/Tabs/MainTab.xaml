@@ -30,18 +30,25 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Grid.Row="0"
+                           Text="Выбери окно игры/программы из списка ниже. Игра должна быть запущена в оконном или borderless-режиме (полный экран не подходит)."
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,10"/>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
                     <Button Content="Обновить список"
                             Command="{Binding RefreshWindowsCommand}"
-                            Padding="12,6" Margin="0,0,10,0"/>
+                            Padding="12,6" Margin="0,0,10,0"
+                            ToolTip="Пересканировать список открытых окон"/>
                     <TextBlock Text="Выбрано: " VerticalAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <TextBlock Text="{Binding SelectedWindowTitle}" VerticalAlignment="Center"
                                Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"/>
                 </StackPanel>
-                <ListBox Grid.Row="1"
+                <ListBox Grid.Row="2"
                          ItemsSource="{Binding Windows}"
                          SelectedItem="{Binding SelectedWindow}"
                          Background="{DynamicResource InputBackgroundBrush}"

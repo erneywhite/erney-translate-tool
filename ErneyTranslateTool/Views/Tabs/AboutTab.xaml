@@ -7,24 +7,49 @@
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="40">
-        <StackPanel MaxWidth="700">
-            <StackPanel HorizontalAlignment="Center" Margin="0,0,0,30">
+        <StackPanel MaxWidth="780">
+
+            <StackPanel HorizontalAlignment="Center" Margin="0,0,0,25">
                 <TextBlock Text="Erney's Translate Tool"
                            FontSize="32" FontWeight="Bold"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            HorizontalAlignment="Center"/>
-                <TextBlock Text="Версия 1.0.0"
+                <TextBlock Text="Версия 1.0.0 · MIT License"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           HorizontalAlignment="Center"/>
+                           HorizontalAlignment="Center"
+                           Margin="0,4,0,0"/>
             </StackPanel>
 
-            <GroupBox Header="О программе" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="Что это" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <TextBlock Margin="10" TextWrapping="Wrap"
                            Foreground="{DynamicResource TextPrimaryBrush}">
-                    Инструмент для перевода текста с экрана в реальном времени. Захватывает указанное окно,
-                    распознаёт текст через Windows.Media.OCR и переводит его через DeepL API. Перевод
-                    отображается полупрозрачным оверлеем поверх оригинала.
+                    Программа в реальном времени распознаёт текст в выбранном окне (игра, видео, любой
+                    софт), переводит его и накладывает русский перевод поверх оригинала прозрачной
+                    «табличкой». Управление — мышью или горячими клавишами; клики проходят сквозь
+                    оверлей, играть/работать можно как обычно.
                 </TextBlock>
+            </GroupBox>
+
+            <GroupBox Header="Быстрый старт" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="10">
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8">
+                        <Run FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}">1.</Run>
+                        Запусти игру (оконный или borderless-режим — полный экран не подходит).
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8">
+                        <Run FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}">2.</Run>
+                        Вкладка <Run FontWeight="SemiBold">«Главная»</Run> → нажми «Обновить список» →
+                        выбери окно игры → нажми «Запустить» (или Ctrl+Shift+T).
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8">
+                        <Run FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}">3.</Run>
+                        В игре появятся переводы поверх английского текста. Игру можно тыкать как обычно.
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}">
+                        <Run FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}">4.</Run>
+                        Чтобы остановить — снова Ctrl+Shift+T или кнопка «Остановить» в программе.
+                    </TextBlock>
+                </StackPanel>
             </GroupBox>
 
             <GroupBox Header="Горячие клавиши" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
@@ -48,14 +73,47 @@
                 </Grid>
             </GroupBox>
 
-            <GroupBox Header="Системные требования" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <TextBlock Margin="10" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextPrimaryBrush}">
-                    <Run FontWeight="Bold">ОС:</Run> Windows 10/11 (x64)<LineBreak/>
-                    <Run FontWeight="Bold">.NET:</Run> .NET 8.0 Runtime<LineBreak/>
-                    <Run FontWeight="Bold">Память:</Run> 512 МБ ОЗУ<LineBreak/>
-                    <Run FontWeight="Bold">Место на диске:</Run> 100 МБ
-                </TextBlock>
+            <GroupBox Header="Что внутри" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="10">
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8">
+                        <Run FontWeight="Bold">Распознавание (OCR):</Run>
+                        Три движка на выбор —
+                        <Run FontWeight="SemiBold">PaddleOCR</Run> (нейросеть, по умолчанию, лучшая точность),
+                        <Run FontWeight="SemiBold">Tesseract</Run> (быстрее, средняя точность),
+                        <Run FontWeight="SemiBold">Windows OCR</Run> (нужны системные языковые пакеты).
+                        12 языков для PaddleOCR (включая режим «Авто» — англ+яп+кириллица одновременно).
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8">
+                        <Run FontWeight="Bold">Перевод:</Run>
+                        Четыре сервиса —
+                        <Run FontWeight="SemiBold">MyMemory</Run> (бесплатно, без регистрации),
+                        <Run FontWeight="SemiBold">Google Translate</Run> (бесплатно, без ключа),
+                        <Run FontWeight="SemiBold">DeepL</Run> (нужен ключ),
+                        <Run FontWeight="SemiBold">LibreTranslate</Run> (open source, любой инстанс).
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}">
+                        <Run FontWeight="Bold">Захват экрана:</Run>
+                        Windows API <Run FontFamily="Consolas">PrintWindow</Run> с флагом
+                        RENDERFULLCONTENT — работает с современными играми, Chromium-браузерами и UWP.
+                    </TextBlock>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="Где хранятся файлы программы" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="10">
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,8">
+                        Все данные хранятся рядом с программой (или в
+                        <Run FontFamily="Consolas">%AppData%\ErneyTranslateTool</Run> если папка только для чтения):
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" FontFamily="Consolas">
+                        settings.json — настройки<LineBreak/>
+                        cache.db — кэш переводов<LineBreak/>
+                        history.db — история сессий<LineBreak/>
+                        logs\ — журналы работы<LineBreak/>
+                        tessdata\ — модели Tesseract<LineBreak/>
+                        Sdcb.PaddleOCR кэш — модели PaddleOCR (в %LocalAppData%\Sdcb)
+                    </TextBlock>
+                </StackPanel>
             </GroupBox>
 
             <Border Background="#3D3D1A1A"
@@ -65,22 +123,32 @@
                     Padding="15"
                     Margin="0,0,0,15">
                 <StackPanel>
-                    <TextBlock Text="Важное предупреждение"
+                    <TextBlock Text="⚠ Важно про онлайн-игры"
                                FontSize="16" FontWeight="Bold"
                                Foreground="#FFFFB74D"
-                               Margin="0,0,0,10"/>
+                               Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}">
-                        Программа использует стандартный Windows API захвата экрана и не модифицирует
-                        память игр. Тем не менее, использование в онлайн-играх с античитом может
-                        нарушать условия использования игры. Используйте на свой страх и риск.
+                        Программа использует только стандартные Windows API захвата окна и не лезет в
+                        память игр. Тем не менее в онлайн-играх с античитом (Vanguard, EAC, BattlEye,
+                        Ricochet и т.п.) использование любых внешних программ может нарушать правила
+                        игры — на свой страх и риск. Для одиночных игр и визуальных новелл — полностью
+                        безопасно.
                     </TextBlock>
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="© 2026 Erney White. MIT License."
+            <GroupBox Header="Системные требования" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <TextBlock Margin="10" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextPrimaryBrush}">
+                    Windows 10 1809+ или Windows 11 (x64) · .NET 8 Runtime · ~2 ГБ ОЗУ свободно (для
+                    PaddleOCR) · Visual C++ Redistributable 2015-2022.
+                </TextBlock>
+            </GroupBox>
+
+            <TextBlock Text="© 2026 Erney White · github.com/erneywhite/erney-translate-tool"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        HorizontalAlignment="Center"
-                       Margin="0,20,0,0"/>
+                       Margin="0,15,0,0"/>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
