@@ -16,7 +16,7 @@
 ; =============================================================================
 
 #define MyAppName "Erney's Translate Tool"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyAppPublisher "Erney"
 #define MyAppURL "https://github.com/erneywhite/erney-translate-tool"
 #define MyAppExeName "ErneyTranslateTool.exe"
@@ -69,7 +69,11 @@ Name: "{group}\Удалить {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Запустить {#MyAppName}"; Flags: nowait postinstall skipifsilent
+; Auto-launch the new exe after install. `skipifsilent` is intentionally
+; OMITTED so the in-app updater (which calls the installer with /SILENT)
+; also gets a fresh app launched once the upgrade finishes. Interactive
+; installs see the usual "Запустить программу" checkbox via `postinstall`.
+Filename: "{app}\{#MyAppExeName}"; Description: "Запустить {#MyAppName}"; Flags: nowait postinstall
 
 [UninstallDelete]
 ; Logs and downloaded tessdata are inside {app} — clean them up too. Settings

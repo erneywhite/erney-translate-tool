@@ -1,12 +1,12 @@
 using System;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Windows;
 using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Core.Tray;
 using ErneyTranslateTool.Core.Updates;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.ViewModels;
+using ErneyTranslateTool.Views.Dialogs;
 using Serilog;
 
 namespace ErneyTranslateTool;
@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private readonly AppSettings _settings;
     private readonly TranslationEngine _engine;
     private readonly UpdateChecker _updateChecker;
+    private readonly UpdateDownloader _updateDownloader;
     private readonly ILogger _logger;
     private TrayIconManager? _tray;
     private bool _allowRealClose;
@@ -33,6 +34,7 @@ public partial class MainWindow : Window
         AppSettings settings,
         TranslationEngine engine,
         UpdateChecker updateChecker,
+        UpdateDownloader updateDownloader,
         ILogger logger)
     {
         InitializeComponent();
@@ -43,6 +45,7 @@ public partial class MainWindow : Window
         _settings = settings;
         _engine = engine;
         _updateChecker = updateChecker;
+        _updateDownloader = updateDownloader;
         _logger = logger;
         DataContext = this;
 
@@ -119,15 +122,8 @@ public partial class MainWindow : Window
         {
             case UpdateCheckOutcome.UpdateAvailable:
                 _tray?.ShowBalloon("Доступно обновление",
-                    $"Версия {result.Latest} вышла. Открой «О программе» чтобы скачать.");
-                if (MessageBox.Show(
-                        $"Доступна новая версия {result.Latest} (у тебя {result.Current}).\n\n" +
-                        "Открыть страницу релиза в браузере?",
-                        "Обновление", MessageBoxButton.YesNo, MessageBoxImage.Information)
-                    == MessageBoxResult.Yes)
-                {
-                    OpenInBrowser(result.ReleaseUrl);
-                }
+                    $"Версия {result.Latest} вышла. Открой «О программе» чтобы установить.");
+                ShowUpdateDialog(result);
                 break;
 
             case UpdateCheckOutcome.UpToDate:
@@ -154,12 +150,30 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Show the in-app update dialog. If the user clicks "Update now" and the
+    /// installer launches successfully, we shut the app down so the installer
+    /// can replace files; the new exe is auto-launched by Inno Setup's [Run]
+    /// section.
+    /// </summary>
+    private void ShowUpdateDialog(UpdateCheckResult result)
+    {
+        // Make sure the main window is visible — if the user has it minimised
+        // to tray, the modal would otherwise be invisible behind it.
+        if (!IsVisible) Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+
+        var dlg = new UpdateAvailableDialog(result, _updateDownloader, _logger) { Owner = this };
+        dlg.ShowDialog();
+
+        if (dlg.ShouldExitForUpdate)
+        {
+            _logger.Information("Update installer launched, shutting down to allow file replacement");
+            RealExit();
+        }
+    }
+
     /// <summary>Manual "Check for updates" entry point used by the About tab.</summary>
     public void RunManualUpdateCheck() => _ = CheckForUpdatesAsync(showAlways: true);
-
-    private static void OpenInBrowser(string url)
-    {
-        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
-        catch { /* swallow */ }
-    }
 }
