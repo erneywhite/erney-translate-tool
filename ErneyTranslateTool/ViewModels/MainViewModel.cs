@@ -19,8 +19,11 @@ public class MainViewModel : BaseViewModel
     // second is plenty for human-readable counters.
     private readonly DispatcherTimer _statsTimer;
 
-    private string _statusMessage = "Ожидание";
-    private string _selectedWindowTitle = "(окно не выбрано)";
+    // Localised lazily — LanguageManager.Get reads from the live merged
+    // dictionaries, so the value follows whatever language is loaded
+    // when the property is first accessed.
+    private string _statusMessage = LanguageManager.Get("Strings.Main.StatusWaiting");
+    private string _selectedWindowTitle = LanguageManager.Get("Strings.Main.NoWindow");
     private WindowInfo? _selectedWindow;
     private bool _isRunning;
     private int _charactersTranslatedToday;
@@ -80,7 +83,7 @@ public class MainViewModel : BaseViewModel
         {
             if (SetProperty(ref _selectedWindow, value))
             {
-                SelectedWindowTitle = value?.Title ?? "(окно не выбрано)";
+                SelectedWindowTitle = value?.Title ?? LanguageManager.Get("Strings.Main.NoWindow");
                 OnPropertyChanged(nameof(CanToggle));
             }
         }
@@ -118,7 +121,9 @@ public class MainViewModel : BaseViewModel
         set => SetProperty(ref _frameTimeText, value);
     }
 
-    public string ToggleButtonText => IsRunning ? "Остановить" : "Запустить";
+    public string ToggleButtonText => IsRunning
+        ? LanguageManager.Get("Strings.Main.Stop")
+        : LanguageManager.Get("Strings.Main.Start");
     public bool CanToggle => SelectedWindow != null;
 
     public ICommand RefreshWindowsCommand { get; }

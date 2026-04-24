@@ -10,6 +10,9 @@
                      at runtime when the user picks a different theme. -->
                 <ResourceDictionary Source="Resources/Themes/Dark.xaml"/>
                 <ResourceDictionary Source="Resources/Styles.xaml"/>
+                <!-- Strings dictionary is loaded dynamically by
+                     LanguageManager.Apply() during App.OnStartup so the
+                     active language follows AppConfig.UiLanguage. -->
                 <ResourceDictionary Source="Resources/Strings.ru.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

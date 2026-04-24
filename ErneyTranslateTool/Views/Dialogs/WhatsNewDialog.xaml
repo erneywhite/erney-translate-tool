@@ -1,7 +1,7 @@
 <Window x:Class="ErneyTranslateTool.Views.Dialogs.WhatsNewDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Что нового"
+        Title="{DynamicResource Strings.WhatsNew.Title}"
         Width="600" Height="500"
         MinWidth="480" MinHeight="380"
         WindowStartupLocation="CenterOwner"
@@ -17,7 +17,7 @@
 
         <StackPanel Grid.Row="0" Margin="0,0,0,16">
             <TextBlock x:Name="TitleText"
-                       Text="Что нового"
+                       Text="{DynamicResource Strings.WhatsNew.Title}"
                        FontSize="22" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock x:Name="SubtitleText"
@@ -50,13 +50,13 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0"
-                    Content="Открыть на GitHub"
+                    Content="{DynamicResource Strings.WhatsNew.OpenGitHub}"
                     Padding="12,7"
                     HorizontalAlignment="Left"
                     Click="OnOpenGitHubClick"/>
 
             <Button Grid.Column="1"
-                    Content="Понятно"
+                    Content="{DynamicResource Strings.Common.Got}"
                     Padding="22,7"
                     FontWeight="SemiBold"
                     Background="{DynamicResource PrimaryBrush}"

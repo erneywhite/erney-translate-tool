@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using ErneyTranslateTool.Core;
 using ErneyTranslateTool.Core.Updates;
 using Serilog;
 
@@ -34,22 +35,22 @@ public partial class UpdateAvailableDialog : Window
         _downloader = downloader;
         _logger = logger;
 
-        TitleText.Text = $"Доступна версия {result.Latest}";
+        TitleText.Text = LanguageManager.Format("Strings.UpdateDlg.HeadingFmt", result.Latest!);
 
         var sizeMb = result.InstallerSize > 0
-            ? $" · {result.InstallerSize / 1024.0 / 1024.0:F0} МБ"
+            ? LanguageManager.Format("Strings.UpdateDlg.SizeSuffixFmt", result.InstallerSize / 1024.0 / 1024.0)
             : string.Empty;
-        SubtitleText.Text = $"У тебя сейчас {result.Current}{sizeMb}";
+        SubtitleText.Text = LanguageManager.Format("Strings.UpdateDlg.SubFmt", result.Current, sizeMb);
 
         NotesText.Text = string.IsNullOrWhiteSpace(result.Notes)
-            ? "Описание изменений не указано."
+            ? LanguageManager.Get("Strings.UpdateDlg.NoNotes")
             : CleanMarkdown(result.Notes);
 
         // No installer asset attached → can only open the release page.
         if (string.IsNullOrEmpty(result.InstallerUrl))
         {
             InstallButton.IsEnabled = false;
-            InstallButton.ToolTip = "К релизу не прикреплён установщик — открой страницу вручную.";
+            InstallButton.ToolTip = LanguageManager.Get("Strings.UpdateDlg.NoInstaller");
         }
     }
 
@@ -103,7 +104,7 @@ public partial class UpdateAvailableDialog : Window
         OpenPageButton.IsEnabled = false;
         CancelButton.Visibility = Visibility.Visible;
         ProgressPanel.Visibility = Visibility.Visible;
-        ProgressLabel.Text = "Скачивание установщика…";
+        ProgressLabel.Text = LanguageManager.Get("Strings.UpdateDlg.Downloading");
 
         _cts = new CancellationTokenSource();
         var progress = new Progress<double>(p =>
@@ -117,7 +118,7 @@ public partial class UpdateAvailableDialog : Window
             var installerPath = await _downloader.DownloadAsync(
                 _result.InstallerUrl, progress, _cts.Token);
 
-            ProgressLabel.Text = "Запуск установщика…";
+            ProgressLabel.Text = LanguageManager.Get("Strings.UpdateDlg.Launching");
             ProgressPercent.Text = "100%";
             DownloadProgress.Value = 1.0;
 
@@ -131,12 +132,12 @@ public partial class UpdateAvailableDialog : Window
         }
         catch (OperationCanceledException)
         {
-            ResetUiAfterFailure("Скачивание отменено.");
+            ResetUiAfterFailure(LanguageManager.Get("Strings.UpdateDlg.DownloadCancelled"));
         }
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to download/launch update installer");
-            ResetUiAfterFailure($"Не удалось скачать обновление:\n{ex.Message}");
+            ResetUiAfterFailure(LanguageManager.Format("Strings.UpdateDlg.DownloadFailedFmt", ex.Message));
         }
     }
 
@@ -148,7 +149,7 @@ public partial class UpdateAvailableDialog : Window
         LaterButton.Visibility = Visibility.Visible;
         OpenPageButton.IsEnabled = true;
 
-        MessageBox.Show(this, message, "Обновление",
+        MessageBox.Show(this, message, LanguageManager.Get("Strings.UpdateDlg.Title"),
             MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 

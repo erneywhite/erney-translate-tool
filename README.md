@@ -14,8 +14,11 @@
 - **3 OCR-движка на выбор** — PaddleOCR (нейросеть, лучшее качество), Tesseract (быстрее), Windows OCR (системный, нужны языковые пакеты)
 - **30+ языков для Tesseract** — Европа целиком (от английского и немецкого до прибалтийских и скандинавских), кириллица, восточноазиатские (jpn/chi/kor + вертикальные), арабский. Скачиваются одной кнопкой из встроенного каталога
 - **12 языков для PaddleOCR** — латиница, кириллица, японский, китайский (упр./трад.), корейский, арабский, хинди + индийские, плюс **режим «Авто»** — несколько моделей параллельно
-- **4 переводчика** — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (любой инстанс, можно свой)
+- **6 переводчиков** — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (любой инстанс, можно свой), **OpenAI** (LLM, нужен платный ключ — лучшее качество для художественных текстов и игровых диалогов), **Anthropic Claude** (LLM, нужен платный ключ)
+- **Резервный провайдер** — если основной несколько раз подряд возвращает ошибку, программа автоматически переключается на запасной и каждую минуту проверяет восстановился ли основной
+- **Контекст последних реплик для LLM-провайдеров** — последние N (настраивается, по умолчанию 3) пар «оригинал — перевод» передаются как conversation history. Помогает корректно обрабатывать местоимения и продолжающиеся диалоги
 - **Кэш переводов** в SQLite + **настраиваемый лимит размера** (50 МБ / 200 МБ / 500 МБ / 1 ГБ / без лимита) с LRU-вытеснением самых давно неиспользуемых записей
+- **Маскирование API-ключей** в UI с кнопкой 👁 «показать», ключи шифруются через Windows DPAPI
 
 ### Глоссарий имён собственных ⭐
 Заведи правило «Оригинал → Перевод» — программа подменит каждое вхождение, **минуя кэш и переводчика**. Спасает от того что автоперевод путает имена и названия (Geralt → Геральт каждый раз по-новому). Поддерживает регистр и word-boundary. Импорт/экспорт JSON для шеринга наборов под конкретные игры.
@@ -38,6 +41,7 @@
 - **Цветная индикация в трее** — зелёная точка (перевод активен), серая (idle), серая моргающая (пауза при свёрнутой игре), жёлтая (есть уведомление, например доступно обновление), красная (ошибка)
 - **Запуск с Windows (свёрнутым в трей)** — для тех кто играет регулярно
 - **4 темы программы** — Авто (по системе Windows, переключается на лету), Dark, Light, Nord
+- **Двуязычный интерфейс** — Русский / English, переключается на лету (без перезапуска)
 - **Глобальные горячие клавиши** — `Ctrl+Shift+T` старт/стоп, `Ctrl+Shift+H` скрыть оверлей
 - **Авто-пауза** при свёрнутом окне игры (статус-сообщение в окне + моргающая точка в трее)
 - **Live-статистика** — символы за день, hit rate кэша, среднее время на фрейм (OCR + перевод + отрисовка) обновляются раз в секунду пока движок работает
@@ -181,6 +185,7 @@ ErneyTranslateTool/
 │   ├── OverlayManager          — управление click-through окном-оверлеем
 │   ├── RegionGrouper           — склейка соседних строк OCR в абзацы
 │   ├── ThemeManager            — переключение тем (Auto/Dark/Light/Nord), слежение за системной темой
+│   ├── LanguageManager         — переключение языка UI (RU/EN) через ResourceDictionary swap
 │   ├── TranslationEngine       — пайплайн capture → OCR → translate → overlay
 │   ├── TranslationService      — оркестратор кэш + глоссарий + переводчик
 │   ├── Glossary/
@@ -198,7 +203,10 @@ ErneyTranslateTool/
 │   │   ├── DeepLTranslator        — DeepL API (нужен ключ)
 │   │   ├── GoogleFreeTranslator   — публичный gtx endpoint
 │   │   ├── MyMemoryTranslator     — MyMemory.translated.net API
-│   │   └── LibreTranslator        — LibreTranslate (любой инстанс)
+│   │   ├── LibreTranslator        — LibreTranslate (любой инстанс)
+│   │   ├── OpenAITranslator       — OpenAI Chat Completions + sliding context
+│   │   ├── AnthropicTranslator    — Anthropic Messages API + sliding context
+│   │   └── LlmLanguageNames       — DeepL-codes -> English names for LLM prompts
 │   ├── Startup/
 │   │   └── AutoStartManager     — HKCU\...\Run для автозапуска с Windows
 │   ├── Tray/
@@ -217,12 +225,14 @@ ErneyTranslateTool/
 ├── ViewModels/                  — MVVM ViewModels (Main, Settings, History, Glossary, Profiles)
 ├── Views/
 │   ├── OverlayWindow            — само click-through окно-оверлей
+│   ├── Controls/                — MaskedSecretBox (поле API-ключа с маскированием)
 │   ├── Dialogs/                 — UpdateAvailableDialog, WhatsNewDialog
 │   └── Tabs/                    — 7 вкладок UI
 ├── Resources/
 │   ├── Themes/                  — Dark, Light, Nord
 │   ├── Styles.xaml              — общие стили WPF
-│   └── Strings.ru.xaml          — все строки UI
+│   ├── Strings.ru.xaml          — все строки UI на русском
+│   └── Strings.en.xaml          — все строки UI на английском
 ├── Installer/setup.iss          — Inno Setup скрипт (per-user, no UAC)
 └── tessdata/                    — bundled английский/русский/японский для Tesseract
 ```

@@ -8,18 +8,18 @@
              Background="{DynamicResource BackgroundBrush}">
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
         <StackPanel>
-            <TextBlock Text="Настройки оверлея и интерфейса"
+            <TextBlock Text="{DynamicResource Strings.OS.Title}"
                        FontSize="24" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        Margin="0,0,0,5"/>
-            <TextBlock Text="Внешний вид «таблички» с переводом и тема самой программы."
+            <TextBlock Text="{DynamicResource Strings.OS.Subtitle}"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,15"/>
 
-            <GroupBox Header="Тема программы" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.OS.AppTheme}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock Text="Цветовая палитра самого окна программы (применяется сразу):"
+                    <TextBlock Text="{DynamicResource Strings.OS.AppThemeHelp}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                TextWrapping="Wrap"
                                FontSize="11"
@@ -28,37 +28,50 @@
                               SelectedValue="{Binding SelectedAppTheme}"
                               SelectedValuePath="Id"
                               DisplayMemberPath="DisplayName"
+                              Width="280" HorizontalAlignment="Left"
+                              Margin="0,0,0,10"/>
+
+                    <!-- Language picker — sits with the theme picker because
+                         both swap a merged ResourceDictionary at runtime. -->
+                    <TextBlock Text="{DynamicResource Strings.OS.AppLanguage}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="11"
+                               Margin="0,0,0,4"/>
+                    <ComboBox ItemsSource="{Binding AppLanguages}"
+                              SelectedValue="{Binding SelectedAppLanguage}"
+                              SelectedValuePath="Id"
+                              DisplayMemberPath="DisplayName"
                               Width="280" HorizontalAlignment="Left"/>
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Поведение программы" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.OS.Behavior}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <CheckBox Content="Сворачивать в трей при нажатии «×» вместо выхода"
+                    <CheckBox Content="{DynamicResource Strings.OS.CloseToTray}"
                               IsChecked="{Binding CloseToTray}"
                               Foreground="{DynamicResource TextPrimaryBrush}"
                               Margin="0,0,0,8"/>
-                    <TextBlock Text="Полный выход — через ПКМ по иконке в трее → «Выход»."
+                    <TextBlock Text="{DynamicResource Strings.OS.CloseToTrayHint}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="11"
                                Margin="22,0,0,10"/>
-                    <CheckBox Content="Проверять обновления при запуске (фоном, тихо)"
+                    <CheckBox Content="{DynamicResource Strings.OS.CheckUpdates}"
                               IsChecked="{Binding CheckForUpdatesOnStartup}"
                               Foreground="{DynamicResource TextPrimaryBrush}"
                               Margin="0,0,0,8"/>
-                    <CheckBox Content="Запускать с Windows (свёрнутым в трей)"
+                    <CheckBox Content="{DynamicResource Strings.OS.AutoStart}"
                               IsChecked="{Binding AutoStartWithWindows}"
                               Foreground="{DynamicResource TextPrimaryBrush}"/>
-                    <TextBlock Text="При входе в Windows программа сразу появится в трее. Открыть — клик по иконке."
+                    <TextBlock Text="{DynamicResource Strings.OS.AutoStartHint}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="11"
                                Margin="22,0,0,0"/>
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Готовые темы оверлея" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.OS.Presets}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
-                    <TextBlock Text="Один клик — применятся фон, цвет текста, прозрачность и скругление углов."
+                    <TextBlock Text="{DynamicResource Strings.OS.PresetsHelp}"
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                TextWrapping="Wrap"
                                FontSize="11"
@@ -88,7 +101,7 @@
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="Внешний вид" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.OS.Appearance}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <Grid Margin="5">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="180"/>
@@ -104,14 +117,14 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Шрифт перевода:"
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.OS.OverlayFont}"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
                               ItemsSource="{Binding SystemFonts}"
                               SelectedItem="{Binding OverlayFontFamily}"
                               Margin="0,0,0,8"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Размер шрифта:"
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Strings.OS.FontSize}"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <Slider Grid.Row="1" Grid.Column="1"
                             Minimum="8" Maximum="32"
@@ -122,7 +135,7 @@
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Прозрачность фона:"
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Strings.OS.OverlayOpacity}"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <Slider Grid.Row="2" Grid.Column="1"
                             Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
@@ -133,7 +146,7 @@
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Скругление углов:"
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Strings.OS.CornerRadius}"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <Slider Grid.Row="3" Grid.Column="1"
                             Minimum="0" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True"
@@ -144,7 +157,7 @@
                                Foreground="{DynamicResource TextPrimaryBrush}"
                                VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Цвет фона:"
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Strings.OS.BgColor}"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
@@ -162,7 +175,7 @@
                                 CornerRadius="3"/>
                     </Grid>
 
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Цвет текста:"
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource Strings.OS.FgColor}"
                                Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
                     <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2">
                         <Grid.ColumnDefinitions>
@@ -182,14 +195,14 @@
                 </Grid>
             </GroupBox>
 
-            <GroupBox Header="Предпросмотр" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+            <GroupBox Header="{DynamicResource Strings.OS.Preview}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <Border Background="{Binding BackgroundColor}"
                         Padding="12"
                         CornerRadius="{Binding OverlayCornerRadius}"
                         BorderBrush="{DynamicResource BorderBrush}"
                         BorderThickness="1"
                         Opacity="{Binding OverlayOpacity}">
-                    <TextBlock Text="Пример переведённого текста"
+                    <TextBlock Text="{DynamicResource Strings.OS.PreviewText}"
                                Foreground="{Binding TextColor}"
                                FontFamily="{Binding OverlayFontFamily}"
                                FontSize="{Binding ManualFontSize}"/>
@@ -197,7 +210,7 @@
             </GroupBox>
 
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Сохранить настройки"
+                <Button Content="{DynamicResource Strings.OS.SaveBtn}"
                         Command="{Binding SaveCommand}"
                         Padding="20,10" FontWeight="SemiBold"
                         Background="{DynamicResource PrimaryBrush}"

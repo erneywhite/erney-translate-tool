@@ -18,15 +18,15 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="История переводов"
+            <TextBlock Grid.Column="0" Text="{DynamicResource Strings.History.Title}"
                        FontSize="24" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="Обновить" Command="{Binding RefreshCommand}"
+                <Button Content="{DynamicResource Strings.Common.Refresh}" Command="{Binding RefreshCommand}"
                         Padding="12,6" Margin="0,0,8,0"/>
-                <Button Content="Экспорт сессии" Command="{Binding ExportSessionCommand}"
+                <Button Content="{DynamicResource Strings.History.ExportSession}" Command="{Binding ExportSessionCommand}"
                         Padding="12,6" Margin="0,0,8,0"/>
-                <Button Content="Очистить историю" Command="{Binding ClearHistoryCommand}"
+                <Button Content="{DynamicResource Strings.History.ClearAll}" Command="{Binding ClearHistoryCommand}"
                         Padding="12,6"/>
             </StackPanel>
         </Grid>
@@ -39,7 +39,7 @@
             <TextBox Grid.Column="0"
                      Text="{Binding SearchQuery, UpdateSourceTrigger=PropertyChanged}"
                      Margin="0,0,8,0"/>
-            <Button Grid.Column="1" Content="Поиск" Command="{Binding SearchCommand}"
+            <Button Grid.Column="1" Content="{DynamicResource Strings.History.Search}" Command="{Binding SearchCommand}"
                     Padding="12,6"/>
         </Grid>
 
@@ -79,13 +79,13 @@
                       AlternatingRowBackground="{DynamicResource AlternateRowBrush}"
                       BorderBrush="{DynamicResource BorderBrush}">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Время" Width="120"
+                    <DataGridTextColumn Header="{DynamicResource Strings.History.ColTime}" Width="120"
                                         Binding="{Binding Timestamp, StringFormat={}{0:HH:mm:ss}}"/>
-                    <DataGridTextColumn Header="Язык" Width="60"
+                    <DataGridTextColumn Header="{DynamicResource Strings.History.ColLang}" Width="60"
                                         Binding="{Binding SourceLanguage}"/>
-                    <DataGridTextColumn Header="Оригинал" Width="*"
+                    <DataGridTextColumn Header="{DynamicResource Strings.History.ColOriginal}" Width="*"
                                         Binding="{Binding OriginalText}"/>
-                    <DataGridTextColumn Header="Перевод" Width="*"
+                    <DataGridTextColumn Header="{DynamicResource Strings.History.ColTranslated}" Width="*"
                                         Binding="{Binding TranslatedText}"/>
                 </DataGrid.Columns>
             </DataGrid>

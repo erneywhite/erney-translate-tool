@@ -81,6 +81,8 @@ public class TranslationEngine : IDisposable
     {
         // Surface the switch in the main status line so the user knows
         // why the active provider name suddenly changed in the tooltip.
+        // Message is already localised (TranslationService formats it
+        // through LanguageManager.Format).
         if (IsRunning) StatusUpdated?.Invoke(this, message);
     }
 
@@ -96,8 +98,8 @@ public class TranslationEngine : IDisposable
         // a second minimise "fixed" the visual but left the bug latent.
         if (isPaused) _overlay.Hide();
         StatusUpdated?.Invoke(this, isPaused
-            ? $"⏸ Окно «{TargetWindowTitle}» свёрнуто — пауза"
-            : $"Перевод активен: {TargetWindowTitle}");
+            ? LanguageManager.Format("Strings.Engine.Paused", TargetWindowTitle)
+            : LanguageManager.Format("Strings.Engine.Active", TargetWindowTitle));
     }
 
     public async Task StartAsync(IntPtr hwnd, string title, string processName = "")
@@ -123,7 +125,7 @@ public class TranslationEngine : IDisposable
         {
             if (!_translation.Initialize())
             {
-                StatusUpdated?.Invoke(this, "Сервис перевода не настроен — проверьте вкладку «Настройки перевода»");
+                StatusUpdated?.Invoke(this, LanguageManager.Get("Strings.Engine.NoTranslator"));
                 return;
             }
         }
@@ -137,8 +139,8 @@ public class TranslationEngine : IDisposable
         IsRunning = true;
         StatusUpdated?.Invoke(this,
             profile.IsDefault
-                ? $"Перевод активен: {title}"
-                : $"Перевод активен: {title}  ·  профиль: {profile.Name}");
+                ? LanguageManager.Format("Strings.Engine.Active", title)
+                : LanguageManager.Format("Strings.Engine.ActiveWithProfile", title, profile.Name));
         StateChanged?.Invoke(this, EventArgs.Empty);
         _logger.Information("Engine started for {Title} (profile: {Profile})", title, profile.Name);
     }
@@ -152,7 +154,7 @@ public class TranslationEngine : IDisposable
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
         IsRunning = false;
-        StatusUpdated?.Invoke(this, "Перевод остановлен");
+        StatusUpdated?.Invoke(this, LanguageManager.Get("Strings.Engine.Stopped"));
         StateChanged?.Invoke(this, EventArgs.Empty);
         _logger.Information("Engine stopped");
     }

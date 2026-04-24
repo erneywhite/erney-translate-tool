@@ -95,6 +95,13 @@ public class AppConfig
     /// </summary>
     public string AppTheme { get; set; } = "Dark";
 
+    /// <summary>
+    /// UI language id ("ru" / "en"). See LanguageManager. Empty/unknown
+    /// values fall through to "ru" — Russian is the project's source
+    /// language so it stays the safer default for unconfigured installs.
+    /// </summary>
+    public string UiLanguage { get; set; } = "ru";
+
     /// <summary>When true, the [×] button minimises to tray instead of exiting.</summary>
     public bool CloseToTray { get; set; } = true;
 

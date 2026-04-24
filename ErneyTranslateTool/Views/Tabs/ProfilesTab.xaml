@@ -20,11 +20,11 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="Профили под игру"
+            <TextBlock Grid.Column="0" Text="{DynamicResource Strings.Profiles.Title}"
                        FontSize="24" FontWeight="Bold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
-                <TextBlock Text="Активный: "
+                <TextBlock Text="{DynamicResource Strings.Profiles.Active}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding ActiveProfileName}"
@@ -34,15 +34,11 @@
             </StackPanel>
         </Grid>
 
-        <TextBlock Grid.Row="1" TextWrapping="Wrap"
+        <TextBlock Grid.Row="1"
+                   Text="{DynamicResource Strings.Profiles.Help}"
+                   TextWrapping="Wrap"
                    Foreground="{DynamicResource TextSecondaryBrush}"
-                   Margin="0,0,0,12">
-            Профиль — это набор настроек (OCR-движок, языки, провайдер перевода, шрифт и цвет
-            оверлея, флаг глоссария) под конкретную игру. Когда ты выбираешь окно на «Главной»
-            и жмёшь «Запустить», программа ищет первый профиль, чей «Шаблон» совпадает с
-            заголовком окна или именем процесса, и применяет его настройки. Если не найден —
-            используется профиль «По умолчанию».
-        </TextBlock>
+                   Margin="0,0,0,12"/>
 
         <Grid Grid.Row="2" Margin="0,0,0,10">
             <Grid.ColumnDefinitions>
@@ -54,21 +50,21 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Column="0" Content="Добавить пустой"
+            <Button Grid.Column="0" Content="{DynamicResource Strings.Profiles.AddBlank}"
                     Command="{Binding AddBlankCommand}"
                     Padding="14,6" Margin="0,0,8,0"/>
-            <Button Grid.Column="1" Content="Создать из текущих настроек"
+            <Button Grid.Column="1" Content="{DynamicResource Strings.Profiles.CreateFromCurrent}"
                     Command="{Binding CreateFromCurrentCommand}"
                     Padding="14,6"
-                    ToolTip="Снимает снимок текущих настроек (вкладок «Настройки перевода» и «Настройки оверлея») в новый профиль"/>
+                    ToolTip="{DynamicResource Strings.Profiles.CreateFromCurrent.Tooltip}"/>
 
-            <Button Grid.Column="3" Content="Импорт..."
+            <Button Grid.Column="3" Content="{DynamicResource Strings.Common.Import}"
                     Command="{Binding ImportCommand}"
                     Padding="14,6" Margin="0,0,8,0"/>
-            <Button Grid.Column="4" Content="Экспорт..."
+            <Button Grid.Column="4" Content="{DynamicResource Strings.Common.Export}"
                     Command="{Binding ExportCommand}"
                     Padding="14,6" Margin="0,0,8,0"/>
-            <Button Grid.Column="5" Content="Сохранить"
+            <Button Grid.Column="5" Content="{DynamicResource Strings.Common.Save}"
                     Command="{Binding SaveCommand}"
                     Padding="18,6" FontWeight="SemiBold"
                     Background="{DynamicResource PrimaryBrush}"
@@ -92,41 +88,41 @@
                   HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
                   RowHeaderWidth="0">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Имя"
+                <DataGridTextColumn Header="{DynamicResource Strings.Profiles.ColName}"
                                     Binding="{Binding Name, UpdateSourceTrigger=LostFocus}"
                                     Width="*" MinWidth="120"/>
-                <DataGridTextColumn Header="Шаблон совпадения"
+                <DataGridTextColumn Header="{DynamicResource Strings.Profiles.ColPattern}"
                                     Binding="{Binding MatchPattern, UpdateSourceTrigger=LostFocus}"
                                     Width="*" MinWidth="140"
-                                    ToolTipService.ToolTip="Подстрока (регистр не важен) для поиска в заголовке окна или имени процесса"/>
-                <DataGridCheckBoxColumn Header="Искать в exe"
+                                    ToolTipService.ToolTip="{DynamicResource Strings.Profiles.ColPattern.Tooltip}"/>
+                <DataGridCheckBoxColumn Header="{DynamicResource Strings.Profiles.ColMatchExe}"
                                         Binding="{Binding MatchByProcessName, UpdateSourceTrigger=PropertyChanged}"
                                         Width="80"
-                                        ToolTipService.ToolTip="Если включено — шаблон сравнивается с именем процесса, иначе с заголовком окна"/>
-                <DataGridTextColumn Header="Цель"
+                                        ToolTipService.ToolTip="{DynamicResource Strings.Profiles.ColMatchExe.Tooltip}"/>
+                <DataGridTextColumn Header="{DynamicResource Strings.Profiles.ColTarget}"
                                     Binding="{Binding TargetLanguage, UpdateSourceTrigger=LostFocus}"
                                     Width="50"/>
-                <DataGridTextColumn Header="OCR"
+                <DataGridTextColumn Header="{DynamicResource Strings.Profiles.ColOcr}"
                                     Binding="{Binding OcrEngine, UpdateSourceTrigger=LostFocus}"
                                     Width="90"/>
-                <DataGridTextColumn Header="Провайдер"
+                <DataGridTextColumn Header="{DynamicResource Strings.Profiles.ColProvider}"
                                     Binding="{Binding TranslationProvider, UpdateSourceTrigger=LostFocus}"
                                     Width="90"/>
                 <DataGridTemplateColumn Header="" Width="170">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="Применить"
+                                <Button Content="{DynamicResource Strings.Common.Apply}"
                                         Padding="8,3" Margin="0,0,4,0"
                                         Command="{Binding DataContext.ApplyNowCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}"
-                                        ToolTip="Применить настройки этого профиля прямо сейчас (не дожидаясь следующего запуска)"/>
-                                <Button Padding="8,3"
+                                        ToolTip="{DynamicResource Strings.Profiles.Apply.Tooltip}"/>
+                                <Button Content="{DynamicResource Strings.Common.Delete}"
+                                        Padding="8,3"
                                         Background="Transparent"
                                         Foreground="{DynamicResource TextSecondaryBrush}"
                                         Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                         CommandParameter="{Binding}">
-                                    <Button.Content>Удалить</Button.Content>
                                     <Button.Style>
                                         <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                             <Setter Property="IsEnabled" Value="True"/>
@@ -135,7 +131,7 @@
                                                      gray out delete to make this obvious in the UI. -->
                                                 <DataTrigger Binding="{Binding IsDefault}" Value="True">
                                                     <Setter Property="IsEnabled" Value="False"/>
-                                                    <Setter Property="ToolTip" Value="Профиль «По умолчанию» нельзя удалить"/>
+                                                    <Setter Property="ToolTip" Value="{DynamicResource Strings.Profiles.DefaultLockedTooltip}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -158,7 +154,7 @@
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        VerticalAlignment="Center"
                        FontSize="11"/>
-            <Button Grid.Column="1" Content="Обновить"
+            <Button Grid.Column="1" Content="{DynamicResource Strings.Common.Refresh}"
                     Command="{Binding RefreshCommand}"
                     Padding="12,5"/>
         </Grid>

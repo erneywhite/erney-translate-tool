@@ -97,6 +97,9 @@ public partial class App : Application
 
             // Apply the persisted UI theme before any window is shown.
             ThemeManager.Apply(Settings.Config.AppTheme);
+            // Same idea for the localised strings dictionary — must be
+            // active before any window resolves a {DynamicResource}.
+            LanguageManager.Apply(Settings.Config.UiLanguage);
 
             var services = new ServiceCollection();
             ConfigureServices(services);
