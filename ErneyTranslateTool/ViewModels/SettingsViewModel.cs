@@ -35,6 +35,7 @@ public class SettingsViewModel : BaseViewModel
     private string _backgroundColor = "#1A1A1A";
     private string _textColor = "#FFFFFF";
     private double _manualFontSize;
+    private double _overlayCornerRadius = 4;
     private string _fontSizeMode = "Auto";
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
@@ -60,6 +61,19 @@ public class SettingsViewModel : BaseViewModel
     public ObservableCollection<EngineOption> OcrEngines { get; }
     public ObservableCollection<OcrLanguageOption> OcrLanguages { get; } = new();
     public ObservableCollection<TessdataItem> TessdataCatalog { get; } = new();
+
+    /// <summary>Pre-baked overlay colour combinations users can pick with one click.</summary>
+    public ObservableCollection<OverlayPreset> OverlayPresets { get; } = new()
+    {
+        new("Классика",          "#000000", "#FFFFFF", 0.95, 4),
+        new("Тёмная мягкая",     "#1F2937", "#F3F4F6", 0.92, 6),
+        new("Светлая",           "#FFFFFF", "#000000", 0.95, 4),
+        new("Sepia",             "#3A2814", "#F5DEB3", 0.92, 6),
+        new("Cyber neon",        "#0A1929", "#00E5FF", 0.95, 2),
+        new("Discord",           "#36393F", "#DCDDDE", 0.95, 6),
+        new("Hi-contrast yellow","#000000", "#FFEB3B", 1.00, 0),
+        new("Glass",             "#1A1A1A", "#FFFFFF", 0.65, 8),
+    };
 
     public SettingsViewModel(
         AppSettings appSettings,
@@ -93,6 +107,7 @@ public class SettingsViewModel : BaseViewModel
         DownloadLanguageCommand = new RelayCommand(async p => await DownloadLanguageAsync(p as TessdataItem));
         DeleteLanguageCommand = new RelayCommand(p => DeleteLanguage(p as TessdataItem));
         RefreshOcrLanguagesCommand = new RelayCommand(_ => RefreshOcrLanguages());
+        ApplyOverlayPresetCommand = new RelayCommand(p => ApplyOverlayPreset(p as OverlayPreset));
 
         BuildTessdataCatalog();
         LoadFromConfig();
@@ -238,6 +253,12 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _manualFontSize, value);
     }
 
+    public double OverlayCornerRadius
+    {
+        get => _overlayCornerRadius;
+        set => SetProperty(ref _overlayCornerRadius, value);
+    }
+
     public string FontSizeMode
     {
         get => _fontSizeMode;
@@ -303,6 +324,16 @@ public class SettingsViewModel : BaseViewModel
     public ICommand DownloadLanguageCommand { get; }
     public ICommand DeleteLanguageCommand { get; }
     public ICommand RefreshOcrLanguagesCommand { get; }
+    public ICommand ApplyOverlayPresetCommand { get; }
+
+    private void ApplyOverlayPreset(OverlayPreset? preset)
+    {
+        if (preset == null) return;
+        BackgroundColor = preset.Background;
+        TextColor = preset.Text;
+        OverlayOpacity = preset.Opacity;
+        OverlayCornerRadius = preset.CornerRadius;
+    }
 
     private void LoadFromConfig()
     {
@@ -323,6 +354,7 @@ public class SettingsViewModel : BaseViewModel
         BackgroundColor = c.BackgroundColor;
         TextColor = c.TextColor;
         ManualFontSize = c.ManualFontSize;
+        OverlayCornerRadius = c.OverlayCornerRadius;
         FontSizeMode = c.FontSizeMode;
         ToggleTranslationHotkey = c.ToggleTranslationHotkey;
         ToggleOverlayHotkey = c.ToggleOverlayHotkey;
@@ -491,6 +523,7 @@ public class SettingsViewModel : BaseViewModel
         c.BackgroundColor = BackgroundColor;
         c.TextColor = TextColor;
         c.ManualFontSize = ManualFontSize;
+        c.OverlayCornerRadius = OverlayCornerRadius;
         c.FontSizeMode = FontSizeMode;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
@@ -528,6 +561,7 @@ public class SettingsViewModel : BaseViewModel
 public record ProviderOption(string Id, string DisplayName);
 public record OcrLanguageOption(string Tag, string DisplayName);
 public record EngineOption(string Id, string DisplayName);
+public record OverlayPreset(string Name, string Background, string Text, double Opacity, double CornerRadius);
 
 public class TessdataItem : BaseViewModel
 {

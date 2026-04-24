@@ -50,6 +50,11 @@ public class AppConfig
     public string TextColor { get; set; } = "#FFFFFF";
 
     /// <summary>
+    /// Border corner radius for overlay rectangles, in DIPs (0 = sharp corners).
+    /// </summary>
+    public double OverlayCornerRadius { get; set; } = 4;
+
+    /// <summary>
     /// Selected window handle (HWND) for capture, stored as long because
     /// System.Text.Json refuses to serialize IntPtr. Round-trip via the
     /// helper property below.

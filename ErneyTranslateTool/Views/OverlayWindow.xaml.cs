@@ -121,6 +121,7 @@ public partial class OverlayWindow : Window
         // which made labels jitter between sizes from frame to frame even
         // when the original text wasn't changing.
         var fontSize = cfg.ManualFontSize >= 8 ? cfg.ManualFontSize : 16.0;
+        var cornerRadius = new CornerRadius(Math.Clamp(cfg.OverlayCornerRadius, 0, 16));
 
         foreach (var s in snapped)
         {
@@ -140,7 +141,7 @@ public partial class OverlayWindow : Window
             var border = new Border
             {
                 Background = bgBrush,
-                CornerRadius = new CornerRadius(2),
+                CornerRadius = cornerRadius,
                 Padding = new Thickness(4, 1, 4, 1),
                 MinWidth = Math.Min(s.Rect.Width, availableWidth),
                 MinHeight = s.Rect.Height,
