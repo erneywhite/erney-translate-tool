@@ -71,13 +71,15 @@ public static class RegionGrouper
         // of "...маленькой девочкой").
         if (lb.Width < cb.Width * 0.4) return false;
 
-        // Candidate sits below `last` with a gap no bigger than ~1.3 line
-        // heights — covers normal line spacing (0.3-0.6 H) plus a generous
-        // margin for fonts with wide leading. Anything wider is a paragraph
-        // break, not a wrap.
+        // Gap threshold ~0.7 line heights. Real paragraph wraps in dialog
+        // boxes have very tight leading (gap is 10-30% of letter height),
+        // while UI menus typically space items by 80%+ of letter height.
+        // 0.7 H reliably distinguishes "wrapped paragraph" (merge) from
+        // "two separate stacked labels" (don't merge — translate and
+        // overlay each at its own position).
         var gap = cb.Top - lb.Bottom;
         if (gap < -lb.Height * 0.3) return false; // overlapping rows: weird, skip
-        if (gap > lb.Height * 1.3) return false;
+        if (gap > lb.Height * 0.7) return false;
 
         // Roughly the same column — either left edges close (left-aligned
         // paragraph) or there's any horizontal overlap (centered text where
