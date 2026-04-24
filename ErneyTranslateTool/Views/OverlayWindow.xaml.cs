@@ -131,14 +131,19 @@ public partial class OverlayWindow : Window
             const double rightMargin = 12;
             var availableWidth = Math.Max(60, Width - s.Rect.X - rightMargin);
 
-            // Border is "shrink-to-fit": no MinWidth/MinHeight so it sizes
-            // exactly to whatever the translated text needs (no empty dark
-            // tail extending past the actual text).
+            // Border has to cover the original English text (so the user
+            // doesn't see it bleeding through under the translation), so
+            // MinWidth/MinHeight equal the source rect. If the Russian
+            // translation needs more room than that, WPF lets the Border
+            // grow up to MaxWidth — anything bigger and the text wraps to
+            // a new line and the Border grows vertically instead.
             var border = new Border
             {
                 Background = bgBrush,
                 CornerRadius = new CornerRadius(2),
                 Padding = new Thickness(4, 1, 4, 1),
+                MinWidth = Math.Min(s.Rect.Width, availableWidth),
+                MinHeight = s.Rect.Height,
                 MaxWidth = availableWidth,
                 SnapsToDevicePixels = true
             };
