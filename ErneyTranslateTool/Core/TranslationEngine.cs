@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using ErneyTranslateTool.Core.Ocr;
 using ErneyTranslateTool.Core.Profiles;
 using ErneyTranslateTool.Data;
+using ErneyTranslateTool.Models;
 using Serilog;
 
 namespace ErneyTranslateTool.Core;
@@ -276,19 +278,40 @@ public class TranslationEngine : IDisposable
                     r.Bounds.Top, r.Bounds.Height,
                     r.OriginalText.Length > 80 ? r.OriginalText.Substring(0, 80) + "..." : r.OriginalText);
 
-            var translated = await _translation.TranslateRegionsAsync(
-                regions, _settings.Config.TargetLanguage);
-            _logger.Debug("Frame: Translation -> {Count} regions", translated.Count);
-            if (translated.Count == 0) return;
-
+            // Resolve target window rect ONCE up-front so the streaming
+            // callback can re-render the overlay without repeatedly calling
+            // back into Win32. If the window vanished between capture and
+            // here, bail before kicking off any translation work.
             if (!GetWindowRect(TargetWindowHandle, out var rect))
             {
                 _logger.Warning("Frame: GetWindowRect failed for handle {Handle}", TargetWindowHandle);
                 return;
             }
-
             var winRect = new System.Windows.Rect(
                 rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+
+            // For streaming-capable LLM providers (OpenAI / Anthropic with
+            // UseStreamingLlm = true) the service feeds us partial text per
+            // region as the SSE stream arrives. We re-render the overlay
+            // each time so the user sees the translation appear word-by-
+            // word — TTFT ~200 ms vs the ~1-2 s of a full round-trip.
+            var partial = new List<TranslationRegion>();
+            void OnRegionUpdated(TranslationRegion r)
+            {
+                if (string.IsNullOrEmpty(r.TranslatedText)) return;
+                if (!partial.Contains(r)) partial.Add(r);
+                _overlay.ShowRegions(partial, winRect);
+            }
+
+            var translated = await _translation.TranslateRegionsAsync(
+                regions, _settings.Config.TargetLanguage, OnRegionUpdated);
+            _logger.Debug("Frame: Translation -> {Count} regions", translated.Count);
+            if (translated.Count == 0) return;
+
+            // Final render: covers the non-streaming case (callback never
+            // fired) AND ensures any post-stream glossary substitution lands
+            // even if it produced an identical fingerprint to the last
+            // partial chunk.
             _overlay.ShowRegions(translated, winRect);
         }
         catch (Exception ex)

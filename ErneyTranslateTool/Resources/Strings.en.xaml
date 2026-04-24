@@ -74,6 +74,8 @@
     <sys:String x:Key="Strings.TS.UseContext.Tooltip">Helps the LLM resolve pronouns and continue ongoing dialogue</sys:String>
     <sys:String x:Key="Strings.TS.ContextSize">Context size:</sys:String>
     <sys:String x:Key="Strings.TS.ContextSize.Tooltip">How many previous translations to send each time. More = better context but more expensive</sys:String>
+    <sys:String x:Key="Strings.TS.UseStreaming">Stream translation (text appears as it's generated)</sys:String>
+    <sys:String x:Key="Strings.TS.UseStreaming.Tooltip">On by default. First characters appear in ~200 ms instead of waiting the full 1-2 sec round-trip. Turn off if your network buffers SSE (some corporate proxies do) or if you prefer the "whole sentence at once" behaviour.</sys:String>
     <sys:String x:Key="Strings.TS.TestConnection">Test connection</sys:String>
 
     <sys:String x:Key="Strings.TS.Fallback">Fallback provider</sys:String>
@@ -167,7 +169,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">The "Default" profile cannot be deleted</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.14 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.15 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Check for updates</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub repository</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">What is it</sys:String>

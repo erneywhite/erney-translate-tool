@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -24,7 +27,7 @@ namespace ErneyTranslateTool.Core.Translators;
 /// bounded so token spend stays predictable.
 /// </para>
 /// </summary>
-public class OpenAITranslator : ITranslator
+public class OpenAITranslator : IStreamingTranslator
 {
     private const string EndpointUrl = "https://api.openai.com/v1/chat/completions";
 
@@ -142,6 +145,104 @@ public class OpenAITranslator : ITranslator
         }
     }
 
+    /// <summary>
+    /// Streaming counterpart to <see cref="TranslateAsync"/>. Issues the
+    /// same Chat Completions request with <c>stream: true</c> and parses
+    /// OpenAI's SSE format:
+    /// <code>
+    /// data: {"choices":[{"delta":{"content":"Доб"}}]}
+    /// data: {"choices":[{"delta":{"content":"ро"}}]}
+    /// data: {"choices":[{"delta":{},"finish_reason":"stop"}]}
+    /// data: [DONE]
+    /// </code>
+    /// Each yield carries the FULL accumulated translation so the caller
+    /// can hand it straight to the overlay without separately accumulating.
+    /// LLM context (sliding window) is updated only once at end-of-stream
+    /// so we don't pollute it with partial fragments.
+    /// </summary>
+    public async IAsyncEnumerable<string> TranslateStreamAsync(
+        string text, string targetLanguage,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(text)) yield break;
+
+        var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
+        var messages = BuildMessages(text, targetName);
+
+        var request = new ChatRequest
+        {
+            Model = _model,
+            Messages = messages,
+            Temperature = _temperature,
+            MaxTokens = 1000,
+            Stream = true,
+        };
+
+        using var content = JsonContent.Create(request,
+            options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
+        using var req = new HttpRequestMessage(HttpMethod.Post, EndpointUrl) { Content = content };
+        // ResponseHeadersRead so we don't buffer the whole body — without it
+        // HttpClient waits for the response to finish before returning,
+        // defeating the entire point of streaming.
+        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"OpenAI API {(int)resp.StatusCode}: {Truncate(body, 300)}");
+        }
+
+        var accumulated = new StringBuilder();
+        await using var stream = await resp.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrEmpty(line)) continue;
+            // SSE comment lines start with ":" — used as keep-alives, ignore.
+            if (line.StartsWith(':')) continue;
+            if (!line.StartsWith("data:")) continue;
+
+            var payload = line.Substring(5).Trim();
+            if (payload == "[DONE]") break;
+            if (string.IsNullOrEmpty(payload)) continue;
+
+            string? delta = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(payload);
+                if (doc.RootElement.TryGetProperty("choices", out var choices)
+                    && choices.GetArrayLength() > 0
+                    && choices[0].TryGetProperty("delta", out var deltaEl)
+                    && deltaEl.TryGetProperty("content", out var contentEl)
+                    && contentEl.ValueKind == JsonValueKind.String)
+                {
+                    delta = contentEl.GetString();
+                }
+            }
+            catch (JsonException)
+            {
+                // Stray non-JSON line (rare) — skip without poisoning the stream.
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(delta)) continue;
+            accumulated.Append(delta);
+            // Trim only the leading whitespace progressively — the model
+            // sometimes prefixes the first token with a space; users would
+            // see " Перевод..." which looks broken.
+            var snapshot = accumulated.ToString();
+            yield return accumulated.Length == delta.Length ? snapshot.TrimStart() : snapshot;
+        }
+
+        var final = accumulated.ToString().Trim();
+        if (!string.IsNullOrEmpty(final))
+            RememberContext(text, final);
+    }
+
     public async Task<(bool Ok, string Message)> VerifyAsync(CancellationToken ct = default)
     {
         try
@@ -203,6 +304,10 @@ public class OpenAITranslator : ITranslator
         [JsonPropertyName("messages")] public List<ChatMessage> Messages { get; set; } = new();
         [JsonPropertyName("temperature")] public double Temperature { get; set; }
         [JsonPropertyName("max_tokens")] public int MaxTokens { get; set; }
+        // Default false → JsonIgnoreCondition.WhenWritingNull keeps it out
+        // of the payload for the regular non-streaming path. Set to true
+        // explicitly by TranslateStreamAsync.
+        [JsonPropertyName("stream")] public bool? Stream { get; set; }
     }
 
     private class ChatMessage

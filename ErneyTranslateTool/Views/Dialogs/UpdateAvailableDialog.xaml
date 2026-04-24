@@ -7,7 +7,17 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         ResizeMode="CanResize"
-        Background="{DynamicResource BackgroundBrush}">
+        Background="{DynamicResource BackgroundBrush}"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType">
+    <!-- v1.0.15: blurry-text fix. Each WPF Window is its own visual root
+         and does NOT inherit TextOptions from the owning MainWindow, so
+         dialogs that don't repeat these four settings render text in WPF's
+         default "Ideal" mode — sub-pixel precise but visibly fuzzy at 100%
+         DPI. The user reported this on the Update dialog buttons (v1.0.14)
+         which was the most prominent place left untreated. -->
     <Grid Margin="24,20,24,18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

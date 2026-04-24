@@ -133,6 +133,7 @@ public class TranslationService : IDisposable
     public async Task<List<TranslationRegion>> TranslateRegionsAsync(
         List<TranslationRegion> regions,
         string targetLanguage,
+        Action<TranslationRegion>? onRegionUpdated = null,
         CancellationToken ct = default)
     {
         if (_primary == null)
@@ -142,6 +143,12 @@ public class TranslationService : IDisposable
         }
 
         var translatedRegions = new List<TranslationRegion>();
+        // Streaming is only worth the SSE plumbing for actual LLM providers;
+        // cache/glossary hits return instantly so chunked delivery would be
+        // pointless. The active-translator check happens per-region inside
+        // the loop because the fallback machinery may swap providers
+        // mid-frame.
+        var streamingEnabled = _settings.Config.UseStreamingLlm && onRegionUpdated != null;
 
         foreach (var region in regions)
         {
@@ -161,7 +168,10 @@ public class TranslationService : IDisposable
                         "glossary",
                         false);
                     if (!string.IsNullOrWhiteSpace(region.TranslatedText))
+                    {
                         translatedRegions.Add(region);
+                        onRegionUpdated?.Invoke(region);
+                    }
                     continue;
                 }
 
@@ -174,8 +184,22 @@ public class TranslationService : IDisposable
                 }
                 else
                 {
-                    region.TranslatedText = await TranslateWithFallbackAsync(
-                        region.OriginalText, targetLanguage, ct);
+                    // Pick streaming path only when it's actually useful:
+                    // - user toggle is on
+                    // - the active translator implements IStreamingTranslator
+                    // - the engine gave us a per-region callback
+                    // Otherwise fall through to the regular round-trip call.
+                    var active = ResolveActiveForStreamingHint();
+                    if (streamingEnabled && active is IStreamingTranslator streamer)
+                    {
+                        region.TranslatedText = await TranslateStreamWithFallbackAsync(
+                            streamer, region, targetLanguage, onRegionUpdated!, ct);
+                    }
+                    else
+                    {
+                        region.TranslatedText = await TranslateWithFallbackAsync(
+                            region.OriginalText, targetLanguage, ct);
+                    }
 
                     if (!string.IsNullOrWhiteSpace(region.TranslatedText))
                     {
@@ -206,6 +230,10 @@ public class TranslationService : IDisposable
                     // Step 4 (post-process): glossary word-boundary replace.
                     region.TranslatedText = _glossary.Apply(region.TranslatedText, targetLanguage);
                     translatedRegions.Add(region);
+                    // Final notify so the overlay shows the post-glossary
+                    // text. For streaming this overrides the last partial
+                    // chunk; for non-streaming this is the only notify.
+                    onRegionUpdated?.Invoke(region);
                 }
             }
             catch (OperationCanceledException) { break; }
@@ -225,6 +253,60 @@ public class TranslationService : IDisposable
         }
 
         return translatedRegions;
+    }
+
+    /// <summary>
+    /// Pick which translator the streaming path should target right now —
+    /// fallback if we've switched, primary otherwise. Doesn't touch the
+    /// fallback state machine (probing/recovery stays inside
+    /// <see cref="TranslateWithFallbackAsync"/>); this is just a hint
+    /// used to decide whether to enter the streaming codepath at all.
+    /// </summary>
+    private ITranslator? ResolveActiveForStreamingHint()
+        => _usingFallback && _fallback != null ? _fallback : _primary;
+
+    /// <summary>
+    /// Streaming version of <see cref="TranslateWithFallbackAsync"/>: yields
+    /// partial text into the region (and forwards each chunk to the
+    /// callback) as the LLM's SSE stream produces it. On hard failure of
+    /// the primary it falls back to the regular non-streaming translator
+    /// path so the user still gets a result, just without the typewriter
+    /// animation.
+    /// </summary>
+    private async Task<string> TranslateStreamWithFallbackAsync(
+        IStreamingTranslator streamer,
+        TranslationRegion region,
+        string targetLanguage,
+        Action<TranslationRegion> onRegionUpdated,
+        CancellationToken ct)
+    {
+        try
+        {
+            string final = string.Empty;
+            await foreach (var chunk in streamer.TranslateStreamAsync(region.OriginalText, targetLanguage, ct))
+            {
+                if (string.IsNullOrEmpty(chunk)) continue;
+                region.TranslatedText = chunk;
+                final = chunk;
+                onRegionUpdated(region);
+            }
+            // Reset failure counter on success of an active-primary stream
+            // so the existing fallback machinery's invariants hold.
+            if (!_usingFallback) _consecutiveFailures = 0;
+            return final;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.Information(ex, "Streaming translate failed; degrading to non-streaming path");
+            // Hand off to the non-streaming fallback machinery — same as if
+            // streaming had been off in the first place. The user loses the
+            // typewriter effect for this region but still gets a result.
+            return await TranslateWithFallbackAsync(region.OriginalText, targetLanguage, ct);
+        }
     }
 
     /// <summary>

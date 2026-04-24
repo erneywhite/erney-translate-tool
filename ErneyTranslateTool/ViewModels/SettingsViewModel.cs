@@ -38,6 +38,7 @@ public class SettingsViewModel : BaseViewModel
     private double _llmTemperature = 0.3;
     private bool _llmUseContext = true;
     private int _llmContextSize = 3;
+    private bool _useStreamingLlm = true;
     private string _myMemoryEmail = string.Empty;
     private string _libreUrl = "https://libretranslate.com";
     private string _libreApiKey = string.Empty;
@@ -362,6 +363,19 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _llmContextSize, value);
     }
 
+    /// <summary>
+    /// When true (default), LLM providers stream the translation chunk-by-
+    /// chunk and the overlay updates as the text arrives — visible head
+    /// start of ~200 ms TTFT vs ~1-2 s for the full request. Off only if
+    /// the user wants the old "appear all at once" behaviour or runs into
+    /// a network setup that mangles SSE (corp proxies that buffer).
+    /// </summary>
+    public bool UseStreamingLlm
+    {
+        get => _useStreamingLlm;
+        set => SetProperty(ref _useStreamingLlm, value);
+    }
+
     /// <summary>Suggested OpenAI models — user can also type their own in the textbox.</summary>
     public ObservableCollection<string> OpenAIModelPresets { get; } = new()
     {
@@ -664,6 +678,7 @@ public class SettingsViewModel : BaseViewModel
         LlmTemperature = c.LlmTemperature;
         LlmUseContext = c.LlmUseContext;
         LlmContextSize = c.LlmContextSize;
+        UseStreamingLlm = c.UseStreamingLlm;
         DeepLApiKey = _appSettings.GetApiKey() ?? string.Empty;
         MyMemoryEmail = c.MyMemoryEmail;
         LibreUrl = string.IsNullOrWhiteSpace(c.LibreTranslateUrl) ? "https://libretranslate.com" : c.LibreTranslateUrl;
@@ -875,6 +890,7 @@ public class SettingsViewModel : BaseViewModel
         c.LlmTemperature = LlmTemperature;
         c.LlmUseContext = LlmUseContext;
         c.LlmContextSize = LlmContextSize;
+        c.UseStreamingLlm = UseStreamingLlm;
         if (SelectedTargetLanguage != null)
             c.TargetLanguage = SelectedTargetLanguage.Code;
         c.OcrEngine = SelectedOcrEngine;

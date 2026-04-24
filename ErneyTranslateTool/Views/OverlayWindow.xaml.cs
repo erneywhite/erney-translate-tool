@@ -34,9 +34,13 @@ public partial class OverlayWindow : Window
     // same English string in a spot that still overlaps the previous box, we
     // keep the previous rect instead of the freshly-jittered one.
     private Dictionary<string, Rect> _lastByOriginal = new(StringComparer.Ordinal);
-    // Active borders on the canvas, keyed by translated text. Lets us diff
-    // the new frame against the previous one so unchanged regions stay put
-    // (no Clear/Add flicker, no re-layout).
+    // Active borders on the canvas, keyed by ORIGINAL text. Originally keyed
+    // by translated text, but v1.0.15's streaming LLM path re-renders the
+    // same region with progressively longer translated strings ("Доб" →
+    // "Добро" → "Добро по...") — keying by the unstable translated value
+    // would create + destroy a Border per chunk and flicker visibly.
+    // Keying by the stable OriginalText lets us update the inner TextBlock
+    // in place as chunks arrive.
     private readonly Dictionary<string, Border> _activeBorders = new(StringComparer.Ordinal);
 
     public OverlayWindow()
@@ -93,7 +97,7 @@ public partial class OverlayWindow : Window
 
             var key = r.OriginalText;
             if (!next.ContainsKey(key)) next[key] = rect;
-            snapped.Add(new SnappedRegion(rect, r.TranslatedText));
+            snapped.Add(new SnappedRegion(rect, r.OriginalText, r.TranslatedText));
         }
 
         var fingerprint = string.Join("|",
@@ -147,18 +151,18 @@ public partial class OverlayWindow : Window
         var cornerRadius = new CornerRadius(Math.Clamp(cfg.OverlayCornerRadius, 0, 16));
 
         // Diff-based update. For each region in the new frame: if a Border
-        // for that translation exists, just reposition it (no Clear flicker,
-        // no re-layout). Otherwise create a new one. Borders that survive
-        // from previous frames are tracked via _activeBorders so we can
-        // remove the ones that no longer appear.
+        // for that source text exists, reposition it AND update the inner
+        // TextBlock.Text in place (the streaming-LLM hot path). Otherwise
+        // create a new Border. Tracked via _activeBorders keyed by Original
+        // so we can drop borders that disappear in a later frame.
         var keep = new HashSet<string>(StringComparer.Ordinal);
         foreach (var s in snapped)
         {
             const double rightMargin = 12;
             var availableWidth = Math.Max(60, Width - s.Rect.X - rightMargin);
 
-            keep.Add(s.Text);
-            if (_activeBorders.TryGetValue(s.Text, out var existing))
+            keep.Add(s.Original);
+            if (_activeBorders.TryGetValue(s.Original, out var existing))
             {
                 // Reposition / resize existing border in place.
                 Canvas.SetLeft(existing, s.Rect.X);
@@ -167,7 +171,14 @@ public partial class OverlayWindow : Window
                 existing.MinHeight = s.Rect.Height;
                 existing.MaxWidth = availableWidth;
                 if (existing.Child is TextBlock tb)
+                {
                     tb.MaxWidth = availableWidth - 8;
+                    // In-place text update is what makes streaming feel
+                    // smooth — no Border destroy/create churn between
+                    // chunks, the user sees the existing label grow.
+                    if (!ReferenceEquals(tb.Text, s.Text) && tb.Text != s.Text)
+                        tb.Text = s.Text;
+                }
                 continue;
             }
 
@@ -202,10 +213,10 @@ public partial class OverlayWindow : Window
             Canvas.SetLeft(border, s.Rect.X);
             Canvas.SetTop(border, s.Rect.Y);
             RegionCanvas.Children.Add(border);
-            _activeBorders[s.Text] = border;
+            _activeBorders[s.Original] = border;
         }
 
-        // Drop borders whose translations no longer appear in this frame.
+        // Drop borders whose source text no longer appears in this frame.
         if (_activeBorders.Count != keep.Count)
         {
             var toRemove = _activeBorders.Keys.Where(k => !keep.Contains(k)).ToList();
@@ -242,5 +253,10 @@ public partial class OverlayWindow : Window
         catch { return fallback; }
     }
 
-    private readonly record struct SnappedRegion(Rect Rect, string Text);
+    /// <summary>
+    /// Original = stable identity (same OCR'd source text across frames and
+    /// streaming chunks). Text = the current translation to display, which
+    /// can grow chunk-by-chunk during a streaming LLM call.
+    /// </summary>
+    private readonly record struct SnappedRegion(Rect Rect, string Original, string Text);
 }
