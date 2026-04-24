@@ -47,6 +47,8 @@ public class SettingsViewModel : BaseViewModel
     private string _ocrStatus = string.Empty;
     private Brush _ocrStatusColor = MakeBrush("#9CA3AF");
     private string _selectedAppTheme = "Dark";
+    private bool _closeToTray = true;
+    private bool _checkForUpdatesOnStartup = true;
 
     private static Brush MakeBrush(string hex)
     {
@@ -79,6 +81,26 @@ public class SettingsViewModel : BaseViewModel
                 ThemeManager.Apply(value);
             }
         }
+    }
+
+    public bool CloseToTray
+    {
+        get => _closeToTray;
+        set
+        {
+            if (SetProperty(ref _closeToTray, value))
+            {
+                // Take effect immediately so the user can test "x" closes to
+                // tray without restarting.
+                _appSettings.Config.CloseToTray = value;
+            }
+        }
+    }
+
+    public bool CheckForUpdatesOnStartup
+    {
+        get => _checkForUpdatesOnStartup;
+        set => SetProperty(ref _checkForUpdatesOnStartup, value);
     }
 
     /// <summary>Pre-baked overlay colour combinations users can pick with one click.</summary>
@@ -381,6 +403,8 @@ public class SettingsViewModel : BaseViewModel
         SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EnginePaddle : c.OcrEngine;
         UseBestTessdata = c.UseBestTessdata;
         SelectedAppTheme = string.IsNullOrWhiteSpace(c.AppTheme) ? ThemeManager.Dark : c.AppTheme;
+        CloseToTray = c.CloseToTray;
+        CheckForUpdatesOnStartup = c.CheckForUpdatesOnStartup;
     }
 
     public void RefreshOcrLanguages()
@@ -546,6 +570,8 @@ public class SettingsViewModel : BaseViewModel
         c.OverlayCornerRadius = OverlayCornerRadius;
         c.FontSizeMode = FontSizeMode;
         c.AppTheme = SelectedAppTheme;
+        c.CloseToTray = CloseToTray;
+        c.CheckForUpdatesOnStartup = CheckForUpdatesOnStartup;
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
     }
