@@ -115,6 +115,16 @@ public class TranslationService : IDisposable
                             region.TranslatedText,
                             targetLanguage,
                             region.SourceLanguage);
+
+                        // Cheap (no-op unless we're 10 % over the configured
+                        // limit) and runs on the threadpool — won't block this
+                        // hot path. 0 here means "no limit, never evict".
+                        var maxBytes = _settings.Config.MaxCacheSizeMb > 0
+                            ? (long)_settings.Config.MaxCacheSizeMb * 1024 * 1024
+                            : 0L;
+                        if (maxBytes > 0)
+                            _cache.EnforceSizeLimitInBackground(maxBytes);
+
                         region.IsFromCache = false;
                         _settings.UpdateStats(region.OriginalText.Length, false);
                         _history.AddTranslation(

@@ -124,6 +124,15 @@ public class AppConfig
     public DateTime CharactersResetDate { get; set; } = DateTime.MinValue;
 
     /// <summary>
+    /// Maximum size of the SQLite translation cache in megabytes. When the
+    /// file grows past this, oldest-accessed entries are evicted (LRU) until
+    /// it's back under ~90% of the limit. Set to 0 for unlimited.
+    /// Default 200 MB matches a typical visual-novel save after several
+    /// hundred hours.
+    /// </summary>
+    public int MaxCacheSizeMb { get; set; } = 200;
+
+    /// <summary>
     /// Statistics: total cache hits.
     /// </summary>
     public int CacheHits { get; set; } = 0;

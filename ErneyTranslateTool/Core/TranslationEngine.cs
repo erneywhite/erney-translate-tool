@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -29,9 +30,22 @@ public class TranslationEngine : IDisposable
     private bool _disposed;
     private long _lastFrameHash;
 
+    // Rolling average of "frame received → overlay updated" wall-clock time.
+    // Cheap and useful as a single throughput indicator: covers OCR + grouping
+    // + translation + overlay layout. Smoothed with EMA to avoid one slow
+    // frame whip-sawing the readout.
+    private double _avgFrameMs;
+    private long _lastFrameMs;
+
     public bool IsRunning { get; private set; }
     public IntPtr TargetWindowHandle { get; private set; }
     public string TargetWindowTitle { get; private set; } = string.Empty;
+
+    /// <summary>Last completed frame's end-to-end processing time in ms (0 if none yet).</summary>
+    public long LastFrameMs => _lastFrameMs;
+
+    /// <summary>Exponentially-smoothed average frame time in ms (0 if no samples yet).</summary>
+    public double AverageFrameMs => _avgFrameMs;
 
     public event EventHandler? StateChanged;
     public event EventHandler<string>? StatusUpdated;
@@ -54,6 +68,15 @@ public class TranslationEngine : IDisposable
         _logger = logger;
 
         _capture.FrameCaptured += OnFrameCaptured;
+        _capture.PauseStateChanged += OnCapturePauseChanged;
+    }
+
+    private void OnCapturePauseChanged(object? sender, bool isPaused)
+    {
+        if (!IsRunning) return;
+        StatusUpdated?.Invoke(this, isPaused
+            ? $"⏸ Окно «{TargetWindowTitle}» свёрнуто — пауза"
+            : $"Перевод активен: {TargetWindowTitle}");
     }
 
     public async Task StartAsync(IntPtr hwnd, string title)
@@ -116,6 +139,8 @@ public class TranslationEngine : IDisposable
             return;
         }
 
+        var sw = Stopwatch.StartNew();
+        var didWork = false;
         try
         {
             // Sample-based hash of the captured pixels: lets us skip the OCR +
@@ -129,6 +154,7 @@ public class TranslationEngine : IDisposable
                 return;
             }
             _lastFrameHash = hash;
+            didWork = true;
 
             byte[] bytes;
             using (var ms = new MemoryStream())
@@ -174,6 +200,17 @@ public class TranslationEngine : IDisposable
         }
         finally
         {
+            // Only count frames that actually went through OCR — early-outs
+            // (cache hash hit on static screen) would otherwise drag the
+            // average to near-zero and hide the real cost.
+            if (didWork)
+            {
+                _lastFrameMs = sw.ElapsedMilliseconds;
+                // EMA with α=0.2 — feels responsive without being jumpy.
+                _avgFrameMs = _avgFrameMs == 0
+                    ? _lastFrameMs
+                    : _avgFrameMs * 0.8 + _lastFrameMs * 0.2;
+            }
             Interlocked.Exchange(ref _processingFlag, 0);
         }
     }
@@ -212,6 +249,7 @@ public class TranslationEngine : IDisposable
     {
         if (_disposed) return;
         _capture.FrameCaptured -= OnFrameCaptured;
+        _capture.PauseStateChanged -= OnCapturePauseChanged;
         if (IsRunning)
             StopAsync().GetAwaiter().GetResult();
         _disposed = true;

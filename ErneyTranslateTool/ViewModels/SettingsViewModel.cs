@@ -21,6 +21,7 @@ public class SettingsViewModel : BaseViewModel
     private readonly TranslationService _translationService;
     private readonly OcrService _ocrService;
     private readonly TessdataManager _tessdata;
+    private readonly CacheRepository _cache;
 
     private string _selectedProvider = TranslatorFactory.ProviderMyMemory;
     private string _deeplApiKey = string.Empty;
@@ -120,12 +121,14 @@ public class SettingsViewModel : BaseViewModel
         AppSettings appSettings,
         TranslationService translationService,
         OcrService ocrService,
-        TessdataManager tessdata)
+        TessdataManager tessdata,
+        CacheRepository cache)
     {
         _appSettings = appSettings;
         _translationService = translationService;
         _ocrService = ocrService;
         _tessdata = tessdata;
+        _cache = cache;
 
         Providers = new ObservableCollection<ProviderOption>(
             TranslatorFactory.AllProviders.Select(p =>
@@ -149,10 +152,13 @@ public class SettingsViewModel : BaseViewModel
         DeleteLanguageCommand = new RelayCommand(p => DeleteLanguage(p as TessdataItem));
         RefreshOcrLanguagesCommand = new RelayCommand(_ => RefreshOcrLanguages());
         ApplyOverlayPresetCommand = new RelayCommand(p => ApplyOverlayPreset(p as OverlayPreset));
+        ClearCacheCommand = new RelayCommand(_ => ClearCache());
+        RefreshCacheStatsCommand = new RelayCommand(_ => RefreshCacheStats());
 
         BuildTessdataCatalog();
         LoadFromConfig();
         RefreshOcrLanguages();
+        RefreshCacheStats();
 
         // Live status indicator for the active OCR backend (download / init /
         // ready state) — important for PaddleOCR which can be loading models
@@ -366,6 +372,74 @@ public class SettingsViewModel : BaseViewModel
     public ICommand DeleteLanguageCommand { get; }
     public ICommand RefreshOcrLanguagesCommand { get; }
     public ICommand ApplyOverlayPresetCommand { get; }
+    public ICommand ClearCacheCommand { get; }
+    public ICommand RefreshCacheStatsCommand { get; }
+
+    /// <summary>Cache size limit options shown in the dropdown. 0 == "no limit".</summary>
+    public ObservableCollection<CacheSizeOption> CacheSizeOptions { get; } = new()
+    {
+        new(50,   "50 МБ"),
+        new(200,  "200 МБ (по умолчанию)"),
+        new(500,  "500 МБ"),
+        new(1000, "1 ГБ"),
+        new(0,    "Без лимита"),
+    };
+
+    private CacheSizeOption? _selectedCacheSizeOption;
+    public CacheSizeOption? SelectedCacheSizeOption
+    {
+        get => _selectedCacheSizeOption;
+        set
+        {
+            if (SetProperty(ref _selectedCacheSizeOption, value) && value != null)
+            {
+                // Take effect immediately; the next translation will trigger
+                // a background eviction if we just dropped below current size.
+                _appSettings.Config.MaxCacheSizeMb = value.Mb;
+                _appSettings.Save();
+                RefreshCacheStats();
+            }
+        }
+    }
+
+    private string _cacheStatsText = "—";
+    /// <summary>"1 234 записи · 18 МБ из 200 МБ" or similar.</summary>
+    public string CacheStatsText
+    {
+        get => _cacheStatsText;
+        private set => SetProperty(ref _cacheStatsText, value);
+    }
+
+    public void RefreshCacheStats()
+    {
+        try
+        {
+            var (entries, bytes) = _cache.GetStats();
+            var mb = bytes / 1024.0 / 1024.0;
+            var limit = _appSettings.Config.MaxCacheSizeMb;
+            CacheStatsText = limit > 0
+                ? $"{entries:N0} записей · {mb:F1} МБ из {limit} МБ"
+                : $"{entries:N0} записей · {mb:F1} МБ (без лимита)";
+        }
+        catch
+        {
+            CacheStatsText = "Не удалось прочитать статистику кэша";
+        }
+    }
+
+    private void ClearCache()
+    {
+        if (MessageBox.Show(
+                "Полностью очистить кэш переводов? Все сохранённые переводы будут удалены, " +
+                "повторные переводы пойдут заново через провайдер.",
+                "Очистка кэша", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            != MessageBoxResult.Yes) return;
+
+        var deleted = _cache.ClearCache();
+        RefreshCacheStats();
+        MessageBox.Show($"Удалено записей: {deleted:N0}.", "Кэш очищен",
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
 
     private void ApplyOverlayPreset(OverlayPreset? preset)
     {
@@ -405,6 +479,11 @@ public class SettingsViewModel : BaseViewModel
         SelectedAppTheme = string.IsNullOrWhiteSpace(c.AppTheme) ? ThemeManager.Dark : c.AppTheme;
         CloseToTray = c.CloseToTray;
         CheckForUpdatesOnStartup = c.CheckForUpdatesOnStartup;
+
+        // Match the saved limit to one of our preset options; fall back to
+        // 200 MB if the stored value isn't in the dropdown (manual edit).
+        SelectedCacheSizeOption = CacheSizeOptions.FirstOrDefault(o => o.Mb == c.MaxCacheSizeMb)
+            ?? CacheSizeOptions.First(o => o.Mb == 200);
     }
 
     public void RefreshOcrLanguages()
@@ -609,6 +688,7 @@ public record ProviderOption(string Id, string DisplayName);
 public record OcrLanguageOption(string Tag, string DisplayName);
 public record EngineOption(string Id, string DisplayName);
 public record OverlayPreset(string Name, string Background, string Text, double Opacity, double CornerRadius);
+public record CacheSizeOption(int Mb, string DisplayName);
 
 public class TessdataItem : BaseViewModel
 {
