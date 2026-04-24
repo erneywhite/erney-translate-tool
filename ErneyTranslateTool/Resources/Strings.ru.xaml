@@ -163,7 +163,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.12 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.13 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>

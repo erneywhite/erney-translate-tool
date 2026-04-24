@@ -573,7 +573,13 @@
                             <RowDefinition/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <ScrollContentPresenter Grid.Column="0" Grid.Row="0"/>
+                        <!-- v1.0.13 fix: bind Padding so ScrollViewer.Padding=...
+                             actually inset the content (e.g. tab pages
+                             want 28px breathing room around their stack).
+                             Without this template-binding the property was
+                             silently ignored. -->
+                        <ScrollContentPresenter Grid.Column="0" Grid.Row="0"
+                                                Margin="{TemplateBinding Padding}"/>
                         <ScrollBar x:Name="PART_VerticalScrollBar"
                                   Grid.Column="1" Grid.Row="0"
                                   Value="{TemplateBinding VerticalOffset}"
