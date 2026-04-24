@@ -30,7 +30,7 @@ public class UpdateChecker
 
     public Version CurrentVersion => _currentVersion;
 
-    public async Task<UpdateInfo?> CheckAsync(CancellationToken ct = default)
+    public async Task<UpdateCheckResult> CheckAsync(CancellationToken ct = default)
     {
         try
         {
@@ -40,33 +40,42 @@ public class UpdateChecker
                 $"ErneyTranslateTool/{_currentVersion} (+https://github.com/erneywhite/erney-translate-tool)");
             http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
-            var release = await http.GetFromJsonAsync<GitHubRelease>(LatestReleaseUrl, ct);
+            using var resp = await http.GetAsync(LatestReleaseUrl, ct);
+
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                // Repo exists but has no published releases yet — that's not
+                // an error, just "nothing to update to".
+                _logger.Information("Update check: GitHub returned 404 (no releases published yet)");
+                return UpdateCheckResult.NoReleases(_currentVersion);
+            }
+
+            resp.EnsureSuccessStatusCode();
+            var release = await resp.Content.ReadFromJsonAsync<GitHubRelease>(cancellationToken: ct);
             if (release == null || string.IsNullOrWhiteSpace(release.TagName))
             {
                 _logger.Information("Update check: empty release info");
-                return null;
+                return UpdateCheckResult.Error("Сервер вернул пустой ответ");
             }
 
             var latest = ParseVersion(release.TagName);
             if (latest == null)
             {
                 _logger.Information("Update check: could not parse tag {Tag}", release.TagName);
-                return null;
+                return UpdateCheckResult.Error($"Не удалось разобрать версию «{release.TagName}»");
             }
 
             _logger.Information("Update check: current={Current}, latest={Latest}",
                 _currentVersion, latest);
 
-            if (latest <= _currentVersion)
-                return new UpdateInfo(false, _currentVersion, latest, release.HtmlUrl ?? "", release.Body ?? "");
-
-            return new UpdateInfo(true, _currentVersion, latest, release.HtmlUrl ?? "", release.Body ?? "");
+            return latest > _currentVersion
+                ? UpdateCheckResult.UpdateAvailable(_currentVersion, latest, release.HtmlUrl ?? "", release.Body ?? "")
+                : UpdateCheckResult.UpToDate(_currentVersion, latest);
         }
         catch (Exception ex)
         {
-            _logger.Information(ex, "Update check failed (this is fine — user has no internet, " +
-                                    "GitHub rate-limited us, or the repo doesn't have releases yet)");
-            return null;
+            _logger.Information(ex, "Update check failed (network / rate limit / parse error)");
+            return UpdateCheckResult.Error(ex.Message);
         }
     }
 
@@ -88,4 +97,25 @@ public class UpdateChecker
     }
 }
 
-public record UpdateInfo(bool IsNewer, Version Current, Version Latest, string ReleaseUrl, string Notes);
+public enum UpdateCheckOutcome { UpToDate, UpdateAvailable, NoReleases, Error }
+
+public record UpdateCheckResult(
+    UpdateCheckOutcome Outcome,
+    Version Current,
+    Version? Latest,
+    string ReleaseUrl,
+    string Notes,
+    string ErrorMessage)
+{
+    public static UpdateCheckResult UpToDate(Version current, Version latest) =>
+        new(UpdateCheckOutcome.UpToDate, current, latest, "", "", "");
+
+    public static UpdateCheckResult UpdateAvailable(Version current, Version latest, string url, string notes) =>
+        new(UpdateCheckOutcome.UpdateAvailable, current, latest, url, notes, "");
+
+    public static UpdateCheckResult NoReleases(Version current) =>
+        new(UpdateCheckOutcome.NoReleases, current, null, "", "", "");
+
+    public static UpdateCheckResult Error(string message) =>
+        new(UpdateCheckOutcome.Error, new Version(0, 0), null, "", "", message);
+}
