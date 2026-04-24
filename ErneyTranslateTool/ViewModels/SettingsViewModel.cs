@@ -31,6 +31,13 @@ public class SettingsViewModel : BaseViewModel
     private string _selectedProvider = TranslatorFactory.ProviderMyMemory;
     private string _selectedFallbackProvider = string.Empty;
     private string _deeplApiKey = string.Empty;
+    private string _openAIApiKey = string.Empty;
+    private string _openAIModel = "gpt-4o-mini";
+    private string _anthropicApiKey = string.Empty;
+    private string _anthropicModel = "claude-haiku-4-5";
+    private double _llmTemperature = 0.3;
+    private bool _llmUseContext = true;
+    private int _llmContextSize = 3;
     private string _myMemoryEmail = string.Empty;
     private string _libreUrl = "https://libretranslate.com";
     private string _libreApiKey = string.Empty;
@@ -242,6 +249,9 @@ public class SettingsViewModel : BaseViewModel
                 OnPropertyChanged(nameof(IsMyMemory));
                 OnPropertyChanged(nameof(IsGoogleFree));
                 OnPropertyChanged(nameof(IsLibre));
+                OnPropertyChanged(nameof(IsOpenAI));
+                OnPropertyChanged(nameof(IsAnthropic));
+                OnPropertyChanged(nameof(IsLlm));
                 OnPropertyChanged(nameof(ProviderHelpText));
             }
         }
@@ -262,11 +272,15 @@ public class SettingsViewModel : BaseViewModel
     public bool IsMyMemory => _selectedProvider == TranslatorFactory.ProviderMyMemory;
     public bool IsGoogleFree => _selectedProvider == TranslatorFactory.ProviderGoogleFree;
     public bool IsLibre => _selectedProvider == TranslatorFactory.ProviderLibreTranslate;
+    public bool IsOpenAI => _selectedProvider == TranslatorFactory.ProviderOpenAI;
+    public bool IsAnthropic => _selectedProvider == TranslatorFactory.ProviderAnthropic;
+    /// <summary>True for any LLM-backed provider — drives the visibility of the shared "LLM settings" group (temperature, context).</summary>
+    public bool IsLlm => IsOpenAI || IsAnthropic;
 
     public string ProviderHelpText => _selectedProvider switch
     {
         TranslatorFactory.ProviderDeepL =>
-            "DeepL: лучшее качество. Регистрация на deepl.com/pro-api. " +
+            "DeepL: лучшее качество среди классических переводчиков. Регистрация на deepl.com/pro-api. " +
             "Бесплатный тариф 500 000 симв./мес, но требует привязку карты. Ключ заканчивается на «:fx».",
         TranslatorFactory.ProviderMyMemory =>
             "MyMemory: бесплатно, без карты. 5 000 символов в день анонимно, " +
@@ -275,7 +289,75 @@ public class SettingsViewModel : BaseViewModel
             "Google Translate (бесплатный публичный endpoint): без регистрации, без ключа, без карты.",
         TranslatorFactory.ProviderLibreTranslate =>
             "LibreTranslate: open-source. Можно использовать публичный инстанс или свой собственный.",
+        TranslatorFactory.ProviderOpenAI =>
+            "OpenAI: качественный нейросетевой перевод (особенно для художественных диалогов и игр). " +
+            "Нужен платный API-ключ с platform.openai.com. Стоимость ~$0.01–0.05 за час игры с диалогами " +
+            "на gpt-4o-mini, дороже на gpt-4o. Поддерживается контекст последних реплик.",
+        TranslatorFactory.ProviderAnthropic =>
+            "Anthropic Claude: качественный LLM-перевод. Нужен платный API-ключ с console.anthropic.com. " +
+            "Стоимость близка к OpenAI — claude-haiku-4-5 дешёвый и быстрый, claude-sonnet-4-5 точнее. " +
+            "Поддерживается контекст последних реплик.",
         _ => string.Empty
+    };
+
+    public string OpenAIApiKey
+    {
+        get => _openAIApiKey;
+        set => SetProperty(ref _openAIApiKey, value);
+    }
+
+    public string OpenAIModel
+    {
+        get => _openAIModel;
+        set => SetProperty(ref _openAIModel, value);
+    }
+
+    public string AnthropicApiKey
+    {
+        get => _anthropicApiKey;
+        set => SetProperty(ref _anthropicApiKey, value);
+    }
+
+    public string AnthropicModel
+    {
+        get => _anthropicModel;
+        set => SetProperty(ref _anthropicModel, value);
+    }
+
+    public double LlmTemperature
+    {
+        get => _llmTemperature;
+        set => SetProperty(ref _llmTemperature, value);
+    }
+
+    public bool LlmUseContext
+    {
+        get => _llmUseContext;
+        set => SetProperty(ref _llmUseContext, value);
+    }
+
+    public int LlmContextSize
+    {
+        get => _llmContextSize;
+        set => SetProperty(ref _llmContextSize, value);
+    }
+
+    /// <summary>Suggested OpenAI models — user can also type their own in the textbox.</summary>
+    public ObservableCollection<string> OpenAIModelPresets { get; } = new()
+    {
+        "gpt-4o-mini",
+        "gpt-4o",
+        "gpt-4-turbo",
+        "gpt-3.5-turbo",
+    };
+
+    /// <summary>Suggested Anthropic models — user can also type their own.</summary>
+    public ObservableCollection<string> AnthropicModelPresets { get; } = new()
+    {
+        "claude-haiku-4-5",
+        "claude-sonnet-4-5",
+        "claude-3-5-haiku-latest",
+        "claude-3-5-sonnet-latest",
     };
 
     public string DeepLApiKey
@@ -507,6 +589,14 @@ public class SettingsViewModel : BaseViewModel
             ? TranslatorFactory.ProviderMyMemory
             : c.TranslationProvider;
         SelectedFallbackProvider = c.FallbackProvider ?? string.Empty;
+
+        OpenAIApiKey = _appSettings.GetOpenAIKey() ?? string.Empty;
+        OpenAIModel = string.IsNullOrWhiteSpace(c.OpenAIModel) ? "gpt-4o-mini" : c.OpenAIModel;
+        AnthropicApiKey = _appSettings.GetAnthropicKey() ?? string.Empty;
+        AnthropicModel = string.IsNullOrWhiteSpace(c.AnthropicModel) ? "claude-haiku-4-5" : c.AnthropicModel;
+        LlmTemperature = c.LlmTemperature;
+        LlmUseContext = c.LlmUseContext;
+        LlmContextSize = c.LlmContextSize;
         DeepLApiKey = _appSettings.GetApiKey() ?? string.Empty;
         MyMemoryEmail = c.MyMemoryEmail;
         LibreUrl = string.IsNullOrWhiteSpace(c.LibreTranslateUrl) ? "https://libretranslate.com" : c.LibreTranslateUrl;
@@ -662,8 +752,12 @@ public class SettingsViewModel : BaseViewModel
             TestStatus = "Проверка...";
 
             ApplyToConfig();
+            // Persist keys before Verify so the just-edited values are
+            // picked up by the freshly-built translator.
             if (IsDeepL && !string.IsNullOrWhiteSpace(DeepLApiKey))
                 _appSettings.SetApiKey(DeepLApiKey);
+            if (IsOpenAI) _appSettings.SetOpenAIKey(OpenAIApiKey ?? string.Empty);
+            if (IsAnthropic) _appSettings.SetAnthropicKey(AnthropicApiKey ?? string.Empty);
             _appSettings.Save();
 
             _translationService.Reload();
@@ -692,6 +786,11 @@ public class SettingsViewModel : BaseViewModel
         c.MyMemoryEmail = MyMemoryEmail ?? string.Empty;
         c.LibreTranslateUrl = string.IsNullOrWhiteSpace(LibreUrl) ? "https://libretranslate.com" : LibreUrl;
         c.LibreTranslateApiKey = LibreApiKey ?? string.Empty;
+        c.OpenAIModel = string.IsNullOrWhiteSpace(OpenAIModel) ? "gpt-4o-mini" : OpenAIModel;
+        c.AnthropicModel = string.IsNullOrWhiteSpace(AnthropicModel) ? "claude-haiku-4-5" : AnthropicModel;
+        c.LlmTemperature = LlmTemperature;
+        c.LlmUseContext = LlmUseContext;
+        c.LlmContextSize = LlmContextSize;
         if (SelectedTargetLanguage != null)
             c.TargetLanguage = SelectedTargetLanguage.Code;
         c.OcrEngine = SelectedOcrEngine;
@@ -723,6 +822,10 @@ public class SettingsViewModel : BaseViewModel
             ApplyToConfig();
             if (!string.IsNullOrWhiteSpace(DeepLApiKey))
                 _appSettings.SetApiKey(DeepLApiKey);
+            // Always pass through to the setter — empty string clears the
+            // stored key, which is how the user "removes" it.
+            _appSettings.SetOpenAIKey(OpenAIApiKey ?? string.Empty);
+            _appSettings.SetAnthropicKey(AnthropicApiKey ?? string.Empty);
             _appSettings.Save();
             _translationService.Reload();
             _ocrService.Reload();

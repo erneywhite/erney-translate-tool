@@ -13,6 +13,42 @@ public class AppConfig
     /// </summary>
     public string? EncryptedApiKey { get; set; }
 
+    /// <summary>Encrypted OpenAI API key (used by the OpenAI translator).</summary>
+    public string? EncryptedOpenAIKey { get; set; }
+
+    /// <summary>Encrypted Anthropic API key (used by the Anthropic translator).</summary>
+    public string? EncryptedAnthropicKey { get; set; }
+
+    /// <summary>
+    /// OpenAI model id used by the OpenAI translator. Defaults to the
+    /// cheapest production model — power users can override.
+    /// </summary>
+    public string OpenAIModel { get; set; } = "gpt-4o-mini";
+
+    /// <summary>
+    /// Anthropic model id used by the Anthropic translator. Defaults to
+    /// the cheapest fast tier.
+    /// </summary>
+    public string AnthropicModel { get; set; } = "claude-haiku-4-5";
+
+    /// <summary>
+    /// Sampling temperature for LLM providers (0.0 = deterministic,
+    /// 1.0 = creative). Translation usually wants low temperature so
+    /// the same line doesn't render five different ways across a
+    /// session.
+    /// </summary>
+    public double LlmTemperature { get; set; } = 0.3;
+
+    /// <summary>
+    /// When true, LLM providers prepend the last few exchanges as
+    /// conversation history so the model has context for pronouns,
+    /// callbacks, and continuing dialogue.
+    /// </summary>
+    public bool LlmUseContext { get; set; } = true;
+
+    /// <summary>How many previous exchanges to include as context (0–10). Capped to keep token cost in check.</summary>
+    public int LlmContextSize { get; set; } = 3;
+
     /// <summary>
     /// Target translation language code (e.g., "RU", "EN", "JA").
     /// </summary>
