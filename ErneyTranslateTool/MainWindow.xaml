@@ -23,6 +23,9 @@
         <TabItem Header="Глоссарий">
             <tabs:GlossaryTab DataContext="{Binding GlossaryVM}"/>
         </TabItem>
+        <TabItem Header="Профили">
+            <tabs:ProfilesTab DataContext="{Binding ProfilesVM}"/>
+        </TabItem>
         <TabItem Header="О программе">
             <tabs:AboutTab/>
         </TabItem>

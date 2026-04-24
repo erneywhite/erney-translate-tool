@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Core.Profiles;
 using ErneyTranslateTool.Core.Tray;
 using ErneyTranslateTool.Core.Updates;
 using ErneyTranslateTool.Data;
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
     private readonly AppSettings _settings;
     private readonly TranslationEngine _engine;
     private readonly CaptureService _capture;
+    private readonly ProfileManager _profiles;
     private readonly UpdateChecker _updateChecker;
     private readonly UpdateDownloader _updateDownloader;
     private readonly ILogger _logger;
@@ -31,16 +33,19 @@ public partial class MainWindow : Window
     public SettingsViewModel SettingsVM { get; }
     public HistoryViewModel HistoryVM { get; }
     public GlossaryViewModel GlossaryVM { get; }
+    public ProfilesViewModel ProfilesVM { get; }
 
     public MainWindow(
         MainViewModel mainVm,
         SettingsViewModel settingsVm,
         HistoryViewModel historyVm,
         GlossaryViewModel glossaryVm,
+        ProfilesViewModel profilesVm,
         HotkeyService hotkeys,
         AppSettings settings,
         TranslationEngine engine,
         CaptureService capture,
+        ProfileManager profiles,
         UpdateChecker updateChecker,
         UpdateDownloader updateDownloader,
         ILogger logger)
@@ -50,10 +55,12 @@ public partial class MainWindow : Window
         SettingsVM = settingsVm;
         HistoryVM = historyVm;
         GlossaryVM = glossaryVm;
+        ProfilesVM = profilesVm;
         _hotkeys = hotkeys;
         _settings = settings;
         _engine = engine;
         _capture = capture;
+        _profiles = profiles;
         _updateChecker = updateChecker;
         _updateDownloader = updateDownloader;
         _logger = logger;
@@ -69,7 +76,7 @@ public partial class MainWindow : Window
         _hotkeys.Initialize(this);
         RegisterHotkeys();
 
-        _tray = new TrayIconManager(this, MainVM, _engine, _capture, _settings, _logger);
+        _tray = new TrayIconManager(this, MainVM, _engine, _capture, _settings, _profiles, _logger);
         _tray.ExitRequested += (_, _) => RealExit();
         _tray.MainWindowOpened += (_, _) => FlushPendingDialogs();
 

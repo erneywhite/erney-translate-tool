@@ -8,6 +8,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ErneyTranslateTool.Core.Ocr;
+using ErneyTranslateTool.Core.Profiles;
 using ErneyTranslateTool.Data;
 using Serilog;
 
@@ -25,6 +27,7 @@ public class TranslationEngine : IDisposable
     private readonly OverlayManager _overlay;
     private readonly AppSettings _settings;
     private readonly HistoryRepository _history;
+    private readonly ProfileManager _profiles;
     private readonly ILogger _logger;
     private int _processingFlag;
     private bool _disposed;
@@ -57,6 +60,7 @@ public class TranslationEngine : IDisposable
         OverlayManager overlay,
         AppSettings settings,
         HistoryRepository history,
+        ProfileManager profiles,
         ILogger logger)
     {
         _capture = capture;
@@ -65,6 +69,7 @@ public class TranslationEngine : IDisposable
         _overlay = overlay;
         _settings = settings;
         _history = history;
+        _profiles = profiles;
         _logger = logger;
 
         _capture.FrameCaptured += OnFrameCaptured;
@@ -87,13 +92,22 @@ public class TranslationEngine : IDisposable
             : $"Перевод активен: {TargetWindowTitle}");
     }
 
-    public async Task StartAsync(IntPtr hwnd, string title)
+    public async Task StartAsync(IntPtr hwnd, string title, string processName = "")
     {
         if (IsRunning)
             await StopAsync();
 
         TargetWindowHandle = hwnd;
         TargetWindowTitle = title;
+
+        // Pick + apply the right profile for this window BEFORE we kick off
+        // any backend so OCR/translator/overlay all read the right settings.
+        // No-op when only the Default profile exists or none match.
+        var profile = _profiles.FindForWindow(title, processName);
+        _profiles.ApplyProfile(profile);
+        // Reload backends — language/engine/provider could all have changed.
+        _ocr.Reload();
+        _translation.Reload();
 
         if (!_translation.IsReady)
         {
@@ -111,9 +125,12 @@ public class TranslationEngine : IDisposable
         _history.StartSession(title);
         await _capture.StartCaptureAsync(hwnd);
         IsRunning = true;
-        StatusUpdated?.Invoke(this, $"Перевод активен: {title}");
+        StatusUpdated?.Invoke(this,
+            profile.IsDefault
+                ? $"Перевод активен: {title}"
+                : $"Перевод активен: {title}  ·  профиль: {profile.Name}");
         StateChanged?.Invoke(this, EventArgs.Empty);
-        _logger.Information("Engine started for {Title}", title);
+        _logger.Information("Engine started for {Title} (profile: {Profile})", title, profile.Name);
     }
 
     public async Task StopAsync()
