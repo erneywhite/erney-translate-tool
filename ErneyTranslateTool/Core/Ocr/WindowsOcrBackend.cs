@@ -27,6 +27,12 @@ public class WindowsOcrBackend : IOcrBackend
 
     public string CurrentLanguageTag => _currentLanguage?.LanguageTag ?? string.Empty;
 
+    public OcrBackendState State => _engine != null ? OcrBackendState.Ready : OcrBackendState.Failed;
+    public string StatusMessage => _engine != null
+        ? $"Готов: {CurrentLanguageTag}"
+        : "Не инициализирован — установлены ли языковые пакеты Windows?";
+    public event EventHandler? StatusChanged;
+
     public WindowsOcrBackend(ILogger logger, string? preferredLanguage)
     {
         _logger = logger;
@@ -72,6 +78,7 @@ public class WindowsOcrBackend : IOcrBackend
             _engine = engine;
             _currentLanguage = lang;
             _logger.Information("WindowsOcr language: {Tag}", tag);
+            StatusChanged?.Invoke(this, EventArgs.Empty);
             return true;
         }
         catch (Exception ex)

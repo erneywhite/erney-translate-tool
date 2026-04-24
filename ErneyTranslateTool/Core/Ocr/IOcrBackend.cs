@@ -9,6 +9,14 @@ namespace ErneyTranslateTool.Core.Ocr;
 /// languages because Windows OCR uses system packs, while Tesseract uses
 /// .traineddata files in a folder.
 /// </summary>
+public enum OcrBackendState
+{
+    NotInitialized,
+    Loading,
+    Ready,
+    Failed,
+}
+
 public interface IOcrBackend : IDisposable
 {
     string Name { get; }
@@ -22,4 +30,13 @@ public interface IOcrBackend : IDisposable
 
     /// <summary>Run OCR on a PNG-encoded image and return detected text regions.</summary>
     List<TranslationRegion> ProcessFrame(byte[] pngBytes);
+
+    /// <summary>Current high-level state for UI indicators.</summary>
+    OcrBackendState State { get; }
+
+    /// <summary>Human-readable status message ("Готов", "Скачивание модели en...", etc.).</summary>
+    string StatusMessage { get; }
+
+    /// <summary>Fired when State or StatusMessage changes.</summary>
+    event EventHandler? StatusChanged;
 }

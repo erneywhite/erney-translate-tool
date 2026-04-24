@@ -48,8 +48,21 @@ public class PaddleOcrBackend : IOcrBackend
     private CancellationTokenSource? _initCts;
     private bool _disposed;
     private readonly object _swapLock = new();
+    private OcrBackendState _state = OcrBackendState.NotInitialized;
+    private string _statusMessage = "Не инициализирован";
 
     public string CurrentLanguageTag => _currentLanguage;
+
+    public OcrBackendState State => _state;
+    public string StatusMessage => _statusMessage;
+    public event EventHandler? StatusChanged;
+
+    private void SetStatus(OcrBackendState state, string message)
+    {
+        _state = state;
+        _statusMessage = message;
+        StatusChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>
     /// Curated PaddleOCR model catalog. V5 for Chinese, V4 for everything
@@ -111,19 +124,35 @@ public class PaddleOcrBackend : IOcrBackend
         _ready = false;
 
         var langsToLoad = lang == AutoTag ? AutoBundle : new[] { lang };
+        SetStatus(OcrBackendState.Loading,
+            langsToLoad.Length == 1
+                ? $"Загрузка модели «{lang}»..."
+                : $"Загрузка моделей: {string.Join(", ", langsToLoad)} (0/{langsToLoad.Length})...");
 
         Task.Run(async () =>
         {
             try
             {
                 var loaded = new List<PaddleOcrAll>();
+                int idx = 0;
                 foreach (var l in langsToLoad)
                 {
+                    idx++;
+                    SetStatus(OcrBackendState.Loading,
+                        langsToLoad.Length == 1
+                            ? $"Скачивание модели «{l}»..."
+                            : $"Скачивание модели «{l}» ({idx}/{langsToLoad.Length})...");
+
                     var entry = AvailableLangs.First(e =>
                         string.Equals(e.Tag, l, StringComparison.OrdinalIgnoreCase));
                     _logger.Information("PaddleOCR: loading model {Lang}...", l);
                     var model = await entry.Model.DownloadAsync().WaitAsync(ct).ConfigureAwait(false);
                     ct.ThrowIfCancellationRequested();
+
+                    SetStatus(OcrBackendState.Loading,
+                        langsToLoad.Length == 1
+                            ? $"Инициализация движка «{l}»..."
+                            : $"Инициализация движка «{l}» ({idx}/{langsToLoad.Length})...");
 
                     loaded.Add(new PaddleOcrAll(model, PaddleDevice.Mkldnn())
                     {
@@ -140,14 +169,20 @@ public class PaddleOcrBackend : IOcrBackend
                 }
                 _logger.Information("PaddleOCR ready: {Lang} ({Count} engine(s) active)",
                     lang, loaded.Count);
+                SetStatus(OcrBackendState.Ready,
+                    loaded.Count == 1
+                        ? $"Готов: {lang}"
+                        : $"Готов: {lang} ({loaded.Count} движков)");
             }
             catch (OperationCanceledException)
             {
                 _logger.Warning("PaddleOCR init for {Lang} cancelled (timeout or language switch)", lang);
+                SetStatus(OcrBackendState.Failed, $"Загрузка отменена (таймаут {InitTimeout.TotalMinutes:F0} мин или переключение языка)");
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, "PaddleOCR init for {Lang} failed", lang);
+                SetStatus(OcrBackendState.Failed, $"Ошибка: {ex.Message}");
             }
         });
     }

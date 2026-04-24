@@ -88,6 +88,24 @@
                               DisplayMemberPath="DisplayName"
                               Margin="0,0,0,10"/>
 
+                    <Border Background="{DynamicResource InputBackgroundBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="10,6"
+                            Margin="0,0,0,10">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="10" Height="10"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,8,0"
+                                     Fill="{Binding OcrStatusColor}"/>
+                            <TextBlock Text="{Binding OcrStatus}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Text="Язык распознавания (укажи язык игры):"
                                Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                     <ComboBox ItemsSource="{Binding OcrLanguages}"
