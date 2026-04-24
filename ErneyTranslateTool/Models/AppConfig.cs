@@ -71,6 +71,15 @@ public class AppConfig
     public bool CheckForUpdatesOnStartup { get; set; } = true;
 
     /// <summary>
+    /// Version string the user has already been shown the "what's new" dialog
+    /// for. On startup we compare this against the running assembly version —
+    /// if they differ (and the stored value isn't empty), we know the user
+    /// just upgraded and we surface the release notes once. Empty for first
+    /// install (no need to show notes when there's no prior version).
+    /// </summary>
+    public string LastSeenReleaseVersion { get; set; } = string.Empty;
+
+    /// <summary>
     /// Selected window handle (HWND) for capture, stored as long because
     /// System.Text.Json refuses to serialize IntPtr. Round-trip via the
     /// helper property below.

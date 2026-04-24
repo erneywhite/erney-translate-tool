@@ -101,6 +101,9 @@ public partial class App : Application
             MainWindow = mainWindow;
             mainWindow.Show();
 
+            // Surface release notes once if the user just upgraded.
+            _ = ShowWhatsNewIfUpdatedAsync(mainWindow);
+
             Logger.Information("Application started successfully");
         }
         catch (Exception ex)
@@ -134,6 +137,7 @@ public partial class App : Application
         services.AddSingleton<WindowPickerService>();
         services.AddSingleton<TranslationEngine>();
         services.AddSingleton<UpdateChecker>();
+        services.AddSingleton<UpdateDownloader>();
 
         // ViewModels
         services.AddSingleton<ViewModels.MainViewModel>();
@@ -158,6 +162,76 @@ public partial class App : Application
     {
         var ex = e.ExceptionObject as Exception;
         Logger.Fatal(ex, "Unhandled AppDomain exception");
+    }
+
+    /// <summary>
+    /// Compare the running assembly version against the last version we
+    /// surfaced release notes for. If they differ — and the stored value is
+    /// non-empty (i.e. this is an upgrade, not a fresh install) — fetch the
+    /// notes from GitHub and pop a one-time "what's new" dialog. Failures are
+    /// silent: this is a nice-to-have, not a critical path.
+    /// </summary>
+    private async System.Threading.Tasks.Task ShowWhatsNewIfUpdatedAsync(Window owner)
+    {
+        try
+        {
+            var current = Assembly.GetExecutingAssembly().GetName().Version;
+            if (current == null) return;
+
+            // Assembly Version is always 4-part (e.g. 1.0.2.0), but our git
+            // tags and release notes are 3-part (v1.0.2). Normalise so the
+            // stored marker and the GitHub tag URL both line up.
+            var currentStr = $"{current.Major}.{current.Minor}.{Math.Max(0, current.Build)}";
+            var lastSeen = Settings.Config.LastSeenReleaseVersion;
+
+            // Fresh install: nothing to compare to. Record current version
+            // silently so the next upgrade triggers the dialog.
+            if (string.IsNullOrEmpty(lastSeen))
+            {
+                Settings.Config.LastSeenReleaseVersion = currentStr;
+                Settings.Save();
+                return;
+            }
+
+            // Same as last time → no upgrade happened.
+            if (lastSeen == currentStr) return;
+
+            // Downgrade or weird case → just bring the marker forward without
+            // showing anything (the user didn't "just upgrade" in the usual sense).
+            if (Version.TryParse(lastSeen, out var lastVer) && lastVer >= current)
+            {
+                Settings.Config.LastSeenReleaseVersion = currentStr;
+                Settings.Save();
+                return;
+            }
+
+            // Genuine upgrade — fetch notes and show the dialog.
+            var displayVersion = new Version(current.Major, current.Minor, Math.Max(0, current.Build));
+            var checker = Services.GetRequiredService<Core.Updates.UpdateChecker>();
+            var notes = await checker.FetchReleaseNotesAsync(displayVersion);
+
+            // Record the new version BEFORE showing the dialog so a crash
+            // mid-display doesn't keep nagging on every relaunch.
+            Settings.Config.LastSeenReleaseVersion = currentStr;
+            Settings.Save();
+
+            owner.Dispatcher.Invoke(() =>
+            {
+                var dlg = new Views.Dialogs.WhatsNewDialog(
+                    displayVersion,
+                    notes ?? string.Empty,
+                    $"https://github.com/erneywhite/erney-translate-tool/releases/tag/v{displayVersion}",
+                    Logger)
+                {
+                    Owner = owner
+                };
+                dlg.ShowDialog();
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.Information(ex, "What's-new dialog failed (non-fatal)");
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
