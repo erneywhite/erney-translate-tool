@@ -100,8 +100,14 @@
     <sys:String x:Key="Strings.TS.CacheUnlimited">Unlimited</sys:String>
 
     <sys:String x:Key="Strings.TS.Hotkeys">Hotkeys</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeysHelp">Click a field and press the desired combo — it's saved and registered immediately, no restart needed. Esc cancels, ✕ clears. At least one modifier (Ctrl/Shift/Alt/Win) is required.</sys:String>
     <sys:String x:Key="Strings.TS.HotkeyToggle">Toggle translation:</sys:String>
     <sys:String x:Key="Strings.TS.HotkeyOverlay">Toggle overlay:</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeyPause">Pause/resume (optional):</sys:String>
+
+    <!-- HotkeyCaptureBox states -->
+    <sys:String x:Key="Strings.Hotkey.PressCombo">Press a key combination... (Esc to cancel)</sys:String>
+    <sys:String x:Key="Strings.Hotkey.NotSet">(not set — click to assign)</sys:String>
 
     <sys:String x:Key="Strings.TS.SaveBtn">Save settings</sys:String>
 
@@ -161,7 +167,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">The "Default" profile cannot be deleted</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.13 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.14 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Check for updates</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub repository</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">What is it</sys:String>
@@ -296,12 +302,26 @@
     <sys:String x:Key="Strings.History.ColLang">Lang</sys:String>
     <sys:String x:Key="Strings.History.ColOriginal">Source</sys:String>
     <sys:String x:Key="Strings.History.ColTranslated">Translation</sys:String>
+    <sys:String x:Key="Strings.History.AddToGlossary">Add to glossary…</sys:String>
+
+    <!-- Add-to-glossary dialog (opened from History tab right-click) -->
+    <sys:String x:Key="Strings.AddToGlossary.Title">Add to glossary</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Heading">Pin "source → translation"</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Help">Both fields are prefilled with the selected row's text. Trim them down to the specific proper noun you want to lock in (e.g. "Geralt" → "Геральт"). Once saved, the rule fires from the very next translation.</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Source">Source (what to replace):</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Target">Target (replace with):</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.WholeWord">Whole word only</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.CaseSensitive">Case sensitive</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.MissingFields">Both "Source" and "Target" need to be filled in.</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.SaveErrorFmt">Couldn't save the rule: {0}</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.NoteFromHistory">from history</sys:String>
 
     <!-- Engine status messages -->
     <sys:String x:Key="Strings.Engine.Active">Translation active: {0}</sys:String>
     <sys:String x:Key="Strings.Engine.ActiveWithProfile">Translation active: {0}  ·  profile: {1}</sys:String>
     <sys:String x:Key="Strings.Engine.Stopped">Translation stopped</sys:String>
     <sys:String x:Key="Strings.Engine.Paused">⏸ Window "{0}" minimised — paused</sys:String>
+    <sys:String x:Key="Strings.Engine.UserPaused">⏸ Translation paused (hotkey): {0}</sys:String>
     <sys:String x:Key="Strings.Engine.NoTranslator">Translation service not configured — see the "Translation settings" tab</sys:String>
     <sys:String x:Key="Strings.Engine.FallbackOn">⚠ Primary provider ({0}) unavailable — using fallback ({1})</sys:String>
     <sys:String x:Key="Strings.Engine.FallbackOff">Primary provider ({0}) is back</sys:String>

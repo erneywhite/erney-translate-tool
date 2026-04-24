@@ -76,6 +76,13 @@ public partial class MainWindow : Window
         _hotkeys.Initialize(this);
         RegisterHotkeys();
 
+        // Re-register every time the user changes a hotkey in Settings.
+        // Without this the new combo is saved to disk but the live Win32
+        // RegisterHotKey binding still points at the old combo until app
+        // restart — the v1.0.13 "I changed the hotkey but it doesn't work"
+        // bug.
+        SettingsVM.HotkeysChanged += (_, _) => RegisterHotkeys();
+
         _tray = new TrayIconManager(this, MainVM, _engine, _capture, _settings, _profiles, _logger);
         _tray.ExitRequested += (_, _) => RealExit();
         _tray.MainWindowOpened += (_, _) => FlushPendingDialogs();
@@ -141,6 +148,13 @@ public partial class MainWindow : Window
 
     private void RegisterHotkeys()
     {
+        // Wipe everything first — RegisterHotkey unregisters by id before
+        // re-registering, but we also want stale hotkeys to disappear if
+        // the user just unset them (empty string in Settings).
+        _hotkeys.UnregisterHotkey("toggle-translation");
+        _hotkeys.UnregisterHotkey("toggle-overlay");
+        _hotkeys.UnregisterHotkey("toggle-pause");
+
         if (HotkeyParser.TryParse(_settings.Config.ToggleTranslationHotkey, out var mod1, out var vk1))
         {
             _hotkeys.RegisterHotkey("toggle-translation", mod1, vk1,
@@ -150,6 +164,13 @@ public partial class MainWindow : Window
         {
             _hotkeys.RegisterHotkey("toggle-overlay", mod2, vk2,
                 () => MainVM.ToggleOverlayFromHotkey());
+        }
+        // Pause is optional — empty config string just skips registration
+        // (TryParse returns false on whitespace input).
+        if (HotkeyParser.TryParse(_settings.Config.PauseTranslationHotkey, out var mod3, out var vk3))
+        {
+            _hotkeys.RegisterHotkey("toggle-pause", mod3, vk3,
+                () => MainVM.TogglePauseFromHotkey());
         }
     }
 

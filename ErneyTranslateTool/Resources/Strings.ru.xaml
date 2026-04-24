@@ -102,8 +102,14 @@
     <sys:String x:Key="Strings.TS.CacheUnlimited">Без лимита</sys:String>
 
     <sys:String x:Key="Strings.TS.Hotkeys">Горячие клавиши</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeysHelp">Кликни по полю и нажми желаемое сочетание — оно сохранится и зарегистрируется сразу, без перезапуска. Esc — отмена, ✕ — сбросить. Минимум один модификатор (Ctrl/Shift/Alt/Win) обязателен.</sys:String>
     <sys:String x:Key="Strings.TS.HotkeyToggle">Включить/выключить перевод:</sys:String>
     <sys:String x:Key="Strings.TS.HotkeyOverlay">Показать/скрыть оверлей:</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeyPause">Пауза/возобновить (опционально):</sys:String>
+
+    <!-- HotkeyCaptureBox states -->
+    <sys:String x:Key="Strings.Hotkey.PressCombo">Нажмите сочетание клавиш... (Esc — отмена)</sys:String>
+    <sys:String x:Key="Strings.Hotkey.NotSet">(не задано — кликни чтобы задать)</sys:String>
 
     <sys:String x:Key="Strings.TS.SaveBtn">Сохранить настройки</sys:String>
 
@@ -163,7 +169,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.13 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.14 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>
@@ -298,12 +304,26 @@
     <sys:String x:Key="Strings.History.ColLang">Язык</sys:String>
     <sys:String x:Key="Strings.History.ColOriginal">Оригинал</sys:String>
     <sys:String x:Key="Strings.History.ColTranslated">Перевод</sys:String>
+    <sys:String x:Key="Strings.History.AddToGlossary">Добавить в глоссарий…</sys:String>
+
+    <!-- Add-to-glossary dialog (opened from History tab right-click) -->
+    <sys:String x:Key="Strings.AddToGlossary.Title">Добавить в глоссарий</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Heading">Закрепить «оригинал → перевод»</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Help">Поля заполнены текстами выбранной строки. Обрежь оба до конкретного имени собственного, которое нужно зафиксировать (например, «Geralt» → «Геральт»). После сохранения правило применится при следующем переводе.</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Source">Оригинал (что заменяем):</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.Target">Перевод (на что меняем):</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.WholeWord">Только целое слово</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.CaseSensitive">Учитывать регистр</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.MissingFields">Заполни оба поля — «Оригинал» и «Перевод».</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.SaveErrorFmt">Не удалось сохранить правило: {0}</sys:String>
+    <sys:String x:Key="Strings.AddToGlossary.NoteFromHistory">из истории</sys:String>
 
     <!-- Engine status messages (used from C# via LanguageManager.Get/Format) -->
     <sys:String x:Key="Strings.Engine.Active">Перевод активен: {0}</sys:String>
     <sys:String x:Key="Strings.Engine.ActiveWithProfile">Перевод активен: {0}  ·  профиль: {1}</sys:String>
     <sys:String x:Key="Strings.Engine.Stopped">Перевод остановлен</sys:String>
     <sys:String x:Key="Strings.Engine.Paused">⏸ Окно «{0}» свёрнуто — пауза</sys:String>
+    <sys:String x:Key="Strings.Engine.UserPaused">⏸ Перевод приостановлен (хоткеем): {0}</sys:String>
     <sys:String x:Key="Strings.Engine.NoTranslator">Сервис перевода не настроен — проверьте вкладку «Настройки перевода»</sys:String>
     <sys:String x:Key="Strings.Engine.FallbackOn">⚠ Основной провайдер ({0}) недоступен — использую резервный ({1})</sys:String>
     <sys:String x:Key="Strings.Engine.FallbackOff">Основной провайдер ({0}) снова работает</sys:String>

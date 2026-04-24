@@ -179,4 +179,17 @@ public class MainViewModel : BaseViewModel
     {
         _engine.ToggleOverlay();
     }
+
+    /// <summary>
+    /// Hotkey entry point for pause/resume. Unlike ToggleFromHotkeyAsync
+    /// which does a full engine start/stop, this flips a soft flag inside
+    /// the engine — capture service, OCR backend, LLM conversation
+    /// history, live stats counters all stay alive. Intended for brief
+    /// interruptions (cutscene, incoming call) where you don't want to
+    /// pay the Start cost all over again when you resume.
+    /// </summary>
+    public void TogglePauseFromHotkey()
+    {
+        _engine.TogglePause();
+    }
 }

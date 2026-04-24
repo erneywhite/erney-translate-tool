@@ -196,6 +196,15 @@ public class AppConfig
     public string ToggleOverlayHotkey { get; set; } = "Ctrl+Shift+H";
 
     /// <summary>
+    /// Optional hotkey for pausing/resuming the translation engine without
+    /// dropping its state (capture window selection, OCR backend, LLM
+    /// conversation history, live stats counters all survive). Empty
+    /// string = unset, no global hotkey is registered. Different from
+    /// the toggle hotkey above which fully starts/stops the engine.
+    /// </summary>
+    public string PauseTranslationHotkey { get; set; } = string.Empty;
+
+    /// <summary>
     /// Source OCR language tag (e.g. "en-US"). Empty = auto.
     /// </summary>
     public string SourceLanguage { get; set; } = string.Empty;
