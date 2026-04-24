@@ -116,32 +116,29 @@ public partial class OverlayWindow : Window
             ? new FontFamily(cfg.OverlayFontFamily)
             : new FontFamily("Segoe UI");
 
-        var manualMode = string.Equals(cfg.FontSizeMode, "Manual", StringComparison.OrdinalIgnoreCase);
+        // Always use the user's chosen font size from the Overlay Settings
+        // tab. Earlier versions auto-scaled to the source rect's height,
+        // which made labels jitter between sizes from frame to frame even
+        // when the original text wasn't changing.
+        var fontSize = cfg.ManualFontSize >= 8 ? cfg.ManualFontSize : 16.0;
 
         foreach (var s in snapped)
         {
-            // Auto-size to roughly match source text height, but clamp to
-            // a sane range so a freak OCR result spanning the whole frame
-            // doesn't blow the overlay up to a wall-of-text font.
-            var fontSize = manualMode && cfg.ManualFontSize >= 8
-                ? cfg.ManualFontSize
-                : Math.Clamp(s.Rect.Height * 0.55, 11.0, 28.0);
-
             // How much horizontal room is left between the source rect's
             // left edge and the right edge of the overlay window?
             // Translation can grow up to that, no further — anything wider
             // would spill off the right side of the game window.
             const double rightMargin = 12;
             var availableWidth = Math.Max(60, Width - s.Rect.X - rightMargin);
-            var preferredMax = Math.Min(availableWidth, Math.Max(120, s.Rect.Width * 1.6));
 
+            // Border is "shrink-to-fit": no MinWidth/MinHeight so it sizes
+            // exactly to whatever the translated text needs (no empty dark
+            // tail extending past the actual text).
             var border = new Border
             {
                 Background = bgBrush,
                 CornerRadius = new CornerRadius(2),
                 Padding = new Thickness(4, 1, 4, 1),
-                MinWidth = Math.Min(s.Rect.Width, availableWidth),
-                MinHeight = s.Rect.Height,
                 MaxWidth = availableWidth,
                 SnapsToDevicePixels = true
             };
@@ -152,7 +149,9 @@ public partial class OverlayWindow : Window
                 FontFamily = fontFamily,
                 FontSize = fontSize,
                 TextWrapping = TextWrapping.Wrap,
-                MaxWidth = preferredMax,
+                // Inner cap is a hair tighter than the Border so wrapping
+                // happens at the text level, not by clipping.
+                MaxWidth = availableWidth - 8,
                 VerticalAlignment = VerticalAlignment.Center
             };
 

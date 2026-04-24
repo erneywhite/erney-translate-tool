@@ -62,6 +62,14 @@ public static class RegionGrouper
         var hRatio = Math.Min(lb.Height, cb.Height) / Math.Max(lb.Height, cb.Height);
         if (hRatio < 0.65) return false;
 
+        // Roughly comparable widths. A speaker-name banner ("Emily" in a
+        // narrow ornate box) sits just above the dialog body but is often
+        // 5-10x narrower — without this check the grouper would merge them
+        // into one giant overlay covering both. A real wrapped paragraph,
+        // even with a short last line, usually keeps width ratio above ~0.4.
+        var wRatio = Math.Min(lb.Width, cb.Width) / Math.Max(lb.Width, cb.Width);
+        if (wRatio < 0.4) return false;
+
         // Candidate sits below `last` with a gap no bigger than ~1.3 line
         // heights — covers normal line spacing (0.3-0.6 H) plus a generous
         // margin for fonts with wide leading. Anything wider is a paragraph
