@@ -29,10 +29,15 @@ public partial class OverlayWindow : Window
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     private string _lastFingerprint = string.Empty;
+    private string _lastStyleFingerprint = string.Empty;
     // Sticky positions keyed by original (source) text. If OCR re-detects the
     // same English string in a spot that still overlaps the previous box, we
     // keep the previous rect instead of the freshly-jittered one.
     private Dictionary<string, Rect> _lastByOriginal = new(StringComparer.Ordinal);
+    // Active borders on the canvas, keyed by translated text. Lets us diff
+    // the new frame against the previous one so unchanged regions stay put
+    // (no Clear/Add flicker, no re-layout).
+    private readonly Dictionary<string, Border> _activeBorders = new(StringComparer.Ordinal);
 
     public OverlayWindow()
     {
@@ -93,16 +98,34 @@ public partial class OverlayWindow : Window
 
         var fingerprint = string.Join("|",
             snapped.Select(s => $"{s.Rect.X}:{s.Rect.Y}:{s.Rect.Width}:{s.Rect.Height}:{s.Text}"));
-        if (fingerprint == _lastFingerprint && RegionCanvas.Children.Count > 0)
+        var styleFingerprint = $"{cfg.BackgroundColor}|{cfg.TextColor}|{cfg.OverlayOpacity:F3}|" +
+            $"{cfg.OverlayCornerRadius:F0}|{cfg.OverlayFontFamily}|{cfg.ManualFontSize:F0}";
+
+        if (fingerprint == _lastFingerprint
+            && styleFingerprint == _lastStyleFingerprint
+            && RegionCanvas.Children.Count > 0)
         {
             _lastByOriginal = next;
             return;
         }
+
+        // If only style changed (theme switch / colour tweak), wipe and
+        // rebuild — every Border has its old brushes baked in.
+        if (styleFingerprint != _lastStyleFingerprint)
+        {
+            RegionCanvas.Children.Clear();
+            _activeBorders.Clear();
+        }
         _lastFingerprint = fingerprint;
+        _lastStyleFingerprint = styleFingerprint;
         _lastByOriginal = next;
 
-        RegionCanvas.Children.Clear();
-        if (snapped.Count == 0) return;
+        if (snapped.Count == 0)
+        {
+            RegionCanvas.Children.Clear();
+            _activeBorders.Clear();
+            return;
+        }
 
         var bgColor = ParseColor(cfg.BackgroundColor, Colors.Black);
         bgColor.A = (byte)Math.Clamp(cfg.OverlayOpacity * 255, 60, 255);
@@ -123,14 +146,30 @@ public partial class OverlayWindow : Window
         var fontSize = cfg.ManualFontSize >= 8 ? cfg.ManualFontSize : 16.0;
         var cornerRadius = new CornerRadius(Math.Clamp(cfg.OverlayCornerRadius, 0, 16));
 
+        // Diff-based update. For each region in the new frame: if a Border
+        // for that translation exists, just reposition it (no Clear flicker,
+        // no re-layout). Otherwise create a new one. Borders that survive
+        // from previous frames are tracked via _activeBorders so we can
+        // remove the ones that no longer appear.
+        var keep = new HashSet<string>(StringComparer.Ordinal);
         foreach (var s in snapped)
         {
-            // How much horizontal room is left between the source rect's
-            // left edge and the right edge of the overlay window?
-            // Translation can grow up to that, no further — anything wider
-            // would spill off the right side of the game window.
             const double rightMargin = 12;
             var availableWidth = Math.Max(60, Width - s.Rect.X - rightMargin);
+
+            keep.Add(s.Text);
+            if (_activeBorders.TryGetValue(s.Text, out var existing))
+            {
+                // Reposition / resize existing border in place.
+                Canvas.SetLeft(existing, s.Rect.X);
+                Canvas.SetTop(existing, s.Rect.Y);
+                existing.MinWidth = Math.Min(s.Rect.Width, availableWidth);
+                existing.MinHeight = s.Rect.Height;
+                existing.MaxWidth = availableWidth;
+                if (existing.Child is TextBlock tb)
+                    tb.MaxWidth = availableWidth - 8;
+                continue;
+            }
 
             // Border has to cover the original English text (so the user
             // doesn't see it bleeding through under the translation), so
@@ -146,7 +185,8 @@ public partial class OverlayWindow : Window
                 MinWidth = Math.Min(s.Rect.Width, availableWidth),
                 MinHeight = s.Rect.Height,
                 MaxWidth = availableWidth,
-                SnapsToDevicePixels = true
+                SnapsToDevicePixels = true,
+                UseLayoutRounding = true
             };
             border.Child = new TextBlock
             {
@@ -155,8 +195,6 @@ public partial class OverlayWindow : Window
                 FontFamily = fontFamily,
                 FontSize = fontSize,
                 TextWrapping = TextWrapping.Wrap,
-                // Inner cap is a hair tighter than the Border so wrapping
-                // happens at the text level, not by clipping.
                 MaxWidth = availableWidth - 8,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -164,6 +202,19 @@ public partial class OverlayWindow : Window
             Canvas.SetLeft(border, s.Rect.X);
             Canvas.SetTop(border, s.Rect.Y);
             RegionCanvas.Children.Add(border);
+            _activeBorders[s.Text] = border;
+        }
+
+        // Drop borders whose translations no longer appear in this frame.
+        if (_activeBorders.Count != keep.Count)
+        {
+            var toRemove = _activeBorders.Keys.Where(k => !keep.Contains(k)).ToList();
+            foreach (var k in toRemove)
+            {
+                if (_activeBorders.TryGetValue(k, out var b))
+                    RegionCanvas.Children.Remove(b);
+                _activeBorders.Remove(k);
+            }
         }
     }
 
