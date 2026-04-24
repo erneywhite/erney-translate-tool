@@ -36,7 +36,7 @@
     <!-- PaddleOCR (alternative engine for stylized / small fonts) -->
     <PackageReference Include="Sdcb.PaddleOCR" Version="3.0.1" />
     <PackageReference Include="Sdcb.PaddleOCR.Models.Online" Version="3.0.1" />
-    <PackageReference Include="Sdcb.PaddleInference.runtime.win64.mkl" Version="3.0.1" />
+    <PackageReference Include="Sdcb.PaddleInference.runtime.win64.mkl" Version="3.1.0.54" />
     <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.11.0.20250507" />
   </ItemGroup>
