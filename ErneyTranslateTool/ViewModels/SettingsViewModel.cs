@@ -307,12 +307,10 @@ public class SettingsViewModel : BaseViewModel
         }
         else if (IsPaddle)
         {
-            // Curated PaddleOCR language families (each downloads ~10-20MB
-            // model on first selection).
-            OcrLanguages.Add(new OcrLanguageOption("en", "Английский (en)"));
-            OcrLanguages.Add(new OcrLanguageOption("zh", "Китайский (zh)"));
-            OcrLanguages.Add(new OcrLanguageOption("ja", "Японский (ja)"));
-            OcrLanguages.Add(new OcrLanguageOption("ko", "Корейский (ko)"));
+            // Single source of truth: PaddleOcrBackend owns the catalog so
+            // we don't have to keep this list in sync by hand.
+            foreach (var (tag, display) in PaddleOcrBackend.SupportedLanguages)
+                OcrLanguages.Add(new OcrLanguageOption(tag, display));
 
             var saved = _appSettings.Config.PaddleLanguage;
             SelectedOcrLanguage = OcrLanguages.FirstOrDefault(o =>
