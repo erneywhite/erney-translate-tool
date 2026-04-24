@@ -138,6 +138,74 @@ public class AppSettings
     /// </summary>
     public bool HasApiKey() => !string.IsNullOrEmpty(_config.EncryptedApiKey);
 
+    /// <summary>Persist (DPAPI-encrypt) the OpenAI key. Empty/whitespace clears it.</summary>
+    public void SetOpenAIKey(string apiKey)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                _config.EncryptedOpenAIKey = null;
+            }
+            else
+            {
+                _config.EncryptedOpenAIKey = Convert.ToBase64String(Protect(apiKey));
+            }
+            Save();
+            _logger.Information("OpenAI key updated");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to encrypt OpenAI key");
+            throw;
+        }
+    }
+
+    /// <summary>Returns the decrypted OpenAI key or null if not set.</summary>
+    public string? GetOpenAIKey() => DecryptOrNull(_config.EncryptedOpenAIKey, "OpenAI");
+
+    /// <summary>Persist (DPAPI-encrypt) the Anthropic key. Empty/whitespace clears it.</summary>
+    public void SetAnthropicKey(string apiKey)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                _config.EncryptedAnthropicKey = null;
+            }
+            else
+            {
+                _config.EncryptedAnthropicKey = Convert.ToBase64String(Protect(apiKey));
+            }
+            Save();
+            _logger.Information("Anthropic key updated");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to encrypt Anthropic key");
+            throw;
+        }
+    }
+
+    /// <summary>Returns the decrypted Anthropic key or null if not set.</summary>
+    public string? GetAnthropicKey() => DecryptOrNull(_config.EncryptedAnthropicKey, "Anthropic");
+
+    /// <summary>Shared decrypt helper — DRY for the LLM-key getters.</summary>
+    private string? DecryptOrNull(string? encryptedB64, string label)
+    {
+        if (string.IsNullOrEmpty(encryptedB64)) return null;
+        try
+        {
+            var bytes = Convert.FromBase64String(encryptedB64);
+            return Encoding.UTF8.GetString(Unprotect(bytes));
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to decrypt {Label} key", label);
+            return null;
+        }
+    }
+
     /// <summary>
     /// Protect data using Windows DPAPI.
     /// </summary>

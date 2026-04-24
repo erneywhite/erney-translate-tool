@@ -10,13 +10,17 @@ public static class TranslatorFactory
     public const string ProviderMyMemory = "MyMemory";
     public const string ProviderGoogleFree = "GoogleFree";
     public const string ProviderLibreTranslate = "LibreTranslate";
+    public const string ProviderOpenAI = "OpenAI";
+    public const string ProviderAnthropic = "Anthropic";
 
     public static readonly string[] AllProviders =
     {
         ProviderMyMemory,
         ProviderGoogleFree,
         ProviderDeepL,
-        ProviderLibreTranslate
+        ProviderLibreTranslate,
+        ProviderOpenAI,
+        ProviderAnthropic,
     };
 
     public static string DisplayName(string provider) => provider switch
@@ -25,6 +29,8 @@ public static class TranslatorFactory
         ProviderMyMemory => "MyMemory (бесплатно, email увеличивает лимит)",
         ProviderGoogleFree => "Google Translate (бесплатно, без регистрации)",
         ProviderLibreTranslate => "LibreTranslate (open source)",
+        ProviderOpenAI => "OpenAI (LLM, лучшее качество, нужен платный API-ключ)",
+        ProviderAnthropic => "Anthropic Claude (LLM, лучшее качество, нужен платный API-ключ)",
         _ => provider
     };
 
@@ -71,6 +77,40 @@ public static class TranslatorFactory
                     settings.Config.LibreTranslateUrl,
                     settings.Config.LibreTranslateApiKey,
                     logger);
+
+            case ProviderOpenAI:
+            {
+                var key = settings.GetOpenAIKey();
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    error = "OpenAI: API-ключ не настроен";
+                    return null;
+                }
+                return new OpenAITranslator(
+                    key,
+                    settings.Config.OpenAIModel,
+                    settings.Config.LlmTemperature,
+                    settings.Config.LlmContextSize,
+                    settings.Config.LlmUseContext,
+                    logger);
+            }
+
+            case ProviderAnthropic:
+            {
+                var key = settings.GetAnthropicKey();
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    error = "Anthropic: API-ключ не настроен";
+                    return null;
+                }
+                return new AnthropicTranslator(
+                    key,
+                    settings.Config.AnthropicModel,
+                    settings.Config.LlmTemperature,
+                    settings.Config.LlmContextSize,
+                    settings.Config.LlmUseContext,
+                    logger);
+            }
 
             default:
                 error = $"Неизвестный провайдер: {provider}";
