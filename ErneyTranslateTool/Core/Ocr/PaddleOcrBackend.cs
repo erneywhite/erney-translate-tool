@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ErneyTranslateTool.Models;
 using OpenCvSharp;
@@ -16,25 +17,31 @@ namespace ErneyTranslateTool.Core.Ocr;
 /// <summary>
 /// PaddleOCR backend — significantly more accurate than Tesseract on
 /// stylized / small / anti-aliased text (the hard cases for game UI),
-/// at the cost of a slower per-frame inference (~1-2s on 1080p) and a
-/// one-time model download on first use of each language.
+/// at the cost of slower per-frame inference.
+///
+/// Initialization is fully asynchronous: the constructor never blocks the
+/// caller. Loading the native Paddle runtime + downloading the language
+/// model happens on a background task. Until it completes, ProcessFrame
+/// returns no regions (so the rest of the pipeline stays responsive). A
+/// hard 3-minute timeout means a stuck CDN can't permanently jam things.
 /// </summary>
 public class PaddleOcrBackend : IOcrBackend
 {
     public string Name => "PaddleOCR";
 
+    private static readonly TimeSpan InitTimeout = TimeSpan.FromMinutes(3);
+
     private readonly ILogger _logger;
     private PaddleOcrAll? _engine;
     private string _currentLanguage = "en";
+    private volatile bool _ready;
+    private volatile bool _failed;
+    private CancellationTokenSource? _initCts;
     private bool _disposed;
+    private readonly object _swapLock = new();
 
     public string CurrentLanguageTag => _currentLanguage;
 
-    /// <summary>
-    /// Curated list of language families PaddleOCR supports out of the box.
-    /// Tags are intentionally short (en, ja, zh, ko, ru) — they map onto
-    /// Paddle's model families, not Tesseract's three-letter codes.
-    /// </summary>
     private static readonly (string Tag, string Display, OnlineFullModels Model)[] AvailableLangs =
     {
         ("en", "Английский", OnlineFullModels.EnglishV4),
@@ -46,8 +53,9 @@ public class PaddleOcrBackend : IOcrBackend
     public PaddleOcrBackend(ILogger logger, string preferredLanguage)
     {
         _logger = logger;
-        var initial = string.IsNullOrWhiteSpace(preferredLanguage) ? "en" : preferredLanguage;
-        if (!SetLanguage(initial)) SetLanguage("en");
+        _currentLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en" : preferredLanguage;
+        // Kick off the model load on a worker — never block the constructor.
+        StartInit(_currentLanguage);
     }
 
     public List<(string Tag, string DisplayName)> GetAvailableLanguages() =>
@@ -55,47 +63,79 @@ public class PaddleOcrBackend : IOcrBackend
 
     public bool SetLanguage(string tag)
     {
-        try
+        var entry = AvailableLangs.FirstOrDefault(l =>
+            string.Equals(l.Tag, tag, StringComparison.OrdinalIgnoreCase));
+        if (entry.Tag == null)
         {
-            var entry = AvailableLangs.FirstOrDefault(l =>
-                string.Equals(l.Tag, tag, StringComparison.OrdinalIgnoreCase));
-            if (entry.Tag == null)
-            {
-                _logger.Warning("PaddleOCR: unsupported language {Tag}", tag);
-                return false;
-            }
-
-            _logger.Information("PaddleOCR: loading model {Tag} (downloads ~10-20MB on first use)...", tag);
-            FullOcrModel model = entry.Model.DownloadAsync().GetAwaiter().GetResult();
-
-            _engine?.Dispose();
-            _engine = new PaddleOcrAll(model, PaddleDevice.Mkldnn())
-            {
-                AllowRotateDetection = false,
-                Enable180Classification = false,
-            };
-            _currentLanguage = tag;
-            _logger.Information("PaddleOCR ready: {Tag}", tag);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "PaddleOCR SetLanguage failed for {Tag}", tag);
+            _logger.Warning("PaddleOCR: unsupported language {Tag}", tag);
             return false;
         }
+        _currentLanguage = tag;
+        StartInit(tag);
+        return true;
+    }
+
+    private void StartInit(string lang)
+    {
+        // Cancel any in-flight init for the previous language.
+        _initCts?.Cancel();
+        _initCts = new CancellationTokenSource(InitTimeout);
+        var ct = _initCts.Token;
+
+        _ready = false;
+        _failed = false;
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                _logger.Information("PaddleOCR: loading model {Lang} (first run downloads ~10-30 MB; subsequent runs use the local cache)...", lang);
+                var entry = AvailableLangs.First(l =>
+                    string.Equals(l.Tag, lang, StringComparison.OrdinalIgnoreCase));
+
+                var model = await entry.Model.DownloadAsync().WaitAsync(ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+
+                var engine = new PaddleOcrAll(model, PaddleDevice.Mkldnn())
+                {
+                    AllowRotateDetection = false,
+                    Enable180Classification = false,
+                };
+
+                lock (_swapLock)
+                {
+                    _engine?.Dispose();
+                    _engine = engine;
+                    _ready = true;
+                }
+                _logger.Information("PaddleOCR ready: {Lang}", lang);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.Warning("PaddleOCR init for {Lang} cancelled (timeout or language switch)", lang);
+                _failed = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "PaddleOCR init for {Lang} failed — falling back to no-op until next attempt", lang);
+                _failed = true;
+            }
+        });
     }
 
     public List<TranslationRegion> ProcessFrame(byte[] pngBytes)
     {
         var regions = new List<TranslationRegion>();
-        if (_engine == null) return regions;
+        PaddleOcrAll? engine;
+        lock (_swapLock) { engine = _ready ? _engine : null; }
+        if (engine == null) return regions;
 
         try
         {
             using var src = Cv2.ImDecode(pngBytes, ImreadModes.Color);
             if (src.Empty()) return regions;
 
-            var result = _engine.Run(src);
+            var result = engine.Run(src);
             int kept = 0, dropped = 0;
             foreach (var r in result.Regions)
             {
@@ -103,8 +143,6 @@ public class PaddleOcrBackend : IOcrBackend
                 if (string.IsNullOrEmpty(text)) { dropped++; continue; }
                 if (OcrTextHelpers.IsEntirelyCyrillic(text)) { dropped++; continue; }
 
-                // Paddle returns a confidence score 0-1; require at least 0.6
-                // to drop the obvious junk.
                 if (r.Score < 0.6f)
                 {
                     dropped++;
@@ -113,7 +151,6 @@ public class PaddleOcrBackend : IOcrBackend
                     continue;
                 }
 
-                // r.Rect is a RotatedRect — take its axis-aligned bounding rect.
                 var box = r.Rect.BoundingRect();
                 regions.Add(new TranslationRegion
                 {
@@ -143,7 +180,12 @@ public class PaddleOcrBackend : IOcrBackend
     public void Dispose()
     {
         if (_disposed) return;
-        _engine?.Dispose();
+        _initCts?.Cancel();
+        lock (_swapLock)
+        {
+            _engine?.Dispose();
+            _engine = null;
+        }
         _disposed = true;
         GC.SuppressFinalize(this);
     }
