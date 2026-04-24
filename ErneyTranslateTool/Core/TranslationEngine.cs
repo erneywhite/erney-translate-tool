@@ -102,8 +102,10 @@ public class TranslationEngine : IDisposable
 
         // Pick + apply the right profile for this window BEFORE we kick off
         // any backend so OCR/translator/overlay all read the right settings.
-        // No-op when only the Default profile exists or none match.
-        var profile = _profiles.FindForWindow(title, processName);
+        // GetOrCreate auto-mints a per-process profile when nothing matched
+        // and we have a sensible process name — gives the user a "settings
+        // remembered per-game" experience without any UI work on their part.
+        var profile = _profiles.GetOrCreateForWindow(title, processName);
         _profiles.ApplyProfile(profile);
         // Reload backends — language/engine/provider could all have changed.
         _ocr.Reload();

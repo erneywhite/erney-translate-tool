@@ -107,6 +107,80 @@ public class ProfileManager
     }
 
     /// <summary>
+    /// Like <see cref="FindForWindow"/>, but if no user profile matches and
+    /// we have a usable process name, auto-create one based on the current
+    /// Default settings and key it on the process name. This is what gives
+    /// the user the "settings remembered per-game automatically" experience
+    /// — first launch on Witcher3.exe creates a "Witcher3" profile, every
+    /// future launch picks it up by process name without any UI work.
+    /// </summary>
+    public GameProfile GetOrCreateForWindow(string windowTitle, string processName)
+    {
+        var existing = FindForWindow(windowTitle, processName);
+        if (!existing.IsDefault) return existing;
+
+        // Nothing matched. Decide whether to mint a new profile:
+        //   - process name must be present and not the placeholder we use
+        //     when GetProcessById fails (see WindowPickerService);
+        //   - keep names short and recognisable.
+        var pname = (processName ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(pname) ||
+            string.Equals(pname, "Unknown", StringComparison.OrdinalIgnoreCase))
+        {
+            return existing;
+        }
+
+        // Snapshot current Default/active fields so the new profile starts
+        // identical — the user's edits while it's active will be persisted
+        // into IT (not Default) by SaveActiveProfileFromCurrentConfig.
+        var auto = CreateFromCurrentConfig(
+            name: pname,
+            matchPattern: pname,
+            matchByProcess: true);
+        _logger.Information("Profiles: auto-created '{Name}' for {Process}", auto.Name, pname);
+        return auto;
+    }
+
+    /// <summary>
+    /// Persist the live AppConfig fields back into the active profile. Called
+    /// from SettingsViewModel.Save so any tweak the user makes to the
+    /// translation-settings or overlay-settings tabs while a profile is
+    /// active sticks to that profile (rather than only living in
+    /// settings.json).
+    /// </summary>
+    public void SaveActiveProfileFromCurrentConfig()
+    {
+        if (_activeProfile == null) return;
+        var p = _activeProfile;
+        var c = _settings.Config;
+
+        p.OcrEngine = c.OcrEngine;
+        p.SourceLanguage = c.SourceLanguage;
+        p.TesseractLanguage = c.TesseractLanguage;
+        p.PaddleLanguage = c.PaddleLanguage;
+
+        p.TargetLanguage = c.TargetLanguage;
+        p.TranslationProvider = c.TranslationProvider;
+
+        p.OverlayFontFamily = c.OverlayFontFamily;
+        p.FontSizeMode = c.FontSizeMode;
+        p.ManualFontSize = c.ManualFontSize;
+        p.OverlayOpacity = c.OverlayOpacity;
+        p.BackgroundColor = c.BackgroundColor;
+        p.TextColor = c.TextColor;
+        p.OverlayCornerRadius = c.OverlayCornerRadius;
+
+        p.GlossaryEnabled = c.GlossaryEnabled;
+
+        if (_repo.Update(p))
+        {
+            _logger.Debug("Profiles: saved active profile '{Name}' (Id={Id})", p.Name, p.Id);
+            // Re-raise so the Profiles UI refreshes the row in-place.
+            ActiveProfileChanged?.Invoke(this, p);
+        }
+    }
+
+    /// <summary>
     /// Copy the profile's fields into the live AppConfig, save settings,
     /// and notify subscribers so dependent services (TranslationService,
     /// OcrService, OverlayManager) can pick up the new values.
