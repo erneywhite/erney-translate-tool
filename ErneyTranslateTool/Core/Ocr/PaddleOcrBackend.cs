@@ -19,23 +19,32 @@ namespace ErneyTranslateTool.Core.Ocr;
 /// stylized / small / anti-aliased text (the hard cases for game UI),
 /// at the cost of slower per-frame inference.
 ///
-/// Initialization is fully asynchronous: the constructor never blocks the
-/// caller. Loading the native Paddle runtime + downloading the language
-/// model happens on a background task. Until it completes, ProcessFrame
-/// returns no regions (so the rest of the pipeline stays responsive). A
-/// hard 3-minute timeout means a stuck CDN can't permanently jam things.
+/// Initialization is fully asynchronous: the constructor never blocks
+/// the caller. Loading the native Paddle runtime + downloading the
+/// language model(s) happens on a background task. Until it completes,
+/// ProcessFrame returns no regions (so the rest of the pipeline stays
+/// responsive). A hard 3-minute timeout means a stuck CDN can't
+/// permanently jam things.
+///
+/// Special "auto" language tag spins up multiple engines (English +
+/// Japanese + Cyrillic by default) and merges their results per frame —
+/// each region keeps the highest-confidence reading. Slower but handles
+/// games whose script the user doesn't know in advance.
 /// </summary>
 public class PaddleOcrBackend : IOcrBackend
 {
     public string Name => "PaddleOCR";
 
-    private static readonly TimeSpan InitTimeout = TimeSpan.FromMinutes(3);
+    public const string AutoTag = "auto";
+    private static readonly string[] AutoBundle = { "en", "ja", "cyrillic" };
+
+    private static readonly TimeSpan InitTimeout = TimeSpan.FromMinutes(5);
+    private const int MaxOcrWidth = 1600;
 
     private readonly ILogger _logger;
-    private PaddleOcrAll? _engine;
+    private readonly List<PaddleOcrAll> _engines = new();
     private string _currentLanguage = "en";
     private volatile bool _ready;
-    private volatile bool _failed;
     private CancellationTokenSource? _initCts;
     private bool _disposed;
     private readonly object _swapLock = new();
@@ -43,9 +52,8 @@ public class PaddleOcrBackend : IOcrBackend
     public string CurrentLanguageTag => _currentLanguage;
 
     /// <summary>
-    /// Curated PaddleOCR model catalog. We pick V5 for Chinese (newest model
-    /// family available), V4 for everything that has it, V3 for Latin /
-    /// Cyrillic / Traditional Chinese (only published as V3 right now).
+    /// Curated PaddleOCR model catalog. V5 for Chinese, V4 for everything
+    /// that has it, V3 for Latin / Cyrillic / Traditional Chinese.
     ///
     /// Latin/Cyrillic models cover their whole script family at once — one
     /// "latin" pick handles German, French, Spanish, Italian, Portuguese,
@@ -54,6 +62,7 @@ public class PaddleOcrBackend : IOcrBackend
     /// </summary>
     private static readonly (string Tag, string Display, OnlineFullModels Model)[] AvailableLangs =
     {
+        (AutoTag,   "Авто (English + Japanese + Cyrillic; в 2-3 раза медленнее)", null!),
         ("en",      "Английский",                                OnlineFullModels.EnglishV4),
         ("zh",      "Китайский (упрощённый)",                    OnlineFullModels.ChineseV5),
         ("zh-tra",  "Китайский (традиционный)",                  OnlineFullModels.TraditionalChineseV3),
@@ -72,15 +81,11 @@ public class PaddleOcrBackend : IOcrBackend
     {
         _logger = logger;
         _currentLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en" : preferredLanguage;
-        // Kick off the model load on a worker — never block the constructor.
         StartInit(_currentLanguage);
     }
 
-    public List<(string Tag, string DisplayName)> GetAvailableLanguages() =>
-        SupportedLanguages;
+    public List<(string Tag, string DisplayName)> GetAvailableLanguages() => SupportedLanguages;
 
-    /// <summary>Static accessor so the settings UI can list languages without
-    /// needing a Paddle engine instance.</summary>
     public static List<(string Tag, string DisplayName)> SupportedLanguages =>
         AvailableLangs.Select(l => (l.Tag, l.Display)).ToList();
 
@@ -100,73 +105,66 @@ public class PaddleOcrBackend : IOcrBackend
 
     private void StartInit(string lang)
     {
-        // Cancel any in-flight init for the previous language.
         _initCts?.Cancel();
         _initCts = new CancellationTokenSource(InitTimeout);
         var ct = _initCts.Token;
-
         _ready = false;
-        _failed = false;
+
+        var langsToLoad = lang == AutoTag ? AutoBundle : new[] { lang };
 
         Task.Run(async () =>
         {
             try
             {
-                _logger.Information("PaddleOCR: loading model {Lang} (first run downloads ~10-30 MB; subsequent runs use the local cache)...", lang);
-                var entry = AvailableLangs.First(l =>
-                    string.Equals(l.Tag, lang, StringComparison.OrdinalIgnoreCase));
-
-                var model = await entry.Model.DownloadAsync().WaitAsync(ct).ConfigureAwait(false);
-                ct.ThrowIfCancellationRequested();
-
-                var engine = new PaddleOcrAll(model, PaddleDevice.Mkldnn())
+                var loaded = new List<PaddleOcrAll>();
+                foreach (var l in langsToLoad)
                 {
-                    AllowRotateDetection = false,
-                    Enable180Classification = false,
-                };
+                    var entry = AvailableLangs.First(e =>
+                        string.Equals(e.Tag, l, StringComparison.OrdinalIgnoreCase));
+                    _logger.Information("PaddleOCR: loading model {Lang}...", l);
+                    var model = await entry.Model.DownloadAsync().WaitAsync(ct).ConfigureAwait(false);
+                    ct.ThrowIfCancellationRequested();
+
+                    loaded.Add(new PaddleOcrAll(model, PaddleDevice.Mkldnn())
+                    {
+                        AllowRotateDetection = false,
+                        Enable180Classification = false,
+                    });
+                }
 
                 lock (_swapLock)
                 {
-                    _engine?.Dispose();
-                    _engine = engine;
+                    DisposeEnginesNoLock();
+                    _engines.AddRange(loaded);
                     _ready = true;
                 }
-                _logger.Information("PaddleOCR ready: {Lang}", lang);
+                _logger.Information("PaddleOCR ready: {Lang} ({Count} engine(s) active)",
+                    lang, loaded.Count);
             }
             catch (OperationCanceledException)
             {
                 _logger.Warning("PaddleOCR init for {Lang} cancelled (timeout or language switch)", lang);
-                _failed = true;
             }
             catch (Exception ex)
             {
-                _logger.Error(ex, "PaddleOCR init for {Lang} failed — falling back to no-op until next attempt", lang);
-                _failed = true;
+                _logger.Error(ex, "PaddleOCR init for {Lang} failed", lang);
             }
         });
     }
 
-    // Cap captured-frame width sent to OCR. Paddle's detector internally
-    // resizes anything > ~1280-1600 px wide to its own preferred resolution,
-    // so feeding it a 4K capture mostly burns CPU on JPEG decode + Mat ops
-    // without improving quality. 1600 keeps small UI fonts readable while
-    // halving inference time on 1080p+ captures.
-    private const int MaxOcrWidth = 1600;
-
     public List<TranslationRegion> ProcessFrame(byte[] pngBytes)
     {
         var regions = new List<TranslationRegion>();
-        PaddleOcrAll? engine;
-        lock (_swapLock) { engine = _ready ? _engine : null; }
-        if (engine == null) return regions;
+        PaddleOcrAll[] engines;
+        lock (_swapLock) { engines = _ready ? _engines.ToArray() : Array.Empty<PaddleOcrAll>(); }
+        if (engines.Length == 0) return regions;
 
         try
         {
             using var src = Cv2.ImDecode(pngBytes, ImreadModes.Color);
             if (src.Empty()) return regions;
 
-            // Downscale very large captures before OCR. We track the scale
-            // factor so we can map the bounding boxes back to original coords.
+            // Downscale very large captures before OCR.
             double scale = 1.0;
             Mat ocrMat = src;
             Mat? scaledMat = null;
@@ -182,25 +180,32 @@ public class PaddleOcrBackend : IOcrBackend
 
             try
             {
-                var result = engine.Run(ocrMat);
-                int kept = 0, dropped = 0;
-                foreach (var r in result.Regions)
+                // Collect detections from every active engine.
+                var raw = new List<(Rect Box, string Text, float Score)>();
+                foreach (var engine in engines)
                 {
-                    var text = r.Text?.Trim();
-                    if (string.IsNullOrEmpty(text)) { dropped++; continue; }
-                    if (OcrTextHelpers.IsEntirelyCyrillic(text)) { dropped++; continue; }
-
-                    if (r.Score < 0.6f)
+                    var result = engine.Run(ocrMat);
+                    foreach (var r in result.Regions)
                     {
-                        dropped++;
-                        _logger.Debug("  drop[paddle-low]: score={Score:F2} '{Text}'",
-                            r.Score, Truncate(text, 60));
-                        continue;
-                    }
+                        var text = r.Text?.Trim();
+                        if (string.IsNullOrEmpty(text)) continue;
+                        if (OcrTextHelpers.IsEntirelyCyrillic(text) && _currentLanguage != "cyrillic" && _currentLanguage != AutoTag) continue;
+                        if (r.Score < 0.6f) continue;
 
-                    // Map bounding box back to original-image coordinates
-                    // when we downscaled before OCR.
-                    var box = r.Rect.BoundingRect();
+                        var box = r.Rect.BoundingRect();
+                        raw.Add((box, text, r.Score));
+                    }
+                }
+
+                // Deduplicate overlapping detections (multi-engine mode produces
+                // duplicates: two engines see the same region and both emit it).
+                // For each cluster of overlapping boxes, keep the one with the
+                // highest score.
+                var winners = DeduplicateByOverlap(raw);
+
+                int kept = 0;
+                foreach (var (box, text, score) in winners)
+                {
                     var bounds = scale == 1.0
                         ? new WpfRect(box.X, box.Y, box.Width, box.Height)
                         : new WpfRect(box.X / scale, box.Y / scale,
@@ -216,10 +221,10 @@ public class PaddleOcrBackend : IOcrBackend
                     });
                     kept++;
                     _logger.Debug("  paddle-keep: score={Score:F2} y={Y:F0} h={H:F0} '{Text}'",
-                        r.Score, bounds.Y, bounds.Height, Truncate(text, 80));
+                        score, bounds.Y, bounds.Height, Truncate(text, 80));
                 }
-                _logger.Debug("PaddleOCR: {Total} regions, kept {Kept}, dropped {Dropped} (ocr-scale={Scale:F2})",
-                    result.Regions.Length, kept, dropped, scale);
+                _logger.Debug("PaddleOCR: {Engines} engine(s), {Raw} raw, kept {Kept} (ocr-scale={Scale:F2})",
+                    engines.Length, raw.Count, kept, scale);
             }
             finally
             {
@@ -233,18 +238,52 @@ public class PaddleOcrBackend : IOcrBackend
         return regions;
     }
 
+    /// <summary>
+    /// Greedy IoU dedup: walk results from highest score down, accept each
+    /// only if it doesn't significantly overlap an already-accepted region.
+    /// </summary>
+    private static List<(Rect Box, string Text, float Score)> DeduplicateByOverlap(
+        List<(Rect Box, string Text, float Score)> input)
+    {
+        const double iouThreshold = 0.4;
+        var sorted = input.OrderByDescending(r => r.Score).ToList();
+        var winners = new List<(Rect Box, string Text, float Score)>();
+        foreach (var candidate in sorted)
+        {
+            bool overlapsExisting = winners.Any(w => Iou(w.Box, candidate.Box) > iouThreshold);
+            if (!overlapsExisting) winners.Add(candidate);
+        }
+        return winners;
+    }
+
+    private static double Iou(Rect a, Rect b)
+    {
+        int x1 = Math.Max(a.X, b.X);
+        int y1 = Math.Max(a.Y, b.Y);
+        int x2 = Math.Min(a.X + a.Width, b.X + b.Width);
+        int y2 = Math.Min(a.Y + a.Height, b.Y + b.Height);
+        if (x2 <= x1 || y2 <= y1) return 0;
+        double inter = (double)(x2 - x1) * (y2 - y1);
+        double areaA = (double)a.Width * a.Height;
+        double areaB = (double)b.Width * b.Height;
+        double union = areaA + areaB - inter;
+        return union <= 0 ? 0 : inter / union;
+    }
+
     private static string Truncate(string s, int max) =>
         s.Length <= max ? s : s.Substring(0, max) + "...";
+
+    private void DisposeEnginesNoLock()
+    {
+        foreach (var e in _engines) e.Dispose();
+        _engines.Clear();
+    }
 
     public void Dispose()
     {
         if (_disposed) return;
         _initCts?.Cancel();
-        lock (_swapLock)
-        {
-            _engine?.Dispose();
-            _engine = null;
-        }
+        lock (_swapLock) { DisposeEnginesNoLock(); }
         _disposed = true;
         GC.SuppressFinalize(this);
     }
