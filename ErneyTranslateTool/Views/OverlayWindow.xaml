@@ -12,6 +12,10 @@
         IsHitTestVisible="False"
         ResizeMode="NoResize"
         WindowStartupLocation="Manual"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
         Left="0" Top="0" Width="100" Height="100">
     <Canvas x:Name="RegionCanvas"/>
 </Window>
