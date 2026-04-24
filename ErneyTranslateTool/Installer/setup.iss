@@ -16,7 +16,7 @@
 ; =============================================================================
 
 #define MyAppName "Erney's Translate Tool"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppPublisher "Erney"
 #define MyAppURL "https://github.com/erneywhite/erney-translate-tool"
 #define MyAppExeName "ErneyTranslateTool.exe"
