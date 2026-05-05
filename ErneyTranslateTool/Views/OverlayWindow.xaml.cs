@@ -159,7 +159,25 @@ public partial class OverlayWindow : Window
         foreach (var s in snapped)
         {
             const double rightMargin = 12;
-            var availableWidth = Math.Max(60, Width - s.Rect.X - rightMargin);
+            // v1.0.19: cap horizontal growth so the overlay stays inscribed
+            // in the source rect's footprint instead of running wildly off
+            // to the right. The pre-v1.0.19 behaviour let any translation
+            // grow up to (window width - rect.X), which on a long Russian
+            // line meant the bubble could span half the screen — visually
+            // jarring and obviously breaks containment in dialogue boxes.
+            //
+            // The cap is an additive + multiplicative blend: at least 60 px
+            // of slack so single-word labels can grow a bit, plus 30 % of
+            // the source width for paragraphs (so a long original gets
+            // proportionally more room). Final cap is still bounded by
+            // available window width — won't push past the right edge.
+            var hardLimit = Math.Max(60, Width - s.Rect.X - rightMargin);
+            var sourceCap = s.Rect.Width * 1.3 + 60;
+            var availableWidth = Math.Min(hardLimit, sourceCap);
+            // But never less than the source — translation must at least
+            // cover the original text underneath, otherwise it bleeds
+            // through visibly.
+            availableWidth = Math.Max(availableWidth, Math.Min(s.Rect.Width, hardLimit));
 
             keep.Add(s.Original);
             if (_activeBorders.TryGetValue(s.Original, out var existing))
