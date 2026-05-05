@@ -101,32 +101,34 @@ public static class RegionGrouper
         if (signal == LineEndSignal.WeakContinuation && LooksLikeLabel(last.OriginalText))
             signal = LineEndSignal.Unknown;
 
-        // v1.0.21: bumped continuation thresholds again. The v1.0.20
-        // values (1.7 / 2.2) were still on the edge for the Yankee
-        // Massage VN — its line gap measures roughly 1.7×H so the
-        // WeakContinuation case sat at the limit and didn't reliably
-        // merge. Bumped Weak to 2.2×H and Strong to 2.5×H to give a
-        // comfortable margin without changing the safety guards (the
-        // LooksLikeLabel intercept still drops button-stack candidates
-        // back to the 0.7×H baseline before this switch is reached).
+        // v1.0.22: bumped again. The v1.0.21 values (2.2 / 2.5) caught
+        // most of the Yankee Massage VN's dialog wraps but still missed
+        // some frames — OCR's per-frame bounding-box jitter would push
+        // the gap above 2.2×H on roughly half the frames, producing
+        // visible split-vs-merged flicker. Bumping to 2.8 / 3.0 gives a
+        // comfortable margin above what OCR jitter realistically reports
+        // for VN-style leading.
         //
-        // Risk: longer non-continuation gaps (e.g. two short paragraphs
-        // close together with no terminator on the first) could now
-        // false-merge. Mitigated by the LooksLikeLabel guard for
-        // single-token capitals, the hRatio + width-direction check
-        // upstream, and the hard absolute cap below.
+        // Risk: longer non-continuation gaps could now false-merge,
+        // particularly multi-word vertical menu items (e.g. "New Game" /
+        // "Load Game" / "Settings"). Single-word ALL-CAPS button stacks
+        // are still caught by the LooksLikeLabel guard above this switch.
+        // If multi-word menu false-merges become common in real use,
+        // a more robust fix is temporal grouping hysteresis (remember
+        // the previous frame's merge decision and bias toward
+        // consistency) — punted to a follow-up release.
         var maxGap = signal switch
         {
-            LineEndSignal.StrongContinuation => lb.Height * 2.5,  // ", \n..." — definitely one sentence
-            LineEndSignal.WeakContinuation   => lb.Height * 2.2,  // no punctuation — probably continues
+            LineEndSignal.StrongContinuation => lb.Height * 3.0,  // ", \n..." — definitely one sentence
+            LineEndSignal.WeakContinuation   => lb.Height * 2.8,  // no punctuation — probably continues
             LineEndSignal.Terminator         => lb.Height * 0.55, // ". \n..." — almost certainly new sentence
             _                                => lb.Height * 0.7,  // unknown / fallback to old behaviour
         };
         if (gap > maxGap) return false;
         // Hard absolute upper bound: even strong continuation shouldn't
-        // span more than ~3.0 line heights — at that point it's almost
+        // span more than ~3.5 line heights — at that point it's almost
         // certainly a layout boundary, not a wrap.
-        if (gap > lb.Height * 3.0) return false;
+        if (gap > lb.Height * 3.5) return false;
 
         // Roughly the same column — either left edges close (left-aligned
         // paragraph) or there's any horizontal overlap (centered text where
