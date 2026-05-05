@@ -190,6 +190,50 @@ public class AppSettings
     /// <summary>Returns the decrypted Anthropic key or null if not set.</summary>
     public string? GetAnthropicKey() => DecryptOrNull(_config.EncryptedAnthropicKey, "Anthropic");
 
+    /// <summary>Persist (DPAPI-encrypt) the Gemini key. Empty/whitespace clears it.</summary>
+    public void SetGeminiKey(string apiKey)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+                _config.EncryptedGeminiKey = null;
+            else
+                _config.EncryptedGeminiKey = Convert.ToBase64String(Protect(apiKey));
+            Save();
+            _logger.Information("Gemini key updated");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to encrypt Gemini key");
+            throw;
+        }
+    }
+
+    /// <summary>Returns the decrypted Gemini key or null if not set.</summary>
+    public string? GetGeminiKey() => DecryptOrNull(_config.EncryptedGeminiKey, "Gemini");
+
+    /// <summary>Persist (DPAPI-encrypt) the Groq key. Empty/whitespace clears it.</summary>
+    public void SetGroqKey(string apiKey)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(apiKey))
+                _config.EncryptedGroqKey = null;
+            else
+                _config.EncryptedGroqKey = Convert.ToBase64String(Protect(apiKey));
+            Save();
+            _logger.Information("Groq key updated");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to encrypt Groq key");
+            throw;
+        }
+    }
+
+    /// <summary>Returns the decrypted Groq key or null if not set.</summary>
+    public string? GetGroqKey() => DecryptOrNull(_config.EncryptedGroqKey, "Groq");
+
     /// <summary>Shared decrypt helper — DRY for the LLM-key getters.</summary>
     private string? DecryptOrNull(string? encryptedB64, string label)
     {

@@ -19,6 +19,12 @@ public class AppConfig
     /// <summary>Encrypted Anthropic API key (used by the Anthropic translator).</summary>
     public string? EncryptedAnthropicKey { get; set; }
 
+    /// <summary>Encrypted Google Gemini API key. Free tier on Google AI Studio is generous (~15 RPM, 1M tokens/day on Flash models).</summary>
+    public string? EncryptedGeminiKey { get; set; }
+
+    /// <summary>Encrypted Groq API key. Free tier ~30 RPM on Llama-family models with very high tokens/sec.</summary>
+    public string? EncryptedGroqKey { get; set; }
+
     /// <summary>
     /// OpenAI model id used by the OpenAI translator. Defaults to the
     /// cheapest production model — power users can override.
@@ -30,6 +36,19 @@ public class AppConfig
     /// the cheapest fast tier.
     /// </summary>
     public string AnthropicModel { get; set; } = "claude-haiku-4-5";
+
+    /// <summary>
+    /// Gemini model id (e.g. "gemini-2.0-flash"). Flash variants are the
+    /// only ones with a sustainable free tier — Pro is paid.
+    /// </summary>
+    public string GeminiModel { get; set; } = "gemini-2.0-flash";
+
+    /// <summary>
+    /// Groq model id. Llama 3.3 70B Versatile is the strongest free
+    /// general-purpose model on Groq right now — solid translation quality
+    /// and Groq's hardware delivers it at 250-400 tokens/sec.
+    /// </summary>
+    public string GroqModel { get; set; } = "llama-3.3-70b-versatile";
 
     /// <summary>
     /// Sampling temperature for LLM providers (0.0 = deterministic,

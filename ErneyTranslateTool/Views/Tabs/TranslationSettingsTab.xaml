@@ -102,6 +102,54 @@
                         </Grid>
                     </StackPanel>
 
+                    <!-- v1.0.18: Gemini section — same shape as OpenAI/Anthropic
+                         (key field + model textbox + preset combo) so users
+                         familiar with one configure the other in seconds. -->
+                    <StackPanel Visibility="{Binding IsGemini, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{DynamicResource Strings.TS.GeminiKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding GeminiApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.Model}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding GeminiModel, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="Consolas"
+                                     Margin="0,0,8,0"
+                                     ToolTip="{DynamicResource Strings.TS.ModelTextHint}"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding GeminiModelPresets}"
+                                      SelectedItem="{Binding GeminiModel, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{DynamicResource Strings.TS.ModelPresetsHint}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- v1.0.18: Groq section — Llama 3.3 70B as default. -->
+                    <StackPanel Visibility="{Binding IsGroq, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{DynamicResource Strings.TS.GroqKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding GroqApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.Model}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding GroqModel, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="Consolas"
+                                     Margin="0,0,8,0"
+                                     ToolTip="{DynamicResource Strings.TS.ModelTextHint}"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding GroqModelPresets}"
+                                      SelectedItem="{Binding GroqModel, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{DynamicResource Strings.TS.ModelPresetsHint}"/>
+                        </Grid>
+                    </StackPanel>
+
                     <!-- Temperature + context controls — common to both LLM providers. -->
                     <StackPanel Visibility="{Binding IsLlm, Converter={StaticResource BoolToVis}}"
                                 Margin="0,12,0,0">
