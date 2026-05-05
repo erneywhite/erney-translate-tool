@@ -35,6 +35,10 @@ public class SettingsViewModel : BaseViewModel
     private string _openAIModel = "gpt-4o-mini";
     private string _anthropicApiKey = string.Empty;
     private string _anthropicModel = "claude-haiku-4-5";
+    private string _geminiApiKey = string.Empty;
+    private string _geminiModel = "gemini-2.0-flash";
+    private string _groqApiKey = string.Empty;
+    private string _groqModel = "llama-3.3-70b-versatile";
     private double _llmTemperature = 0.3;
     private bool _llmUseContext = true;
     private int _llmContextSize = 3;
@@ -272,6 +276,8 @@ public class SettingsViewModel : BaseViewModel
                 OnPropertyChanged(nameof(IsLibre));
                 OnPropertyChanged(nameof(IsOpenAI));
                 OnPropertyChanged(nameof(IsAnthropic));
+                OnPropertyChanged(nameof(IsGemini));
+                OnPropertyChanged(nameof(IsGroq));
                 OnPropertyChanged(nameof(IsLlm));
                 OnPropertyChanged(nameof(ProviderHelpText));
             }
@@ -295,8 +301,10 @@ public class SettingsViewModel : BaseViewModel
     public bool IsLibre => _selectedProvider == TranslatorFactory.ProviderLibreTranslate;
     public bool IsOpenAI => _selectedProvider == TranslatorFactory.ProviderOpenAI;
     public bool IsAnthropic => _selectedProvider == TranslatorFactory.ProviderAnthropic;
-    /// <summary>True for any LLM-backed provider — drives the visibility of the shared "LLM settings" group (temperature, context).</summary>
-    public bool IsLlm => IsOpenAI || IsAnthropic;
+    public bool IsGemini => _selectedProvider == TranslatorFactory.ProviderGemini;
+    public bool IsGroq => _selectedProvider == TranslatorFactory.ProviderGroq;
+    /// <summary>True for any LLM-backed provider — drives the visibility of the shared "LLM settings" group (temperature, context, streaming).</summary>
+    public bool IsLlm => IsOpenAI || IsAnthropic || IsGemini || IsGroq;
 
     public string ProviderHelpText => _selectedProvider switch
     {
@@ -318,6 +326,14 @@ public class SettingsViewModel : BaseViewModel
             "Anthropic Claude: качественный LLM-перевод. Нужен платный API-ключ с console.anthropic.com. " +
             "Стоимость близка к OpenAI — claude-haiku-4-5 дешёвый и быстрый, claude-sonnet-4-5 точнее. " +
             "Поддерживается контекст последних реплик.",
+        TranslatorFactory.ProviderGemini =>
+            "Google Gemini: бесплатный free tier (~15 запросов/мин, ~1М токенов/день на Flash-моделях) — для real-time перевода " +
+            "обычно с запасом. Ключ получается за 30 секунд на aistudio.google.com → Get API key (нужен только Google-аккаунт). " +
+            "Качество сравнимо с gpt-4o-mini, особенно хорош на RU/EN/JP. Поддерживается стриминг и контекст.",
+        TranslatorFactory.ProviderGroq =>
+            "Groq: бесплатный API с очень быстрым инференсом (250-400 токенов/сек, в разы быстрее остальных LLM). " +
+            "Ключ — на console.groq.com (вход через Google или GitHub). По умолчанию llama-3.3-70b-versatile — " +
+            "лучшая free-модель Groq, перевод хороший. Free tier ~30 запросов/мин. Поддерживается стриминг и контекст.",
         _ => string.Empty
     };
 
@@ -344,6 +360,48 @@ public class SettingsViewModel : BaseViewModel
         get => _anthropicModel;
         set => SetProperty(ref _anthropicModel, value);
     }
+
+    public string GeminiApiKey
+    {
+        get => _geminiApiKey;
+        set => SetProperty(ref _geminiApiKey, value);
+    }
+
+    public string GeminiModel
+    {
+        get => _geminiModel;
+        set => SetProperty(ref _geminiModel, value);
+    }
+
+    public string GroqApiKey
+    {
+        get => _groqApiKey;
+        set => SetProperty(ref _groqApiKey, value);
+    }
+
+    public string GroqModel
+    {
+        get => _groqModel;
+        set => SetProperty(ref _groqModel, value);
+    }
+
+    /// <summary>Suggested Gemini models — Flash variants are the only ones with sustainable free tier.</summary>
+    public ObservableCollection<string> GeminiModelPresets { get; } = new()
+    {
+        "gemini-2.0-flash",
+        "gemini-2.5-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-8b",
+    };
+
+    /// <summary>Suggested Groq models — all currently free-tier production models.</summary>
+    public ObservableCollection<string> GroqModelPresets { get; } = new()
+    {
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "gemma2-9b-it",
+        "mixtral-8x7b-32768",
+    };
 
     public double LlmTemperature
     {
@@ -675,6 +733,10 @@ public class SettingsViewModel : BaseViewModel
         OpenAIModel = string.IsNullOrWhiteSpace(c.OpenAIModel) ? "gpt-4o-mini" : c.OpenAIModel;
         AnthropicApiKey = _appSettings.GetAnthropicKey() ?? string.Empty;
         AnthropicModel = string.IsNullOrWhiteSpace(c.AnthropicModel) ? "claude-haiku-4-5" : c.AnthropicModel;
+        GeminiApiKey = _appSettings.GetGeminiKey() ?? string.Empty;
+        GeminiModel = string.IsNullOrWhiteSpace(c.GeminiModel) ? "gemini-2.0-flash" : c.GeminiModel;
+        GroqApiKey = _appSettings.GetGroqKey() ?? string.Empty;
+        GroqModel = string.IsNullOrWhiteSpace(c.GroqModel) ? "llama-3.3-70b-versatile" : c.GroqModel;
         LlmTemperature = c.LlmTemperature;
         LlmUseContext = c.LlmUseContext;
         LlmContextSize = c.LlmContextSize;
@@ -857,6 +919,8 @@ public class SettingsViewModel : BaseViewModel
                 _appSettings.SetApiKey(DeepLApiKey);
             if (IsOpenAI) _appSettings.SetOpenAIKey(OpenAIApiKey ?? string.Empty);
             if (IsAnthropic) _appSettings.SetAnthropicKey(AnthropicApiKey ?? string.Empty);
+            if (IsGemini) _appSettings.SetGeminiKey(GeminiApiKey ?? string.Empty);
+            if (IsGroq) _appSettings.SetGroqKey(GroqApiKey ?? string.Empty);
             _appSettings.Save();
 
             _translationService.Reload();
@@ -887,6 +951,8 @@ public class SettingsViewModel : BaseViewModel
         c.LibreTranslateApiKey = LibreApiKey ?? string.Empty;
         c.OpenAIModel = string.IsNullOrWhiteSpace(OpenAIModel) ? "gpt-4o-mini" : OpenAIModel;
         c.AnthropicModel = string.IsNullOrWhiteSpace(AnthropicModel) ? "claude-haiku-4-5" : AnthropicModel;
+        c.GeminiModel = string.IsNullOrWhiteSpace(GeminiModel) ? "gemini-2.0-flash" : GeminiModel;
+        c.GroqModel = string.IsNullOrWhiteSpace(GroqModel) ? "llama-3.3-70b-versatile" : GroqModel;
         c.LlmTemperature = LlmTemperature;
         c.LlmUseContext = LlmUseContext;
         c.LlmContextSize = LlmContextSize;
@@ -928,6 +994,8 @@ public class SettingsViewModel : BaseViewModel
             // stored key, which is how the user "removes" it.
             _appSettings.SetOpenAIKey(OpenAIApiKey ?? string.Empty);
             _appSettings.SetAnthropicKey(AnthropicApiKey ?? string.Empty);
+            _appSettings.SetGeminiKey(GeminiApiKey ?? string.Empty);
+            _appSettings.SetGroqKey(GroqApiKey ?? string.Empty);
             _appSettings.Save();
             _translationService.Reload();
             _ocrService.Reload();

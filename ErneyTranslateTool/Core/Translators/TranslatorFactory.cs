@@ -12,6 +12,8 @@ public static class TranslatorFactory
     public const string ProviderLibreTranslate = "LibreTranslate";
     public const string ProviderOpenAI = "OpenAI";
     public const string ProviderAnthropic = "Anthropic";
+    public const string ProviderGemini = "Gemini";
+    public const string ProviderGroq = "Groq";
 
     public static readonly string[] AllProviders =
     {
@@ -19,6 +21,11 @@ public static class TranslatorFactory
         ProviderGoogleFree,
         ProviderDeepL,
         ProviderLibreTranslate,
+        // The two free LLMs go before the paid ones — most users will land
+        // on these and shouldn't have to scroll past the credit-card-only
+        // options to find them.
+        ProviderGemini,
+        ProviderGroq,
         ProviderOpenAI,
         ProviderAnthropic,
     };
@@ -29,6 +36,8 @@ public static class TranslatorFactory
         ProviderMyMemory => "MyMemory (бесплатно, email увеличивает лимит)",
         ProviderGoogleFree => "Google Translate (бесплатно, без регистрации)",
         ProviderLibreTranslate => "LibreTranslate (open source)",
+        ProviderGemini => "Google Gemini (LLM, бесплатный free tier)",
+        ProviderGroq => "Groq · Llama 3.3 (LLM, бесплатно, очень быстро)",
         ProviderOpenAI => "OpenAI (LLM, лучшее качество, нужен платный API-ключ)",
         ProviderAnthropic => "Anthropic Claude (LLM, лучшее качество, нужен платный API-ключ)",
         _ => provider
@@ -106,6 +115,40 @@ public static class TranslatorFactory
                 return new AnthropicTranslator(
                     key,
                     settings.Config.AnthropicModel,
+                    settings.Config.LlmTemperature,
+                    settings.Config.LlmContextSize,
+                    settings.Config.LlmUseContext,
+                    logger);
+            }
+
+            case ProviderGemini:
+            {
+                var key = settings.GetGeminiKey();
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    error = "Gemini: API-ключ не настроен";
+                    return null;
+                }
+                return new GeminiTranslator(
+                    key,
+                    settings.Config.GeminiModel,
+                    settings.Config.LlmTemperature,
+                    settings.Config.LlmContextSize,
+                    settings.Config.LlmUseContext,
+                    logger);
+            }
+
+            case ProviderGroq:
+            {
+                var key = settings.GetGroqKey();
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    error = "Groq: API-ключ не настроен";
+                    return null;
+                }
+                return new GroqTranslator(
+                    key,
+                    settings.Config.GroqModel,
                     settings.Config.LlmTemperature,
                     settings.Config.LlmContextSize,
                     settings.Config.LlmUseContext,

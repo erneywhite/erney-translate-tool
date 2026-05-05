@@ -14,7 +14,7 @@
 - **3 OCR-движка на выбор** — PaddleOCR (нейросеть, лучшее качество), Tesseract (быстрее), Windows OCR (системный, нужны языковые пакеты)
 - **30+ языков для Tesseract** — Европа целиком (от английского и немецкого до прибалтийских и скандинавских), кириллица, восточноазиатские (jpn/chi/kor + вертикальные), арабский. Скачиваются одной кнопкой из встроенного каталога
 - **12 языков для PaddleOCR** — латиница, кириллица, японский, китайский (упр./трад.), корейский, арабский, хинди + индийские, плюс **режим «Авто»** — несколько моделей параллельно
-- **6 переводчиков** — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (любой инстанс, можно свой), **OpenAI** (LLM, нужен платный ключ — лучшее качество для художественных текстов и игровых диалогов), **Anthropic Claude** (LLM, нужен платный ключ)
+- **8 переводчиков** — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (любой инстанс, можно свой), **Google Gemini** (LLM, бесплатный free tier — ключ за 30 секунд на aistudio.google.com), **Groq · Llama 3.3** (LLM, бесплатно, экстремально быстрый инференс), **OpenAI** (LLM, платный, лучшее качество для художественных текстов), **Anthropic Claude** (LLM, платный)
 - **Резервный провайдер** — если основной несколько раз подряд возвращает ошибку, программа автоматически переключается на запасной и каждую минуту проверяет восстановился ли основной
 - **Контекст последних реплик для LLM-провайдеров** — последние N (настраивается, по умолчанию 3) пар «оригинал — перевод» передаются как conversation history. Помогает корректно обрабатывать местоимения и продолжающиеся диалоги
 - **Стриминг LLM-перевода** — текст появляется в оверлее по мере генерации (~200 мс до первых символов вместо ~1-2 сек ожидания полного ответа). Включено по умолчанию для OpenAI и Anthropic, выключается одним чекбоксом
@@ -214,6 +214,9 @@ ErneyTranslateTool/
 │   │   ├── LibreTranslator        — LibreTranslate (любой инстанс)
 │   │   ├── OpenAITranslator       — OpenAI Chat Completions + sliding context
 │   │   ├── AnthropicTranslator    — Anthropic Messages API + sliding context
+│   │   ├── GeminiTranslator       — Google Gemini generateContent + sliding context (free tier)
+│   │   ├── GroqTranslator         — Groq Chat Completions (Llama 3.3) + sliding context (free tier)
+│   │   ├── IStreamingTranslator   — optional streaming SSE capability (OpenAI/Anthropic/Gemini/Groq implement)
 │   │   └── LlmLanguageNames       — DeepL-codes -> English names for LLM prompts
 │   ├── Startup/
 │   │   └── AutoStartManager     — HKCU\...\Run для автозапуска с Windows

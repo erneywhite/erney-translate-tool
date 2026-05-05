@@ -66,6 +66,8 @@
     <sys:String x:Key="Strings.TS.LibreKey">API-ключ (если требуется):</sys:String>
     <sys:String x:Key="Strings.TS.OpenAIKey">API-ключ OpenAI (sk-...):</sys:String>
     <sys:String x:Key="Strings.TS.AnthropicKey">API-ключ Anthropic (sk-ant-...):</sys:String>
+    <sys:String x:Key="Strings.TS.GeminiKey">API-ключ Google Gemini (AIzaSy...):</sys:String>
+    <sys:String x:Key="Strings.TS.GroqKey">API-ключ Groq (gsk_...):</sys:String>
     <sys:String x:Key="Strings.TS.Model">Модель:</sys:String>
     <sys:String x:Key="Strings.TS.ModelTextHint">Введи id модели или выбери из пресетов справа</sys:String>
     <sys:String x:Key="Strings.TS.ModelPresetsHint">Пресеты — выбор подставит id в поле слева</sys:String>
@@ -171,7 +173,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.17 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.18 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>
@@ -191,7 +193,7 @@
     <sys:String x:Key="Strings.About.HotkeyOverlay">Показать/скрыть оверлей:</sys:String>
     <sys:String x:Key="Strings.About.WhatInside">Что внутри</sys:String>
     <sys:String x:Key="Strings.About.OcrInside">Распознавание (OCR): три движка — PaddleOCR (нейросеть, по умолчанию, лучшая точность), Tesseract (быстрее, средняя точность), Windows OCR (нужны системные языковые пакеты). Tesseract поддерживает 30+ языков (Европа целиком, кириллица, японский, китайский, корейский). PaddleOCR — 12 семейств моделей включая режим «Авто» (англ+яп+кириллица одновременно).</sys:String>
-    <sys:String x:Key="Strings.About.TranslateInside">Перевод: шесть сервисов — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (open source, любой инстанс), OpenAI (LLM, нужен платный ключ), Anthropic Claude (LLM, нужен платный ключ). Можно настроить резервный провайдер на случай если основной упал.</sys:String>
+    <sys:String x:Key="Strings.About.TranslateInside">Перевод: восемь сервисов — MyMemory (бесплатно), Google Translate (бесплатно, без ключа), DeepL (нужен ключ + карта), LibreTranslate (open source), Google Gemini (LLM, бесплатный free tier), Groq · Llama 3.3 (LLM, бесплатно, очень быстрый), OpenAI (LLM, платный), Anthropic Claude (LLM, платный). Можно настроить резервный провайдер на случай если основной упал.</sys:String>
     <sys:String x:Key="Strings.About.CaptureInside">Захват экрана: Windows API PrintWindow с флагом RENDERFULLCONTENT — работает с современными играми, Chromium-браузерами и UWP.</sys:String>
     <sys:String x:Key="Strings.About.FilesGroup">Где хранятся файлы программы</sys:String>
     <sys:String x:Key="Strings.About.FilesIntro">Все данные хранятся рядом с программой (или в %AppData%\ErneyTranslateTool если папка только для чтения):</sys:String>
