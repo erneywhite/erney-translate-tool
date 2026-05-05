@@ -71,15 +71,37 @@ public static class RegionGrouper
         // of "...маленькой девочкой").
         if (lb.Width < cb.Width * 0.4) return false;
 
-        // Gap threshold ~0.7 line heights. Real paragraph wraps in dialog
-        // boxes have very tight leading (gap is 10-30% of letter height),
-        // while UI menus typically space items by 80%+ of letter height.
-        // 0.7 H reliably distinguishes "wrapped paragraph" (merge) from
-        // "two separate stacked labels" (don't merge — translate and
-        // overlay each at its own position).
+        // Gap threshold is text-aware (v1.0.17). Visual novels and modern
+        // dialogue boxes use generous leading (gap ~1.0–1.5×H) for
+        // readability, while UI menus space items even further apart. The
+        // pre-v1.0.17 fixed 0.7×H threshold worked for tight game HUDs
+        // but mis-classified VN paragraphs as "separate" — translating
+        // each line independently produced incoherent fragments
+        // ("...три\nгоды одиночества" instead of "...три года одиночества").
+        //
+        // We now read the tail of the previous line's TEXT to decide:
+        //   - ends with comma/colon/semicolon → strong continuation
+        //   - ends with no terminator at all  → weak continuation
+        //   - ends with .!?。！？…             → sentence terminator
+        // and stretch the allowed gap accordingly. A hard cap at 2.5×H
+        // still prevents merging across big visual breaks (e.g. menu
+        // buttons stacked vertically).
         var gap = cb.Top - lb.Bottom;
         if (gap < -lb.Height * 0.3) return false; // overlapping rows: weird, skip
-        if (gap > lb.Height * 0.7) return false;
+
+        var signal = ClassifyLineEnd(last.OriginalText);
+        var maxGap = signal switch
+        {
+            LineEndSignal.StrongContinuation => lb.Height * 1.8,  // ", \n..." — definitely one sentence
+            LineEndSignal.WeakContinuation   => lb.Height * 1.3,  // no punctuation — probably continues
+            LineEndSignal.Terminator         => lb.Height * 0.55, // ". \n..." — almost certainly new sentence
+            _                                => lb.Height * 0.7,  // unknown / fallback to old behaviour
+        };
+        if (gap > maxGap) return false;
+        // Hard absolute upper bound: even strong continuation shouldn't
+        // span more than ~2.5 line heights — at that point it's almost
+        // certainly a layout boundary, not a wrap.
+        if (gap > lb.Height * 2.5) return false;
 
         // Roughly the same column — either left edges close (left-aligned
         // paragraph) or there's any horizontal overlap (centered text where
@@ -89,6 +111,60 @@ public static class RegionGrouper
         if (!sameLeftEdge && !horizontalOverlap) return false;
 
         return true;
+    }
+
+    /// <summary>
+    /// Classify what the tail of a line "wants" — does it look like the
+    /// previous sentence finished, or is it asking for the next line to
+    /// continue it? Used to relax or tighten the geometric gap threshold
+    /// in <see cref="CanJoin"/>. Covers both Latin and CJK punctuation
+    /// (Japanese visual novels — our most common stylized-text source —
+    /// use 。 as period and 、 as comma).
+    /// </summary>
+    private static LineEndSignal ClassifyLineEnd(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return LineEndSignal.Unknown;
+
+        // Walk backwards past trailing whitespace + closing quotes/parens.
+        // Quote/paren after a terminator still counts as a terminator
+        // ("...he said." → period through "), but quote/paren after a
+        // continuation should still read as continuation.
+        var i = text.Length - 1;
+        while (i >= 0 && (char.IsWhiteSpace(text[i]) || IsClosingPunct(text[i]))) i--;
+        if (i < 0) return LineEndSignal.Unknown;
+
+        var c = text[i];
+        if (IsTerminator(c)) return LineEndSignal.Terminator;
+        if (IsStrongContinuation(c)) return LineEndSignal.StrongContinuation;
+
+        // Hyphenated split ("convers-\nation") — strong continuation; the
+        // Merge step will join without inserting a space.
+        if (c == '-') return LineEndSignal.StrongContinuation;
+
+        // Letter or digit at end with no terminator — weak continuation.
+        // A single short word with no punctuation could also be a one-word
+        // menu item, so we still cap the geometric gap (1.3×H), which keeps
+        // genuinely separate stacked items apart.
+        if (char.IsLetterOrDigit(c)) return LineEndSignal.WeakContinuation;
+
+        return LineEndSignal.Unknown;
+    }
+
+    private static bool IsTerminator(char c)
+        => c is '.' or '!' or '?' or '。' or '！' or '？' or '…' or '‼' or '⁇' or '⁈' or '⁉';
+
+    private static bool IsStrongContinuation(char c)
+        => c is ',' or ';' or ':' or '、' or '，' or '；' or '：';
+
+    private static bool IsClosingPunct(char c)
+        => c is '"' or '\'' or ')' or ']' or '}' or '»' or '』' or '」' or '”' or '’';
+
+    private enum LineEndSignal
+    {
+        Unknown,
+        Terminator,           // .!?。 — almost certainly end of sentence
+        StrongContinuation,   // ,;:、 or trailing hyphen — definitely continues
+        WeakContinuation,     // letter/digit without terminator — probably continues
     }
 
     private static TranslationRegion Merge(List<TranslationRegion> group)
