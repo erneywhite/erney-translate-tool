@@ -101,29 +101,32 @@ public static class RegionGrouper
         if (signal == LineEndSignal.WeakContinuation && LooksLikeLabel(last.OriginalText))
             signal = LineEndSignal.Unknown;
 
-        // v1.0.20: bumped continuation thresholds. Visual novels and modern
-        // dialogue boxes use generous leading (often 1.4–1.7×H) for
-        // readability. The pre-v1.0.20 1.3×H weak-continuation cap missed
-        // the long 3-line dialogue in Yankee Massage where line 1 ended on
-        // "deem me" without punctuation — the gap to line 2 exceeded 1.3
-        // and the heuristic split the sentence. Bumped to 1.7 to match
-        // VN-style leading. The LooksLikeLabel guard above still keeps
-        // genuine button stacks separated, so we don't over-merge menus.
+        // v1.0.21: bumped continuation thresholds again. The v1.0.20
+        // values (1.7 / 2.2) were still on the edge for the Yankee
+        // Massage VN — its line gap measures roughly 1.7×H so the
+        // WeakContinuation case sat at the limit and didn't reliably
+        // merge. Bumped Weak to 2.2×H and Strong to 2.5×H to give a
+        // comfortable margin without changing the safety guards (the
+        // LooksLikeLabel intercept still drops button-stack candidates
+        // back to the 0.7×H baseline before this switch is reached).
+        //
+        // Risk: longer non-continuation gaps (e.g. two short paragraphs
+        // close together with no terminator on the first) could now
+        // false-merge. Mitigated by the LooksLikeLabel guard for
+        // single-token capitals, the hRatio + width-direction check
+        // upstream, and the hard absolute cap below.
         var maxGap = signal switch
         {
-            LineEndSignal.StrongContinuation => lb.Height * 2.2,  // ", \n..." — definitely one sentence
-            LineEndSignal.WeakContinuation   => lb.Height * 1.7,  // no punctuation — probably continues
+            LineEndSignal.StrongContinuation => lb.Height * 2.5,  // ", \n..." — definitely one sentence
+            LineEndSignal.WeakContinuation   => lb.Height * 2.2,  // no punctuation — probably continues
             LineEndSignal.Terminator         => lb.Height * 0.55, // ". \n..." — almost certainly new sentence
             _                                => lb.Height * 0.7,  // unknown / fallback to old behaviour
         };
         if (gap > maxGap) return false;
         // Hard absolute upper bound: even strong continuation shouldn't
-        // span more than ~2.8 line heights — at that point it's almost
-        // certainly a layout boundary, not a wrap. Slightly bumped from
-        // 2.5 to keep parity with the generous continuation thresholds
-        // above; LooksLikeLabel + sameLeftEdge / horizontalOverlap guards
-        // still prevent merges across genuinely separate panels.
-        if (gap > lb.Height * 2.8) return false;
+        // span more than ~3.0 line heights — at that point it's almost
+        // certainly a layout boundary, not a wrap.
+        if (gap > lb.Height * 3.0) return false;
 
         // Roughly the same column — either left edges close (left-aligned
         // paragraph) or there's any horizontal overlap (centered text where

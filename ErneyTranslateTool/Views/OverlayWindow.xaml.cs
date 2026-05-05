@@ -159,21 +159,21 @@ public partial class OverlayWindow : Window
         foreach (var s in snapped)
         {
             const double rightMargin = 12;
-            // v1.0.20: cap is font-size-aware. The pre-v1.0.20 fixed
-            // multiplier (source × 1.3 + 60 px) worked at the default
-            // ~14 pt overlay font but was too tight at 21-24 pt — bigger
-            // glyphs eat more horizontal space per character, so even a
-            // wrap-friendly cap couldn't fit the line, and Border would
-            // overflow visibly past the source rect.
+            // v1.0.21: tighter cap. The v1.0.20 formula
+            // (source × 1.3 × fontScale + 60 × fontScale) double-counted
+            // the font scale — at 21 pt it allowed ~1.95× source width,
+            // which on a wide dialog (1000+ px) translated to a 400+ px
+            // overshoot past the source's right edge. Visually broken.
             //
-            // Scale both the multiplicative and additive parts by
-            // fontSize / 14 so larger fonts get proportionally more
-            // horizontal room. The hard limit (window width minus margin)
-            // still bounds everything — the cap can never push the bubble
-            // off-screen.
+            // New formula: a small fixed proportional bump (×1.1) plus
+            // an additive font-aware buffer (~80 × fontScale). For wide
+            // sources the multiplicative term dominates and stays close
+            // to the source width; for narrow sources (single short
+            // labels) the additive term ensures a long Russian word can
+            // still fit at large font sizes without clipping.
             var hardLimit = Math.Max(60, Width - s.Rect.X - rightMargin);
             var fontScale = Math.Max(1.0, fontSize / 14.0);
-            var sourceCap = s.Rect.Width * (1.3 * fontScale) + 60 * fontScale;
+            var sourceCap = s.Rect.Width * 1.1 + 80 * fontScale;
             var availableWidth = Math.Min(hardLimit, sourceCap);
             // But never less than the source — translation must at least
             // cover the original text underneath, otherwise it bleeds
