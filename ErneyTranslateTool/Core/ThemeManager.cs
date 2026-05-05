@@ -23,6 +23,7 @@ public static class ThemeManager
     public const string Nord = "Nord";
     public const string CatppuccinMocha = "CatppuccinMocha";
     public const string TokyoNight = "TokyoNight";
+    public const string ErneyNeon = "ErneyNeon";
     public const string Auto = "Auto";
 
     public static readonly (string Id, string DisplayName)[] Available =
@@ -33,6 +34,7 @@ public static class ThemeManager
         (Nord,            "Nord (холодная синяя)"),
         (CatppuccinMocha, "Catppuccin Mocha (мягкие пастели)"),
         (TokyoNight,      "Tokyo Night (электрический синий)"),
+        (ErneyNeon,       "Erney Neon (фирменная неоновая)"),
     };
 
     // Track the user's selected id (may be "Auto"). The actual resolved

@@ -1,0 +1,58 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== Erney Neon — signature theme matching the app logo =====
+         Cyberpunk raccoon on a near-black backdrop with neon
+         magenta-purple highlights. Designed to feel like the logo's
+         glow — saturated primary, deep but not pure-black background
+         (a hint of purple keeps it warm), pale-lavender body text. -->
+
+    <!-- Backdrop: very dark with a warm purple tint instead of pure
+         black so it doesn't feel "off" / OLED-monitor-only. -->
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#15101A"/>
+    <SolidColorBrush x:Key="BackgroundLightBrush" Color="#221530"/>
+    <SolidColorBrush x:Key="BackgroundDarkBrush" Color="#0E0815"/>
+    <SolidColorBrush x:Key="AlternateRowBrush" Color="#1B1325"/>
+
+    <!-- Primary = the logo's neon halo. PrimaryHover slightly brighter
+         to give buttons that "lit up" feel on mouse-over. -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#C920F4"/>
+    <SolidColorBrush x:Key="PrimaryHoverBrush" Color="#D848FF"/>
+    <SolidColorBrush x:Key="PrimaryLightBrush" Color="#E5A8FF"/>          <!-- pale lavender for shimmer end of gradient -->
+    <SolidColorBrush x:Key="PrimaryForegroundBrush" Color="#FFFFFF"/>     <!-- white reads cleanest on saturated magenta -->
+
+    <!-- Buttons + the dashboard Start tile use this gradient. Goes from
+         the deep neon primary to a lighter lavender, mimicking the way
+         the logo's outer ring glows brighter where light scatters. -->
+    <LinearGradientBrush x:Key="PrimaryGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#B916D8" Offset="0"/>
+        <GradientStop Color="#E15BFF" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- Secondary = muted plum for chips and Cancel-style buttons. -->
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#5A3D70"/>
+    <SolidColorBrush x:Key="SecondaryHoverBrush" Color="#6B4C82"/>
+    <SolidColorBrush x:Key="SecondaryForegroundBrush" Color="#ECDFF5"/>
+
+    <!-- Text: pale lavender body, dimmed lavender for hints. Avoids
+         pure white so the eye doesn't bounce off the high-contrast
+         primary. -->
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F0E5FA"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B49FC7"/>
+    <SolidColorBrush x:Key="TextDisabledBrush" Color="#6E5A82"/>
+
+    <SolidColorBrush x:Key="BorderBrush" Color="#3A2850"/>
+    <SolidColorBrush x:Key="BorderLightBrush" Color="#503A6A"/>
+
+    <!-- Status colours: keep functional green/amber/red so they read
+         as "success/warning/error" universally. Error nudged toward
+         hot-pink so it doesn't clash with the magenta primary. -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#10B981"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#FF4584"/>
+    <SolidColorBrush x:Key="InfoBrush" Color="#B36CF5"/>
+
+    <SolidColorBrush x:Key="HeaderBrush" Color="#221530"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush" Color="#221530"/>
+
+</ResourceDictionary>
