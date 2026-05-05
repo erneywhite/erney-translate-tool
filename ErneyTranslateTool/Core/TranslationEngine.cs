@@ -42,6 +42,20 @@ public class TranslationEngine : IDisposable
     private double _avgFrameMs;
     private long _lastFrameMs;
 
+    // v1.0.19: small ring of recently-translated (sourceText, bounds) pairs
+    // used to suppress OCR jitter. When the same dialog is on screen across
+    // frames, OCR sometimes returns slightly different text each frame
+    // (",." swap, stray period, "I"/"l" confusion, …) — that breaks cache
+    // hits and produces visually identical translations that flicker
+    // between two slightly-different versions. Before each frame's
+    // translation pass we snap each region's source text to its near-
+    // identical neighbour from a recent frame, so cache lookups hit and
+    // the overlay stays stable.
+    private const int RecentRegionCapacity = 24;
+    private readonly LinkedList<RecentRegion> _recentRegions = new();
+    private readonly object _recentRegionsLock = new();
+    private readonly record struct RecentRegion(string SourceText, System.Windows.Rect Bounds);
+
     public bool IsRunning { get; private set; }
     public IntPtr TargetWindowHandle { get; private set; }
     public string TargetWindowTitle { get; private set; } = string.Empty;
@@ -163,6 +177,10 @@ public class TranslationEngine : IDisposable
         if (!IsRunning) return;
         await _capture.StopCaptureAsync();
         _overlay.Hide();
+        // Clear the jitter-stabilisation memory — next Start might be on a
+        // completely different game/scene, no point biasing it with last
+        // session's text fragments.
+        lock (_recentRegionsLock) _recentRegions.Clear();
         _history.EndSession(
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
@@ -273,6 +291,12 @@ public class TranslationEngine : IDisposable
             var regions = RegionGrouper.Group(rawRegions);
             if (regions.Count != rawRegions.Count)
                 _logger.Debug("Frame: grouped {From} -> {To} regions", rawRegions.Count, regions.Count);
+
+            // v1.0.19: snap each region's source text to its near-identical
+            // neighbour from a recent frame — kills OCR jitter that would
+            // otherwise miss the cache and produce visibly-different
+            // translations of essentially the same line.
+            StabiliseAgainstRecent(regions);
             foreach (var r in regions)
                 _logger.Debug("  -> tx[{Y:F0},{H:F0}]: '{Text}'",
                     r.Bounds.Top, r.Bounds.Height,
@@ -308,6 +332,12 @@ public class TranslationEngine : IDisposable
             _logger.Debug("Frame: Translation -> {Count} regions", translated.Count);
             if (translated.Count == 0) return;
 
+            // Remember what we translated this frame so the NEXT frame's
+            // jitter-stabilisation pass can find it. Done after translation
+            // (not before) so we only memorise text that actually produced
+            // a translation.
+            RememberRecentRegions(translated);
+
             // Final render: covers the non-streaming case (callback never
             // fired) AND ensures any post-stream glossary substitution lands
             // even if it produced an identical fingerprint to the last
@@ -334,6 +364,145 @@ public class TranslationEngine : IDisposable
             Interlocked.Exchange(ref _processingFlag, 0);
         }
     }
+
+    /// <summary>
+    /// For each region, look in the recent-regions ring for a near-identical
+    /// source text at an overlapping position. If found, rewrite the
+    /// region's source to that recent text — the translation cache will
+    /// then hit the existing translation and the overlay stays stable
+    /// frame-to-frame instead of flickering between two slightly-different
+    /// OCR readings of the same line.
+    /// </summary>
+    private void StabiliseAgainstRecent(List<TranslationRegion> regions)
+    {
+        if (_recentRegions.Count == 0) return;
+        // Snapshot under lock to avoid racing with RememberRecentRegions —
+        // even though OnFrameCaptured is single-flighted, defensive copy is
+        // cheap (24 entries) and avoids subtle invariants.
+        RecentRegion[] snapshot;
+        lock (_recentRegionsLock)
+        {
+            snapshot = _recentRegions.ToArray();
+        }
+
+        foreach (var r in regions)
+        {
+            var match = FindStableMatch(r, snapshot);
+            if (match.HasValue && !ReferenceEquals(match.Value.SourceText, r.OriginalText)
+                && match.Value.SourceText != r.OriginalText)
+            {
+                _logger.Debug("Frame: stabilised '{New}' -> '{Stable}' (jitter)",
+                    Truncate(r.OriginalText, 40), Truncate(match.Value.SourceText, 40));
+                r.OriginalText = match.Value.SourceText;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Find a recent region with a near-identical source text and an
+    /// overlapping bounding box. Position overlap matters: the same word
+    /// appearing in two different parts of the screen is two different
+    /// things, even if the text matches.
+    /// </summary>
+    private static RecentRegion? FindStableMatch(TranslationRegion candidate, RecentRegion[] recent)
+    {
+        var cb = candidate.Bounds;
+        // Newer entries are at the END of the ring (AddLast), and a recent
+        // version is more likely to match — walk back-to-front so we check
+        // newest first and short-circuit on the first hit.
+        for (int i = recent.Length - 1; i >= 0; i--)
+        {
+            var r = recent[i];
+            // Position check: at least 50 % bounding-box overlap. Cheap and
+            // strict enough to disambiguate "Save" buttons in different
+            // panels of the same frame.
+            if (!RectsOverlapEnough(r.Bounds, cb, 0.5)) continue;
+
+            // Text check: short-circuit on exact match (the common case
+            // outside of jitter), then fall through to Levenshtein for
+            // near-identical fragments. Threshold is the lesser of
+            // 3 absolute and 15 % of length — a 20-char line tolerates 3
+            // edits, a 100-char line tolerates 10.
+            if (string.Equals(r.SourceText, candidate.OriginalText, StringComparison.Ordinal))
+                return r;
+
+            // Length-skew prefilter — Levenshtein scales with min(m,n) so
+            // bail on grossly different lengths without running the DP.
+            var lenA = r.SourceText.Length;
+            var lenB = candidate.OriginalText.Length;
+            if (Math.Abs(lenA - lenB) > Math.Max(3, Math.Max(lenA, lenB) / 6)) continue;
+
+            var threshold = Math.Min(3, Math.Max(1, Math.Max(lenA, lenB) / 7));
+            if (BoundedLevenshtein(r.SourceText, candidate.OriginalText, threshold) <= threshold)
+                return r;
+        }
+        return null;
+    }
+
+    /// <summary>Append this frame's regions to the recent ring; cap at <see cref="RecentRegionCapacity"/>.</summary>
+    private void RememberRecentRegions(List<TranslationRegion> regions)
+    {
+        lock (_recentRegionsLock)
+        {
+            foreach (var r in regions)
+            {
+                if (string.IsNullOrWhiteSpace(r.OriginalText)) continue;
+                _recentRegions.AddLast(new RecentRegion(r.OriginalText, r.Bounds));
+                while (_recentRegions.Count > RecentRegionCapacity)
+                    _recentRegions.RemoveFirst();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Bounded Levenshtein distance — bails out as soon as the running
+    /// minimum of any row exceeds <paramref name="threshold"/>. Lets us
+    /// reject far-apart strings cheaply without filling the full DP table.
+    /// O(m*n) worst case; in the early-exit common case it's much less.
+    /// </summary>
+    private static int BoundedLevenshtein(string a, string b, int threshold)
+    {
+        if (a == b) return 0;
+        if (a.Length == 0) return b.Length;
+        if (b.Length == 0) return a.Length;
+
+        // Two-row DP: previous + current. Saves memory vs full m*n table.
+        var prev = new int[b.Length + 1];
+        var curr = new int[b.Length + 1];
+        for (int j = 0; j <= b.Length; j++) prev[j] = j;
+
+        for (int i = 1; i <= a.Length; i++)
+        {
+            curr[0] = i;
+            int rowMin = curr[0];
+            for (int j = 1; j <= b.Length; j++)
+            {
+                var cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                curr[j] = Math.Min(
+                    Math.Min(curr[j - 1] + 1, prev[j] + 1),
+                    prev[j - 1] + cost);
+                if (curr[j] < rowMin) rowMin = curr[j];
+            }
+            // Early exit — if every cell of this row exceeds the threshold,
+            // the final answer (bottom-right cell) can only get larger.
+            if (rowMin > threshold) return threshold + 1;
+            (prev, curr) = (curr, prev);
+        }
+        return prev[b.Length];
+    }
+
+    private static bool RectsOverlapEnough(System.Windows.Rect a, System.Windows.Rect b, double minRatio)
+    {
+        var ix = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
+        var iy = Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top);
+        if (ix <= 0 || iy <= 0) return false;
+        var intersection = ix * iy;
+        var smaller = Math.Min(a.Width * a.Height, b.Width * b.Height);
+        return smaller > 0 && intersection / smaller >= minRatio;
+    }
+
+    private static string Truncate(string s, int max) =>
+        string.IsNullOrEmpty(s) || s.Length <= max ? (s ?? string.Empty) : s.Substring(0, max) + "…";
 
     /// <summary>
     /// Sample 64x64 grid of pixels from the bitmap and combine into a long.

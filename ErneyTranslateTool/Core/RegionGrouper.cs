@@ -90,6 +90,17 @@ public static class RegionGrouper
         if (gap < -lb.Height * 0.3) return false; // overlapping rows: weird, skip
 
         var signal = ClassifyLineEnd(last.OriginalText);
+
+        // v1.0.19 Bug A fix: WeakContinuation was too eager for vertical
+        // menu stacks. A button list like "NORMAL\nHARD\nS.HARD" is three
+        // single-word labels with no punctuation — pre-v1.0.19 my new
+        // heuristic merged them into one phrase and translated it as
+        // garbage ("РедVIeОкна"). Override the WeakContinuation extension
+        // when the previous line looks like a label rather than a
+        // paragraph wrap (single word, short, button-shaped).
+        if (signal == LineEndSignal.WeakContinuation && LooksLikeLabel(last.OriginalText))
+            signal = LineEndSignal.Unknown;
+
         var maxGap = signal switch
         {
             LineEndSignal.StrongContinuation => lb.Height * 1.8,  // ", \n..." — definitely one sentence
@@ -149,6 +160,59 @@ public static class RegionGrouper
 
         return LineEndSignal.Unknown;
     }
+
+    /// <summary>
+    /// Heuristic: does a line look like a UI label / menu button rather
+    /// than a paragraph fragment? Used in v1.0.19 to keep the
+    /// WeakContinuation gap extension from merging vertical button stacks
+    /// like "NORMAL / HARD / S.HARD".
+    ///
+    /// <para>Signals (must hit ALL):</para>
+    /// <list type="bullet">
+    ///   <item>Single token (no internal whitespace) — paragraph wraps
+    ///         have multiple words.</item>
+    ///   <item>Short — &lt;= 20 chars trimmed. Real wrap fragments tend
+    ///         to be longer; labels are concise.</item>
+    ///   <item>No lowercase Latin/Cyrillic letters — buttons are
+    ///         ALL CAPS or single capitalised word with no
+    ///         "lowercase mid-sentence" character. This excludes
+    ///         normal English/Russian sentence fragments while still
+    ///         catching "Save", "QUIT", "Continue", "S.HARD", etc.</item>
+    /// </list>
+    ///
+    /// <para>CJK strings (no spaces, no Latin/Cyrillic letters) pass two of
+    /// the three checks but the lowercase one is irrelevant — to avoid
+    /// breaking Japanese paragraph wraps, we require at least one Latin
+    /// or Cyrillic uppercase letter as positive evidence of "button-shaped"
+    /// text.</para>
+    /// </summary>
+    private static bool LooksLikeLabel(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var trimmed = text.Trim();
+        if (trimmed.Length > 20) return false;
+        // Multiple words → paragraph fragment, not a label.
+        foreach (var c in trimmed)
+            if (char.IsWhiteSpace(c)) return false;
+
+        // Walk the chars: any lowercase Latin/Cyrillic kills the label
+        // hypothesis (sentences have lowercase letters in them); count
+        // uppercase Latin/Cyrillic as positive evidence. Punctuation,
+        // digits, CJK pass through neutrally.
+        bool hasUpperLatinCyrillic = false;
+        foreach (var c in trimmed)
+        {
+            if (IsLowerLatinCyrillic(c)) return false;
+            if (IsUpperLatinCyrillic(c)) hasUpperLatinCyrillic = true;
+        }
+        return hasUpperLatinCyrillic;
+    }
+
+    private static bool IsLowerLatinCyrillic(char c)
+        => (c >= 'a' && c <= 'z') || (c >= 'а' && c <= 'я') || c == 'ё';
+
+    private static bool IsUpperLatinCyrillic(char c)
+        => (c >= 'A' && c <= 'Z') || (c >= 'А' && c <= 'Я') || c == 'Ё';
 
     private static bool IsTerminator(char c)
         => c is '.' or '!' or '?' or '。' or '！' or '？' or '…' or '‼' or '⁇' or '⁈' or '⁉';
