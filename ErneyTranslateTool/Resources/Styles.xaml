@@ -179,7 +179,55 @@
     </Style>
     
     <Style x:Key="{x:Type TextBox}" TargetType="TextBox" BasedOn="{StaticResource DarkTextBoxStyle}"/>
-    
+
+    <!-- v1.0.20: PasswordBox needs its own style — it doesn't inherit from
+         TextBox/TextBoxBase so the {x:Type TextBox} implicit style above
+         doesn't apply to it. Without this, the MaskedSecretBox's
+         PasswordBox renders with WPF's default white-on-blue Win32 look,
+         visibly out of place in the dark themed Settings tab. Mirror the
+         DarkTextBoxStyle's brushes / template so the masked field looks
+         identical to the surrounding TextBox controls. -->
+    <Style x:Key="DarkPasswordBoxStyle" TargetType="PasswordBox">
+        <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontFamily" Value="Segoe UI"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource PrimaryBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="8">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="5,0"
+                                      VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Background" Value="{DynamicResource BackgroundDarkBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="{x:Type PasswordBox}" TargetType="PasswordBox" BasedOn="{StaticResource DarkPasswordBoxStyle}"/>
+
     <!-- ========================================
          СТИЛИ ДЛЯ COMBOBOX
          ======================================== -->

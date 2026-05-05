@@ -159,20 +159,21 @@ public partial class OverlayWindow : Window
         foreach (var s in snapped)
         {
             const double rightMargin = 12;
-            // v1.0.19: cap horizontal growth so the overlay stays inscribed
-            // in the source rect's footprint instead of running wildly off
-            // to the right. The pre-v1.0.19 behaviour let any translation
-            // grow up to (window width - rect.X), which on a long Russian
-            // line meant the bubble could span half the screen — visually
-            // jarring and obviously breaks containment in dialogue boxes.
+            // v1.0.20: cap is font-size-aware. The pre-v1.0.20 fixed
+            // multiplier (source × 1.3 + 60 px) worked at the default
+            // ~14 pt overlay font but was too tight at 21-24 pt — bigger
+            // glyphs eat more horizontal space per character, so even a
+            // wrap-friendly cap couldn't fit the line, and Border would
+            // overflow visibly past the source rect.
             //
-            // The cap is an additive + multiplicative blend: at least 60 px
-            // of slack so single-word labels can grow a bit, plus 30 % of
-            // the source width for paragraphs (so a long original gets
-            // proportionally more room). Final cap is still bounded by
-            // available window width — won't push past the right edge.
+            // Scale both the multiplicative and additive parts by
+            // fontSize / 14 so larger fonts get proportionally more
+            // horizontal room. The hard limit (window width minus margin)
+            // still bounds everything — the cap can never push the bubble
+            // off-screen.
             var hardLimit = Math.Max(60, Width - s.Rect.X - rightMargin);
-            var sourceCap = s.Rect.Width * 1.3 + 60;
+            var fontScale = Math.Max(1.0, fontSize / 14.0);
+            var sourceCap = s.Rect.Width * (1.3 * fontScale) + 60 * fontScale;
             var availableWidth = Math.Min(hardLimit, sourceCap);
             // But never less than the source — translation must at least
             // cover the original text underneath, otherwise it bleeds
