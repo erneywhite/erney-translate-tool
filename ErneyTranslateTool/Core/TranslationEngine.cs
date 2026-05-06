@@ -93,6 +93,19 @@ public class TranslationEngine : IDisposable
         string[] RawTexts,
         List<TranslationRegion> Translated);
 
+    // v1.0.26: output-side dedup. v1.0.25's input-side frame reuse skips
+    // the pipeline entirely when raw regions match a recent frame
+    // closely enough — but jitter on edge regions sometimes prevents the
+    // strict per-region match, so the pipeline runs and produces a
+    // translation that's visually different from what's already on
+    // screen even though the underlying SOURCE CONTENT is identical
+    // (just regrouped). To stop that residual flicker, we compute a
+    // position-agnostic, normalised fingerprint of the source words
+    // covered each frame; if the fingerprint matches what's currently
+    // rendered, we keep the existing overlay instead of redrawing the
+    // newly-translated (but functionally equivalent) version.
+    private string? _displayedSceneFingerprint;
+
     public bool IsRunning { get; private set; }
     public IntPtr TargetWindowHandle { get; private set; }
     public string TargetWindowTitle { get; private set; } = string.Empty;
@@ -225,6 +238,10 @@ public class TranslationEngine : IDisposable
         // is on a fresh window and shouldn't reuse the previous game's
         // translations even if positions happened to overlap.
         lock (_lastCompletedFrameLock) _lastCompletedFrame = null;
+        // And the v1.0.26 displayed-scene fingerprint — without this, the
+        // next Start's first frame would falsely match the old session's
+        // last fingerprint and skip its own overlay update.
+        _displayedSceneFingerprint = null;
         _history.EndSession(
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
@@ -401,9 +418,33 @@ public class TranslationEngine : IDisposable
             // a translation.
             RememberRecentRegions(translated);
 
-            // v1.0.25: also store this frame's full snapshot so the next
-            // frame's reuse-shortcut at the top of OnFrameCaptured can
-            // skip the pipeline entirely if the OCR output matches.
+            // v1.0.26: output-side dedup. If the source content of this
+            // frame matches what's already rendered (same English words
+            // covering roughly the same area, just regrouped differently
+            // by jitter), keep the existing overlay verbatim — including
+            // its translation. The pipeline still ran (we don't pay any
+            // perf savings here, that's v1.0.25's job), but the overlay
+            // doesn't churn so the user sees stable text.
+            //
+            // We DO update the FrameSnapshot's raw bounds with this
+            // frame's positions so the next call's v1.0.25 reuse layer
+            // can match the latest layout — but the Translated payload
+            // stays the OLD one (= what's actually displayed), keeping
+            // input-side reuse and on-screen content in sync.
+            var sceneFp = ComputeSceneFingerprint(rawRegions);
+            FrameSnapshot? prevFrame;
+            lock (_lastCompletedFrameLock) prevFrame = _lastCompletedFrame;
+            if (sceneFp == _displayedSceneFingerprint && prevFrame != null)
+            {
+                _logger.Debug("Frame: same source fingerprint as displayed — overlay kept");
+                RememberCompletedFrame(rawRegions, prevFrame.Translated);
+                return;
+            }
+            _displayedSceneFingerprint = sceneFp;
+
+            // v1.0.25: store this frame's full snapshot so the next frame's
+            // reuse-shortcut at the top of OnFrameCaptured can skip the
+            // pipeline entirely if the OCR output matches.
             RememberCompletedFrame(rawRegions, translated);
 
             // Final render: covers the non-streaming case (callback never
@@ -495,6 +536,40 @@ public class TranslationEngine : IDisposable
         reused = snap.Translated;
         _logger.Debug("Frame: reused previous translation ({N} regions)", reused.Count);
         return true;
+    }
+
+    /// <summary>
+    /// Position-agnostic content fingerprint of the frame. Lowercase + strip
+    /// non-alphanumerics from each region's source text, sort the resulting
+    /// tokens, and join — so a 3-line dialogue split and merged differently
+    /// across two frames produces the SAME fingerprint as long as the
+    /// underlying English words are the same. Tiny fragments
+    /// (&lt; 3 chars after normalisation) are discarded as noise so a
+    /// vanishing/appearing single character doesn't change the result.
+    /// Used by v1.0.26 to suppress overlay redraws when the on-screen
+    /// content is functionally unchanged.
+    /// </summary>
+    private static string ComputeSceneFingerprint(List<TranslationRegion> regions)
+    {
+        var tokens = new List<string>(regions.Count);
+        foreach (var r in regions)
+        {
+            var norm = NormaliseForFingerprint(r.OriginalText);
+            if (norm.Length >= 3) tokens.Add(norm);
+        }
+        tokens.Sort(StringComparer.Ordinal);
+        return string.Join("|", tokens);
+    }
+
+    private static string NormaliseForFingerprint(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        var sb = new StringBuilder(s.Length);
+        foreach (var c in s)
+        {
+            if (char.IsLetterOrDigit(c)) sb.Append(char.ToLowerInvariant(c));
+        }
+        return sb.ToString();
     }
 
     /// <summary>Levenshtein-tolerant text match (same threshold curve as the per-region jitter stabiliser).</summary>
