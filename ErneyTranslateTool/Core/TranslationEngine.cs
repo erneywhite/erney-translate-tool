@@ -71,6 +71,28 @@ public class TranslationEngine : IDisposable
     /// <summary>One frame's worth of grouping memory. RawBounds[i] is the input region position; SourceToGroup[i] is which merged group it landed in.</summary>
     private readonly record struct GroupingSnapshot(System.Windows.Rect[] RawBounds, int[] SourceToGroup);
 
+    // v1.0.25: full-frame translation reuse. The previous v1.0.23/v1.0.24
+    // hysteresis layers tried to make the GROUPING decision consistent
+    // across frames, but in real testing OCR-jitter still produced
+    // alternating output because the underlying group text fluctuated
+    // (and so the cache + hysteresis layers below couldn't fully
+    // prevent re-querying the translator with subtly different text).
+    //
+    // The user-suggested fix sidesteps the whole problem: if the new
+    // frame's RAW OCR output matches the previous frame's raw output
+    // closely enough (every new region maps to a previous region by
+    // position AND text within Levenshtein tolerance), reuse the
+    // previous frame's TRANSLATED regions verbatim — no re-grouping,
+    // no re-translation, just re-render the same bubbles. The overlay
+    // stops flickering because we literally stop computing different
+    // outputs when the source hasn't meaningfully changed.
+    private FrameSnapshot? _lastCompletedFrame;
+    private readonly object _lastCompletedFrameLock = new();
+    private sealed record FrameSnapshot(
+        System.Windows.Rect[] RawBounds,
+        string[] RawTexts,
+        List<TranslationRegion> Translated);
+
     public bool IsRunning { get; private set; }
     public IntPtr TargetWindowHandle { get; private set; }
     public string TargetWindowTitle { get; private set; } = string.Empty;
@@ -199,6 +221,10 @@ public class TranslationEngine : IDisposable
         // Same reasoning for the grouping-hysteresis memory: a new scene
         // shouldn't inherit last session's merge decisions.
         lock (_recentGroupingsLock) _recentGroupings.Clear();
+        // Same for the v1.0.25 full-frame reuse snapshot — the next Start
+        // is on a fresh window and shouldn't reuse the previous game's
+        // translations even if positions happened to overlap.
+        lock (_lastCompletedFrameLock) _lastCompletedFrame = null;
         _history.EndSession(
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
@@ -303,6 +329,21 @@ public class TranslationEngine : IDisposable
             _logger.Debug("Frame: OCR -> {Count} raw regions", rawRegions.Count);
             if (rawRegions.Count == 0) return;
 
+            // v1.0.25: per-frame reuse short-circuit. If the new raw OCR
+            // output is essentially identical to the previous frame's
+            // (every new region matches a previous one by position +
+            // text within OCR-jitter tolerance), skip the entire
+            // grouping + translation pipeline and just re-render the
+            // previous translated regions over the new window rect.
+            // This is what stops the merged-vs-split flicker: when the
+            // source hasn't meaningfully changed, we literally stop
+            // recomputing the output.
+            if (TryReusePreviousFrame(rawRegions, out var winRectShortcut, out var reusedRegions))
+            {
+                _overlay.ShowRegions(reusedRegions!, winRectShortcut);
+                return;
+            }
+
             // Stitch adjacent lines of the same paragraph back together so a
             // dialog that wraps to N lines is translated as one sentence
             // instead of N independent fragments. v1.0.23: try the
@@ -360,6 +401,11 @@ public class TranslationEngine : IDisposable
             // a translation.
             RememberRecentRegions(translated);
 
+            // v1.0.25: also store this frame's full snapshot so the next
+            // frame's reuse-shortcut at the top of OnFrameCaptured can
+            // skip the pipeline entirely if the OCR output matches.
+            RememberCompletedFrame(rawRegions, translated);
+
             // Final render: covers the non-streaming case (callback never
             // fired) AND ensures any post-stream glossary substitution lands
             // even if it produced an identical fingerprint to the last
@@ -385,6 +431,99 @@ public class TranslationEngine : IDisposable
             }
             Interlocked.Exchange(ref _processingFlag, 0);
         }
+    }
+
+    /// <summary>
+    /// v1.0.25 short-circuit. If the previous fully-processed frame's raw
+    /// OCR output matches the new frame's within jitter tolerance, render
+    /// the previous translated regions verbatim over the current window
+    /// rect (which may have moved if the user dragged the window) and
+    /// signal the caller to bail before grouping/translation.
+    ///
+    /// <para>"Matches" requires every new raw region to find a snapshot
+    /// raw region with both ≥0.6 spatial overlap AND text within a
+    /// Levenshtein tolerance. We're strict about new content: if even
+    /// one new region has no spatial+text match in the snapshot, we
+    /// assume genuine new text appeared and let the full pipeline run.
+    /// Snapshot regions that DON'T appear in the new frame are
+    /// tolerated — OCR can briefly miss small elements without
+    /// invalidating the scene.</para>
+    /// </summary>
+    private bool TryReusePreviousFrame(
+        List<TranslationRegion> newRawRegions,
+        out System.Windows.Rect winRect,
+        out List<TranslationRegion>? reused)
+    {
+        winRect = default;
+        reused = null;
+
+        FrameSnapshot? snap;
+        lock (_lastCompletedFrameLock) snap = _lastCompletedFrame;
+        if (snap == null) return false;
+        if (newRawRegions.Count == 0) return false;
+
+        // Resolve target window rect — needed regardless because the
+        // window may have moved since last frame. If we can't get it,
+        // fall through to the normal pipeline (which has its own bail).
+        if (!GetWindowRect(TargetWindowHandle, out var rect)) return false;
+        winRect = new System.Windows.Rect(
+            rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+
+        // Each new region must match a snapshot region by both position
+        // and text. snapshotUsed prevents two new regions claiming the
+        // same snapshot region (which would be a false-positive match).
+        var snapshotUsed = new bool[snap.RawBounds.Length];
+        foreach (var r in newRawRegions)
+        {
+            int bestJ = -1;
+            double bestOverlap = 0.6;
+            for (int j = 0; j < snap.RawBounds.Length; j++)
+            {
+                if (snapshotUsed[j]) continue;
+                var ov = RectOverlapRatio(r.Bounds, snap.RawBounds[j]);
+                if (ov > bestOverlap)
+                {
+                    bestOverlap = ov;
+                    bestJ = j;
+                }
+            }
+            if (bestJ < 0) return false; // new region with no positional match → genuinely new content
+            if (!RawTextsMatch(r.OriginalText, snap.RawTexts[bestJ])) return false;
+            snapshotUsed[bestJ] = true;
+        }
+
+        reused = snap.Translated;
+        _logger.Debug("Frame: reused previous translation ({N} regions)", reused.Count);
+        return true;
+    }
+
+    /// <summary>Levenshtein-tolerant text match (same threshold curve as the per-region jitter stabiliser).</summary>
+    private static bool RawTextsMatch(string a, string b)
+    {
+        if (string.Equals(a, b, StringComparison.Ordinal)) return true;
+        var lenA = a?.Length ?? 0;
+        var lenB = b?.Length ?? 0;
+        if (Math.Abs(lenA - lenB) > Math.Max(3, Math.Max(lenA, lenB) / 6)) return false;
+        var threshold = Math.Min(3, Math.Max(1, Math.Max(lenA, lenB) / 7));
+        return BoundedLevenshtein(a ?? string.Empty, b ?? string.Empty, threshold) <= threshold;
+    }
+
+    /// <summary>Snapshot the just-completed frame's raw OCR + translated output for the next frame's reuse-shortcut.</summary>
+    private void RememberCompletedFrame(List<TranslationRegion> rawRegions, List<TranslationRegion> translated)
+    {
+        var bounds = new System.Windows.Rect[rawRegions.Count];
+        var texts = new string[rawRegions.Count];
+        for (int i = 0; i < rawRegions.Count; i++)
+        {
+            bounds[i] = rawRegions[i].Bounds;
+            texts[i] = rawRegions[i].OriginalText ?? string.Empty;
+        }
+        // Defensive copy so a later mutation of `translated` (we don't do
+        // any but the API's caller could) doesn't poison the snapshot.
+        var translatedCopy = new List<TranslationRegion>(translated);
+
+        lock (_lastCompletedFrameLock)
+            _lastCompletedFrame = new FrameSnapshot(bounds, texts, translatedCopy);
     }
 
     /// <summary>
