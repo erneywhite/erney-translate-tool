@@ -21,33 +21,94 @@ public static class RegionGrouper
     /// passes through unchanged.
     /// </summary>
     public static List<TranslationRegion> Group(List<TranslationRegion> input)
-    {
-        if (input.Count <= 1) return input;
+        => GroupWithIndices(input).Merged;
 
-        // Sort top-to-bottom, then left-to-right.
-        var sorted = input
-            .OrderBy(r => r.Bounds.Top)
-            .ThenBy(r => r.Bounds.Left)
+    /// <summary>
+    /// Same algorithm as <see cref="Group"/> but also returns a per-input-index
+    /// mapping <c>SourceToGroup[i]</c> = which merged-group <paramref name="input"/>[i]
+    /// ended up in. Used by the engine's grouping-hysteresis layer to remember
+    /// last frame's decision and re-apply it on a near-identical next frame
+    /// (kills the merged-vs-split flicker that pure threshold tuning can't
+    /// eliminate when OCR's per-frame bounding-box jitter pushes the gap
+    /// across a threshold).
+    /// </summary>
+    public static (List<TranslationRegion> Merged, int[] SourceToGroup) GroupWithIndices(List<TranslationRegion> input)
+    {
+        if (input.Count == 0)
+            return (new List<TranslationRegion>(), Array.Empty<int>());
+        if (input.Count == 1)
+            return (new List<TranslationRegion>(input), new[] { 0 });
+
+        // Sort top-to-bottom, then left-to-right — but remember each region's
+        // ORIGINAL input index so we can fill SourceToGroup in input order.
+        var indexed = input
+            .Select((r, i) => (Region: r, OriginalIndex: i))
+            .OrderBy(t => t.Region.Bounds.Top)
+            .ThenBy(t => t.Region.Bounds.Left)
             .ToList();
 
-        var groups = new List<List<TranslationRegion>>();
-        foreach (var r in sorted)
+        var groupsOfRegions = new List<List<TranslationRegion>>();
+        var groupOfOriginalIndex = new int[input.Count];
+
+        foreach (var (region, originalIdx) in indexed)
         {
-            var added = false;
-            foreach (var g in groups)
+            int chosenGroup = -1;
+            for (int gi = 0; gi < groupsOfRegions.Count; gi++)
             {
-                if (CanJoin(g, r))
+                if (CanJoin(groupsOfRegions[gi], region))
                 {
-                    g.Add(r);
-                    added = true;
+                    groupsOfRegions[gi].Add(region);
+                    chosenGroup = gi;
                     break;
                 }
             }
-            if (!added)
-                groups.Add(new List<TranslationRegion> { r });
+            if (chosenGroup < 0)
+            {
+                chosenGroup = groupsOfRegions.Count;
+                groupsOfRegions.Add(new List<TranslationRegion> { region });
+            }
+            groupOfOriginalIndex[originalIdx] = chosenGroup;
         }
 
-        return groups.Select(Merge).ToList();
+        var merged = groupsOfRegions.Select(Merge).ToList();
+        return (merged, groupOfOriginalIndex);
+    }
+
+    /// <summary>
+    /// Apply a pre-decided grouping (from a previous frame's
+    /// <see cref="GroupWithIndices"/> result) to a new set of input regions.
+    /// <paramref name="sourceToGroup"/>[i] is the group number that
+    /// <paramref name="input"/>[i] should land in. Regions sharing a group
+    /// number are merged via the same logic as the regular grouper, so the
+    /// resulting merged text and bounds are computed from the CURRENT frame's
+    /// data — only the merge structure is inherited from the snapshot.
+    /// </summary>
+    public static List<TranslationRegion> ApplyGrouping(
+        IList<TranslationRegion> input, IList<int> sourceToGroup)
+    {
+        if (input.Count == 0) return new List<TranslationRegion>();
+        if (input.Count != sourceToGroup.Count)
+            throw new ArgumentException("input.Count must equal sourceToGroup.Count");
+
+        // Bucket inputs by group index. Preserve input order within each
+        // bucket so Merge produces consistent text (the merge logic
+        // concatenates in encounter order with smart hyphen / spacing
+        // handling).
+        var buckets = new SortedDictionary<int, List<TranslationRegion>>();
+        for (int i = 0; i < input.Count; i++)
+        {
+            var g = sourceToGroup[i];
+            if (!buckets.TryGetValue(g, out var list))
+                buckets[g] = list = new List<TranslationRegion>();
+            list.Add(input[i]);
+        }
+
+        // For Merge to produce correct text + bounds we want each bucket
+        // sorted top-to-bottom (matches what Group does internally).
+        return buckets.Values
+            .Select(b => b.OrderBy(r => r.Bounds.Top).ThenBy(r => r.Bounds.Left).ToList())
+            .Select(Merge)
+            .ToList();
     }
 
     private static bool CanJoin(List<TranslationRegion> group, TranslationRegion candidate)
