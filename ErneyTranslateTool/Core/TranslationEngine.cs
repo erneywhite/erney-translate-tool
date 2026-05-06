@@ -388,84 +388,137 @@ public class TranslationEngine : IDisposable
     }
 
     /// <summary>
-    /// v1.0.23 hysteresis entry point. Look for a recent grouping
-    /// snapshot whose raw layout closely matches the current frame's raw
-    /// regions; if found, replay its merge decision so we lock in the
-    /// previous frame's outcome (whether that was "merged" or "split")
-    /// regardless of the borderline-gap result the heuristic would
-    /// produce this frame. Falls through to a regular
-    /// <see cref="RegionGrouper.GroupWithIndices"/> call when there's no
-    /// matching snapshot. Either way the resulting (raw → group)
-    /// mapping is memorised for the next frame.
+    /// v1.0.24 hysteresis entry point. The previous (v1.0.23) implementation
+    /// required an exact region-count match between the new frame and a
+    /// recent snapshot; in real Yankee-Massage frames that mostly failed
+    /// because PaddleOCR sometimes picks up a noise region in the
+    /// background pattern (or misses a small element) — the count
+    /// fluctuates and the snapshot was rejected, so we fell back to the
+    /// jitter-prone heuristic and the user kept seeing the merged-vs-split
+    /// flicker.
+    ///
+    /// <para>The new approach has two pieces:</para>
+    /// <list type="number">
+    ///   <item>Per-region inheritance — every current region independently
+    ///         searches the snapshots for an overlapping bound; matched
+    ///         regions inherit that snapshot's group id, unmatched ones
+    ///         get an isolated id. Tolerates count drift, noise regions,
+    ///         and disappearing elements.</item>
+    ///   <item>Merge-bias arbitration — we always also run the regular
+    ///         heuristic and pick whichever produces FEWER groups (more
+    ///         merging). This means once any frame manages to merge a
+    ///         paragraph correctly, the snapshot inherits that decision
+    ///         and locks it in; conversely, an unlucky early "split"
+    ///         decision is overridden the moment a later frame's
+    ///         heuristic produces a merge. False splits are sticky no
+    ///         longer — false merges still are, but the LooksLikeLabel
+    ///         and hRatio guards make those rare in practice.</item>
+    /// </list>
     /// </summary>
     private List<TranslationRegion> ApplyGroupingHysteresisOrGroup(List<TranslationRegion> rawRegions)
     {
         if (rawRegions.Count == 0) return rawRegions;
 
+        // Always run the heuristic — provides a baseline AND lets merge-
+        // bias arbitration run even when a snapshot exists.
+        var (heuristicMerged, heuristicGroups) = RegionGrouper.GroupWithIndices(rawRegions);
+
         GroupingSnapshot[] snapshots;
         lock (_recentGroupingsLock) snapshots = _recentGroupings.ToArray();
 
-        // Walk newest → oldest so we lock onto the most recent stable scene.
-        for (int i = snapshots.Length - 1; i >= 0; i--)
-        {
-            var mapping = MapRawRegionsToSnapshotGroups(rawRegions, snapshots[i]);
-            if (mapping == null) continue;
+        int[] chosenGroups = heuristicGroups;
+        var chosenMerged = heuristicMerged;
+        string chosenBy = "heuristic";
 
-            var merged = RegionGrouper.ApplyGrouping(rawRegions, mapping);
-            // Memorise THIS frame's mapping so the snapshot ring stays
-            // current — otherwise the lock-in would slowly age out and
-            // we'd revert to threshold roulette.
-            RememberGroupingSnapshot(rawRegions, mapping);
-            _logger.Debug("Frame: grouping replayed from recent snapshot (kept {N} groups)",
-                merged.Count);
-            return merged;
+        if (snapshots.Length > 0)
+        {
+            var inheritedGroups = InheritGroupsPerRegion(rawRegions, snapshots);
+            if (inheritedGroups != null)
+            {
+                var inheritedMerged = RegionGrouper.ApplyGrouping(rawRegions, inheritedGroups);
+                // Merge-bias: fewer groups (more merging) wins. Equal
+                // counts → keep heuristic to avoid stale snapshot lock-in
+                // when the scene has actually changed but happens to
+                // produce the same group count.
+                if (inheritedMerged.Count < heuristicMerged.Count)
+                {
+                    chosenGroups = inheritedGroups;
+                    chosenMerged = inheritedMerged;
+                    chosenBy = "hysteresis";
+                }
+            }
         }
 
-        // No snapshot matched — run the regular grouper and remember its
-        // decision for next frame.
-        var (fresh, sourceToGroup) = RegionGrouper.GroupWithIndices(rawRegions);
-        RememberGroupingSnapshot(rawRegions, sourceToGroup);
-        return fresh;
+        // Always remember the WINNING decision so the snapshot ring stays
+        // biased toward the most-merged outcome we've observed recently.
+        RememberGroupingSnapshot(rawRegions, chosenGroups);
+
+        if (heuristicMerged.Count != chosenMerged.Count)
+        {
+            _logger.Debug("Frame: grouping {Source} kept {N} groups (heuristic alone would have {M})",
+                chosenBy, chosenMerged.Count, heuristicMerged.Count);
+        }
+        return chosenMerged;
     }
 
     /// <summary>
-    /// Try to map every raw region in the new frame to a group number from
-    /// <paramref name="snapshot"/> by spatial overlap with one of the
-    /// snapshot's RawBounds. Returns null if any region has no acceptable
-    /// match (i.e. the scene changed enough that we shouldn't reuse the
-    /// snapshot's decision). Strict count match prevents replaying a 3-line
-    /// snapshot onto a 2-line new frame or vice versa.
+    /// For each region in the current frame, find a matching region in any
+    /// recent snapshot (newest first) by spatial overlap. Matched regions
+    /// inherit their snapshot's group id; unmatched regions get a fresh
+    /// isolated id. Snapshot ids are offset per snapshot to avoid
+    /// collisions across snapshots. Returns null only when NO region
+    /// matched any snapshot — in that case the snapshots are stale (scene
+    /// change) and we let the heuristic decide on its own.
     /// </summary>
-    private static int[]? MapRawRegionsToSnapshotGroups(List<TranslationRegion> rawRegions, GroupingSnapshot snapshot)
+    private static int[]? InheritGroupsPerRegion(
+        List<TranslationRegion> current, GroupingSnapshot[] snapshots)
     {
-        if (rawRegions.Count != snapshot.RawBounds.Length) return null;
+        // Reserve a generous id range per snapshot so SnapshotGroupOffset *
+        // snapshot index + groupId stays unique across all snapshots.
+        // 10 000 is more than the realistic group count by orders of
+        // magnitude.
+        const int IdSpacePerSnapshot = 10_000;
 
-        var result = new int[rawRegions.Count];
-        var snapshotUsed = new bool[snapshot.RawBounds.Length];
+        var result = new int[current.Count];
+        bool anyInherited = false;
+        // Unmatched regions get ids past everything snapshots could produce.
+        int unmatchedNextId = (snapshots.Length + 1) * IdSpacePerSnapshot;
 
-        for (int i = 0; i < rawRegions.Count; i++)
+        for (int i = 0; i < current.Count; i++)
         {
-            int bestJ = -1;
-            double bestOverlap = 0;
-            for (int j = 0; j < snapshot.RawBounds.Length; j++)
+            int matchSnapIdx = -1;
+            int matchSnapGroup = -1;
+            double matchOverlap = 0.6; // minimum overlap to count as a match
+
+            // Walk newest → oldest. Stop at first match — newest is most
+            // representative of the current scene.
+            for (int snapIdx = snapshots.Length - 1; snapIdx >= 0; snapIdx--)
             {
-                if (snapshotUsed[j]) continue;
-                var overlap = RectOverlapRatio(rawRegions[i].Bounds, snapshot.RawBounds[j]);
-                if (overlap > bestOverlap)
+                var snapshot = snapshots[snapIdx];
+                for (int j = 0; j < snapshot.RawBounds.Length; j++)
                 {
-                    bestOverlap = overlap;
-                    bestJ = j;
+                    var ov = RectOverlapRatio(current[i].Bounds, snapshot.RawBounds[j]);
+                    if (ov > matchOverlap)
+                    {
+                        matchOverlap = ov;
+                        matchSnapIdx = snapIdx;
+                        matchSnapGroup = snapshot.SourceToGroup[j];
+                    }
                 }
+                if (matchSnapIdx == snapIdx) break; // got a match in this (newest reachable) snapshot
             }
-            // 0.6 overlap is strict enough to avoid matching across genuinely
-            // different layouts but lenient enough to absorb OCR's per-frame
-            // bounding-box jitter (which is typically a few pixels on each
-            // edge — easily inside 0.6 ratio of the smaller box).
-            if (bestJ < 0 || bestOverlap < 0.6) return null;
-            snapshotUsed[bestJ] = true;
-            result[i] = snapshot.SourceToGroup[bestJ];
+
+            if (matchSnapIdx >= 0)
+            {
+                result[i] = matchSnapIdx * IdSpacePerSnapshot + matchSnapGroup;
+                anyInherited = true;
+            }
+            else
+            {
+                result[i] = unmatchedNextId++;
+            }
         }
-        return result;
+        return anyInherited ? result : null;
     }
 
     private void RememberGroupingSnapshot(List<TranslationRegion> rawRegions, IList<int> sourceToGroup)
