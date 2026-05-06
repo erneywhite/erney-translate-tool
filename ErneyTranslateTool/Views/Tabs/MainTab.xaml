@@ -37,6 +37,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
@@ -45,29 +46,35 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}"
                                    TextWrapping="Wrap"
                                    Margin="0,0,0,10"/>
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                        <!-- Refresh + selected label live in their own row so
+                             the long window title has the full card width to
+                             ellipsis-trim into. -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
                             <Button Content="{DynamicResource Strings.Main.RefreshList}"
                                     Command="{Binding RefreshWindowsCommand}"
                                     Padding="14,8" Margin="0,0,12,0"
                                     ToolTip="{DynamicResource Strings.Main.RefreshList.Tooltip}"/>
-                            <!-- v1.0.28: opt-out filter for the picker. Default
-                                 hides Explorer/Telegram/VPN/peripheral utility
-                                 windows that nobody wants to translate; flip
-                                 this on to see everything if your game/app
-                                 happens to share a name with the filter. -->
-                            <CheckBox Content="{DynamicResource Strings.Main.ShowHiddenApps}"
-                                      IsChecked="{Binding ShowHiddenWindows}"
-                                      ToolTip="{DynamicResource Strings.Main.ShowHiddenApps.Tooltip}"
-                                      Foreground="{DynamicResource TextPrimaryBrush}"
-                                      VerticalAlignment="Center"
-                                      Margin="0,0,16,0"/>
                             <TextBlock Text="{DynamicResource Strings.Main.SelectedLabel}" VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <TextBlock Text="{Binding SelectedWindowTitle}" VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="280"/>
+                                       TextTrimming="CharacterEllipsis" MaxWidth="420"/>
                         </StackPanel>
-                        <ListBox Grid.Row="2"
+                        <!-- v1.0.28: opt-out filter for the picker. Default
+                             hides Explorer/Telegram/VPN/peripheral utility
+                             windows that nobody wants to translate; flip
+                             this on to see everything if your game/app
+                             happens to share a name with the filter.
+                             v1.0.29: moved to its own row so the "Selected:"
+                             line above doesn't have to share horizontal
+                             space with the long checkbox label. -->
+                        <CheckBox Grid.Row="2"
+                                  Content="{DynamicResource Strings.Main.ShowHiddenApps}"
+                                  IsChecked="{Binding ShowHiddenWindows}"
+                                  ToolTip="{DynamicResource Strings.Main.ShowHiddenApps.Tooltip}"
+                                  Foreground="{DynamicResource TextSecondaryBrush}"
+                                  Margin="0,0,0,10"/>
+                        <ListBox Grid.Row="3"
                                  ItemsSource="{Binding Windows}"
                                  SelectedItem="{Binding SelectedWindow}"
                                  Background="{DynamicResource InputBackgroundBrush}"
@@ -85,7 +92,7 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,16,0,0">
+                        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,16,0,0">
                             <Button Content="{Binding ToggleButtonText}"
                                     Command="{Binding ToggleEngineCommand}"
                                     Style="{DynamicResource PrimaryButtonStyle}"
