@@ -56,6 +56,21 @@ public class TranslationEngine : IDisposable
     private readonly object _recentRegionsLock = new();
     private readonly record struct RecentRegion(string SourceText, System.Windows.Rect Bounds);
 
+    // v1.0.23: grouping-hysteresis ring. The pure-threshold approach in
+    // RegionGrouper (1.0.17–1.0.22) reached its ceiling — when OCR
+    // bounding-box jitter pushes the line gap across the WeakContinuation
+    // threshold from frame to frame, the same scene flips between
+    // "merged into one paragraph" and "split into two" producing visible
+    // overlay flicker. We now also remember the LAST FEW frames'
+    // grouping decisions and replay them when the new frame's raw region
+    // layout matches a recent snapshot — locking in whichever decision
+    // we made first instead of letting jitter relitigate it every frame.
+    private const int RecentGroupingsCapacity = 3;
+    private readonly LinkedList<GroupingSnapshot> _recentGroupings = new();
+    private readonly object _recentGroupingsLock = new();
+    /// <summary>One frame's worth of grouping memory. RawBounds[i] is the input region position; SourceToGroup[i] is which merged group it landed in.</summary>
+    private readonly record struct GroupingSnapshot(System.Windows.Rect[] RawBounds, int[] SourceToGroup);
+
     public bool IsRunning { get; private set; }
     public IntPtr TargetWindowHandle { get; private set; }
     public string TargetWindowTitle { get; private set; } = string.Empty;
@@ -181,6 +196,9 @@ public class TranslationEngine : IDisposable
         // completely different game/scene, no point biasing it with last
         // session's text fragments.
         lock (_recentRegionsLock) _recentRegions.Clear();
+        // Same reasoning for the grouping-hysteresis memory: a new scene
+        // shouldn't inherit last session's merge decisions.
+        lock (_recentGroupingsLock) _recentGroupings.Clear();
         _history.EndSession(
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
@@ -287,8 +305,12 @@ public class TranslationEngine : IDisposable
 
             // Stitch adjacent lines of the same paragraph back together so a
             // dialog that wraps to N lines is translated as one sentence
-            // instead of N independent fragments.
-            var regions = RegionGrouper.Group(rawRegions);
+            // instead of N independent fragments. v1.0.23: try the
+            // grouping-hysteresis path first — if the current raw layout
+            // matches a recent frame's, replay that frame's merge
+            // decision instead of relitigating with the gap heuristic.
+            // Otherwise run the regular Group + memorise its decision.
+            var regions = ApplyGroupingHysteresisOrGroup(rawRegions);
             if (regions.Count != rawRegions.Count)
                 _logger.Debug("Frame: grouped {From} -> {To} regions", rawRegions.Count, regions.Count);
 
@@ -363,6 +385,112 @@ public class TranslationEngine : IDisposable
             }
             Interlocked.Exchange(ref _processingFlag, 0);
         }
+    }
+
+    /// <summary>
+    /// v1.0.23 hysteresis entry point. Look for a recent grouping
+    /// snapshot whose raw layout closely matches the current frame's raw
+    /// regions; if found, replay its merge decision so we lock in the
+    /// previous frame's outcome (whether that was "merged" or "split")
+    /// regardless of the borderline-gap result the heuristic would
+    /// produce this frame. Falls through to a regular
+    /// <see cref="RegionGrouper.GroupWithIndices"/> call when there's no
+    /// matching snapshot. Either way the resulting (raw → group)
+    /// mapping is memorised for the next frame.
+    /// </summary>
+    private List<TranslationRegion> ApplyGroupingHysteresisOrGroup(List<TranslationRegion> rawRegions)
+    {
+        if (rawRegions.Count == 0) return rawRegions;
+
+        GroupingSnapshot[] snapshots;
+        lock (_recentGroupingsLock) snapshots = _recentGroupings.ToArray();
+
+        // Walk newest → oldest so we lock onto the most recent stable scene.
+        for (int i = snapshots.Length - 1; i >= 0; i--)
+        {
+            var mapping = MapRawRegionsToSnapshotGroups(rawRegions, snapshots[i]);
+            if (mapping == null) continue;
+
+            var merged = RegionGrouper.ApplyGrouping(rawRegions, mapping);
+            // Memorise THIS frame's mapping so the snapshot ring stays
+            // current — otherwise the lock-in would slowly age out and
+            // we'd revert to threshold roulette.
+            RememberGroupingSnapshot(rawRegions, mapping);
+            _logger.Debug("Frame: grouping replayed from recent snapshot (kept {N} groups)",
+                merged.Count);
+            return merged;
+        }
+
+        // No snapshot matched — run the regular grouper and remember its
+        // decision for next frame.
+        var (fresh, sourceToGroup) = RegionGrouper.GroupWithIndices(rawRegions);
+        RememberGroupingSnapshot(rawRegions, sourceToGroup);
+        return fresh;
+    }
+
+    /// <summary>
+    /// Try to map every raw region in the new frame to a group number from
+    /// <paramref name="snapshot"/> by spatial overlap with one of the
+    /// snapshot's RawBounds. Returns null if any region has no acceptable
+    /// match (i.e. the scene changed enough that we shouldn't reuse the
+    /// snapshot's decision). Strict count match prevents replaying a 3-line
+    /// snapshot onto a 2-line new frame or vice versa.
+    /// </summary>
+    private static int[]? MapRawRegionsToSnapshotGroups(List<TranslationRegion> rawRegions, GroupingSnapshot snapshot)
+    {
+        if (rawRegions.Count != snapshot.RawBounds.Length) return null;
+
+        var result = new int[rawRegions.Count];
+        var snapshotUsed = new bool[snapshot.RawBounds.Length];
+
+        for (int i = 0; i < rawRegions.Count; i++)
+        {
+            int bestJ = -1;
+            double bestOverlap = 0;
+            for (int j = 0; j < snapshot.RawBounds.Length; j++)
+            {
+                if (snapshotUsed[j]) continue;
+                var overlap = RectOverlapRatio(rawRegions[i].Bounds, snapshot.RawBounds[j]);
+                if (overlap > bestOverlap)
+                {
+                    bestOverlap = overlap;
+                    bestJ = j;
+                }
+            }
+            // 0.6 overlap is strict enough to avoid matching across genuinely
+            // different layouts but lenient enough to absorb OCR's per-frame
+            // bounding-box jitter (which is typically a few pixels on each
+            // edge — easily inside 0.6 ratio of the smaller box).
+            if (bestJ < 0 || bestOverlap < 0.6) return null;
+            snapshotUsed[bestJ] = true;
+            result[i] = snapshot.SourceToGroup[bestJ];
+        }
+        return result;
+    }
+
+    private void RememberGroupingSnapshot(List<TranslationRegion> rawRegions, IList<int> sourceToGroup)
+    {
+        var rawBounds = new System.Windows.Rect[rawRegions.Count];
+        for (int i = 0; i < rawRegions.Count; i++) rawBounds[i] = rawRegions[i].Bounds;
+        var indices = sourceToGroup as int[] ?? sourceToGroup.ToArray();
+
+        lock (_recentGroupingsLock)
+        {
+            _recentGroupings.AddLast(new GroupingSnapshot(rawBounds, indices));
+            while (_recentGroupings.Count > RecentGroupingsCapacity)
+                _recentGroupings.RemoveFirst();
+        }
+    }
+
+    /// <summary>Intersection-area / smaller-area ratio. Picks the smaller box as denominator so a tiny region inside a big one still scores 1.0.</summary>
+    private static double RectOverlapRatio(System.Windows.Rect a, System.Windows.Rect b)
+    {
+        var ix = Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left);
+        var iy = Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top);
+        if (ix <= 0 || iy <= 0) return 0;
+        var inter = ix * iy;
+        var smaller = Math.Min(a.Width * a.Height, b.Width * b.Height);
+        return smaller > 0 ? inter / smaller : 0;
     }
 
     /// <summary>
