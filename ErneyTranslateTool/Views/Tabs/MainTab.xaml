@@ -50,6 +50,17 @@
                                     Command="{Binding RefreshWindowsCommand}"
                                     Padding="14,8" Margin="0,0,12,0"
                                     ToolTip="{DynamicResource Strings.Main.RefreshList.Tooltip}"/>
+                            <!-- v1.0.28: opt-out filter for the picker. Default
+                                 hides Explorer/Telegram/VPN/peripheral utility
+                                 windows that nobody wants to translate; flip
+                                 this on to see everything if your game/app
+                                 happens to share a name with the filter. -->
+                            <CheckBox Content="{DynamicResource Strings.Main.ShowHiddenApps}"
+                                      IsChecked="{Binding ShowHiddenWindows}"
+                                      ToolTip="{DynamicResource Strings.Main.ShowHiddenApps.Tooltip}"
+                                      Foreground="{DynamicResource TextPrimaryBrush}"
+                                      VerticalAlignment="Center"
+                                      Margin="0,0,16,0"/>
                             <TextBlock Text="{DynamicResource Strings.Main.SelectedLabel}" VerticalAlignment="Center"
                                        Foreground="{DynamicResource TextSecondaryBrush}"/>
                             <TextBlock Text="{Binding SelectedWindowTitle}" VerticalAlignment="Center"

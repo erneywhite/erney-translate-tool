@@ -41,6 +41,8 @@
     <sys:String x:Key="Strings.Main.WindowHelp">Pick the game/app window from the list below. The game must be in windowed or borderless mode (full-screen exclusive isn't supported).</sys:String>
     <sys:String x:Key="Strings.Main.RefreshList">Refresh list</sys:String>
     <sys:String x:Key="Strings.Main.RefreshList.Tooltip">Re-scan visible top-level windows</sys:String>
+    <sys:String x:Key="Strings.Main.ShowHiddenApps">Show hidden apps</sys:String>
+    <sys:String x:Key="Strings.Main.ShowHiddenApps.Tooltip">By default the list hides system windows (Explorer, ApplicationFrameHost), messengers (Telegram), VPN clients, peripheral driver UIs (Razer, Logitech), and this app itself — they're rarely translated. Enable this if your game happened to land in the filter.</sys:String>
     <sys:String x:Key="Strings.Main.SelectedLabel">Selected: </sys:String>
     <sys:String x:Key="Strings.Main.NoWindow">(no window selected)</sys:String>
     <sys:String x:Key="Strings.Main.Start">Start</sys:String>
@@ -171,7 +173,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">The "Default" profile cannot be deleted</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.27 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.28 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Check for updates</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub repository</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">What is it</sys:String>

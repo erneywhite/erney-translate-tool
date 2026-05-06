@@ -170,6 +170,15 @@ public class AppConfig
     public string TargetWindowTitle { get; set; } = string.Empty;
 
     /// <summary>
+    /// When true, the "pick a window" list on the Main tab includes
+    /// system / utility / messenger windows that are normally hidden
+    /// (Explorer, Telegram, VPN clients, peripheral driver UIs, etc.).
+    /// Defaults off — the unfiltered list is dominated by background
+    /// noise that the user almost never wants to translate.
+    /// </summary>
+    public bool ShowHiddenWindowsInPicker { get; set; } = false;
+
+    /// <summary>
     /// Whether translation is currently enabled.
     /// </summary>
     public bool TranslationEnabled { get; set; } = false;

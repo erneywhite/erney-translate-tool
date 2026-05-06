@@ -43,6 +43,8 @@
     <sys:String x:Key="Strings.Main.WindowHelp">Выбери окно игры/программы из списка ниже. Игра должна быть запущена в оконном или borderless-режиме (полный экран не подходит).</sys:String>
     <sys:String x:Key="Strings.Main.RefreshList">Обновить список</sys:String>
     <sys:String x:Key="Strings.Main.RefreshList.Tooltip">Пересканировать список открытых окон</sys:String>
+    <sys:String x:Key="Strings.Main.ShowHiddenApps">Показать скрытые приложения</sys:String>
+    <sys:String x:Key="Strings.Main.ShowHiddenApps.Tooltip">По умолчанию из списка скрыты системные окна (Проводник, ApplicationFrameHost), мессенджеры (Telegram), VPN-клиенты, утилиты драйверов (Razer, Logitech) и сама эта программа — обычно их не переводят. Включи если твоя игра случайно попала в фильтр.</sys:String>
     <sys:String x:Key="Strings.Main.SelectedLabel">Выбрано: </sys:String>
     <sys:String x:Key="Strings.Main.NoWindow">(окно не выбрано)</sys:String>
     <sys:String x:Key="Strings.Main.Start">Запустить</sys:String>
@@ -173,7 +175,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">Профиль «По умолчанию» нельзя удалить</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.27 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Версия 1.0.28 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Проверить обновление</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub репозиторий</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">Что это</sys:String>

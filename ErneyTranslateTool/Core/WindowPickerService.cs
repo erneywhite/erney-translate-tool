@@ -24,10 +24,75 @@ public class WindowPickerService
     }
 
     /// <summary>
+    /// Process names that have no business being in the "pick a window
+    /// to translate" list under normal use — Windows shell hosts, the
+    /// app's own window, common messengers/VPNs/peripheral driver UIs.
+    /// Hidden by default; the user can opt in to seeing them via the
+    /// "Show hidden apps" checkbox if their game happened to land in
+    /// this list (or just to translate Telegram for fun).
+    ///
+    /// <para>Browsers are deliberately NOT here — translating web pages
+    /// is a perfectly normal use case.</para>
+    /// </summary>
+    private static readonly HashSet<string> FilteredProcessNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Own app — translating our own UI is pointless and clutters the list.
+        "ErneyTranslateTool",
+
+        // Windows shell + system UI hosts
+        "explorer",
+        "ApplicationFrameHost",
+        "ShellExperienceHost",
+        "SearchHost",
+        "SearchUI",
+        "TextInputHost",
+        "LockApp",
+        "StartMenuExperienceHost",
+        "SystemSettings",
+        "Cortana",
+        "Widgets",
+        "WidgetService",
+
+        // Messengers / VPNs / driver-suite trayware that have UI windows
+        // but rarely contain text someone would translate.
+        "Telegram",
+        "AmneziaVPN",
+        "OpenVPN",
+        "OpenVPNConnect",
+        "NordVPN",
+        "ExpressVPN",
+        "ProtonVPN",
+        "WireGuard",
+        "CyberGhost",
+        "TunnelBear",
+        "RzMonitorForegroundWindow",
+        "RazerCentral",
+        "RazerSynapse",
+        "Razer.Synapse",
+        "LCore",
+        "lghub",
+        "LogiOptionsPlus",
+        "GHUB",
+
+        // Generic system / dev tools
+        "TaskMgr",
+        "regedit",
+        "mmc",
+        "cmd",
+        "powershell",
+        "WindowsTerminal",
+        "conhost",
+    };
+
+    /// <summary>
     /// Get list of visible top-level windows.
     /// </summary>
+    /// <param name="includeFiltered">When true, system / utility windows
+    /// (taskbar shells, messengers, VPN clients, etc.) that are normally
+    /// hidden are included in the result. Default false matches the
+    /// "Show hidden apps" checkbox being off in the picker UI.</param>
     /// <returns>List of window information.</returns>
-    public List<WindowInfo> GetVisibleWindows()
+    public List<WindowInfo> GetVisibleWindows(bool includeFiltered = false)
     {
         var windows = new List<WindowInfo>();
 
@@ -58,11 +123,19 @@ public class WindowPickerService
                 // Process may have exited
             }
 
+            // v1.0.28: hide noise-tier processes from the picker by default.
+            // The "Show hidden apps" checkbox in the UI maps to
+            // includeFiltered=true so the user can still find their game
+            // if it happens to share a name with something in the list.
+            var processName = process?.ProcessName ?? "Unknown";
+            if (!includeFiltered && FilteredProcessNames.Contains(processName))
+                return true;
+
             windows.Add(new WindowInfo
             {
                 Handle = hWnd,
                 Title = title,
-                ProcessName = process?.ProcessName ?? "Unknown",
+                ProcessName = processName,
                 ProcessId = processId,
                 IsFullScreen = IsWindowFullScreen(hWnd)
             });
@@ -70,7 +143,8 @@ public class WindowPickerService
             return true;
         }, IntPtr.Zero);
 
-        _logger.Debug("Found {Count} visible windows", windows.Count);
+        _logger.Debug("Found {Count} visible windows (includeFiltered={Inc})",
+            windows.Count, includeFiltered);
         return windows;
     }
 
