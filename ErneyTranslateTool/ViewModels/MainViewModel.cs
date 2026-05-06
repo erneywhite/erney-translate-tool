@@ -29,6 +29,7 @@ public class MainViewModel : BaseViewModel
     private int _charactersTranslatedToday;
     private double _cacheHitRate;
     private string _frameTimeText = "—";
+    private bool _showHiddenWindows;
 
     public ObservableCollection<WindowInfo> Windows { get; } = new();
 
@@ -60,8 +61,33 @@ public class MainViewModel : BaseViewModel
         ToggleEngineCommand = new RelayCommand(async _ => await ToggleEngineAsync(), _ => CanToggle);
         RefreshStatsCommand = new RelayCommand(_ => RefreshStats());
 
+        // v1.0.28: pull the saved "Show hidden apps" toggle into the VM.
+        // Direct field assign so we don't trigger the setter's persist+
+        // refresh side-effects on initial load.
+        _showHiddenWindows = _settings.Config.ShowHiddenWindowsInPicker;
+
         RefreshStats();
         RefreshWindows();
+    }
+
+    /// <summary>
+    /// Bound to the "Показать скрытые приложения" checkbox under the
+    /// Refresh-list button. Persists to AppConfig and immediately
+    /// re-refreshes the window list so the user sees the result without
+    /// clicking Refresh manually.
+    /// </summary>
+    public bool ShowHiddenWindows
+    {
+        get => _showHiddenWindows;
+        set
+        {
+            if (SetProperty(ref _showHiddenWindows, value))
+            {
+                _settings.Config.ShowHiddenWindowsInPicker = value;
+                _settings.Save();
+                RefreshWindows();
+            }
+        }
     }
 
     public string StatusMessage
@@ -133,7 +159,7 @@ public class MainViewModel : BaseViewModel
     private void RefreshWindows()
     {
         Windows.Clear();
-        foreach (var w in _windowPicker.GetVisibleWindows())
+        foreach (var w in _windowPicker.GetVisibleWindows(_showHiddenWindows))
             Windows.Add(w);
     }
 
