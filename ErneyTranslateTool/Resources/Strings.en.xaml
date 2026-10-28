@@ -174,6 +174,10 @@
     <sys:String x:Key="Strings.OS.AppThemeHelp">Colour palette of the app's own window (applied immediately):</sys:String>
     <sys:String x:Key="Strings.OS.AppLanguage">App language:</sys:String>
     <sys:String x:Key="Strings.OS.Behavior">App behaviour</sys:String>
+    <sys:String x:Key="Strings.OS.Diagnostics">Diagnostics</sys:String>
+    <sys:String x:Key="Strings.OS.RecordOcr">Record recognised text</sys:String>
+    <sys:String x:Key="Strings.OS.RecordOcrHint">While this is on, the app saves what OCR found on every frame: line positions and text, no images. It helps track down a flickering translation: turn it on, wait half a minute on the scene that flickers and send the file to the developer. Recording turns off when the app restarts.</sys:String>
+    <sys:String x:Key="Strings.OS.OpenRecordings">Open recordings folder</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTray">Minimise to tray on "×" instead of exiting</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTrayHint">Full exit — right-click the tray icon → "Exit".</sys:String>
     <sys:String x:Key="Strings.OS.CheckUpdates">Check for updates on startup (background, silent)</sys:String>

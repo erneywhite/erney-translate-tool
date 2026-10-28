@@ -168,6 +168,8 @@ public partial class App : Application
         services.AddSingleton<OverlayManager>();
         services.AddSingleton<HotkeyService>();
         services.AddSingleton<WindowPickerService>();
+        services.AddSingleton(sp => new OcrRecorder(
+            Path.Combine(AppDataPath, "logs", "ocr-recordings"), sp.GetRequiredService<ILogger>()));
         services.AddSingleton<TranslationEngine>();
         services.AddSingleton<Core.Glossary.GlossaryApplier>();
         services.AddSingleton<Core.Profiles.ProfileManager>();
