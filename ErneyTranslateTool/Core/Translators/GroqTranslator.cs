@@ -49,7 +49,7 @@ public class GroqTranslator : IStreamingTranslator
         int contextSize, bool useContext, ILogger logger)
     {
         _logger = logger;
-        _model = string.IsNullOrWhiteSpace(model) ? "llama-3.3-70b-versatile" : model;
+        _model = string.IsNullOrWhiteSpace(model) ? ModelCatalog.DefaultGroq : model;
         _temperature = Math.Clamp(temperature, 0.0, 2.0);
         _contextSize = Math.Clamp(contextSize, 0, 10);
         _useContext = useContext;
@@ -66,13 +66,7 @@ public class GroqTranslator : IStreamingTranslator
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var messages = BuildMessages(text, targetName);
 
-        var request = new ChatRequest
-        {
-            Model = _model,
-            Messages = messages,
-            Temperature = _temperature,
-            MaxTokens = 1000,
-        };
+        var request = NewRequest(messages, maxTokens: 1000);
 
         using var resp = await _http.PostAsJsonAsync(EndpointUrl, request,
             new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
@@ -108,14 +102,8 @@ public class GroqTranslator : IStreamingTranslator
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var messages = BuildMessages(text, targetName);
 
-        var request = new ChatRequest
-        {
-            Model = _model,
-            Messages = messages,
-            Temperature = _temperature,
-            MaxTokens = 1000,
-            Stream = true,
-        };
+        var request = NewRequest(messages, maxTokens: 1000);
+        request.Stream = true;
 
         using var content = JsonContent.Create(request,
             options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
@@ -133,10 +121,10 @@ public class GroqTranslator : IStreamingTranslator
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(line)) continue;
             if (line.StartsWith(':')) continue;
             if (!line.StartsWith("data:")) continue;
@@ -226,7 +214,7 @@ public class GroqTranslator : IStreamingTranslator
                 new() { Role = "user", Content = "hello" },
             };
             using var resp = await _http.PostAsJsonAsync(EndpointUrl,
-                new ChatRequest { Model = _model, Messages = messages, Temperature = 0.0, MaxTokens = 50 },
+                NewRequest(messages, maxTokens: 50, temperature: 0.0),
                 new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
             if (!resp.IsSuccessStatusCode)
             {
@@ -255,6 +243,31 @@ public class GroqTranslator : IStreamingTranslator
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// v1.0.30: Groq retired the Llama 3.x models; the replacement GPT-OSS
+    /// models reason before answering. Their reasoning goes to a separate
+    /// <c>reasoning</c> field (never into <c>content</c>), so the overlay is
+    /// safe either way — we still ask for the lowest effort, skip returning
+    /// the reasoning text and leave room for it in the token budget.
+    /// </summary>
+    private ChatRequest NewRequest(List<ChatMessage> messages, int maxTokens, double? temperature = null)
+    {
+        var request = new ChatRequest
+        {
+            Model = _model,
+            Messages = messages,
+            Temperature = temperature ?? _temperature,
+            MaxCompletionTokens = maxTokens,
+        };
+        if (_model.StartsWith("openai/gpt-oss", StringComparison.Ordinal))
+        {
+            request.ReasoningEffort = "low";
+            request.IncludeReasoning = false;
+            request.MaxCompletionTokens = maxTokens * 4;
+        }
+        return request;
+    }
+
     // === DTOs (mirror OpenAI's exactly — Groq is API-compatible) ===
 
     private class ChatRequest
@@ -262,8 +275,11 @@ public class GroqTranslator : IStreamingTranslator
         [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
         [JsonPropertyName("messages")] public List<ChatMessage> Messages { get; set; } = new();
         [JsonPropertyName("temperature")] public double Temperature { get; set; }
-        [JsonPropertyName("max_tokens")] public int MaxTokens { get; set; }
+        [JsonPropertyName("max_completion_tokens")] public int MaxCompletionTokens { get; set; }
         [JsonPropertyName("stream")] public bool? Stream { get; set; }
+        // GPT-OSS only; null keeps them out of requests to other models.
+        [JsonPropertyName("reasoning_effort")] public string? ReasoningEffort { get; set; }
+        [JsonPropertyName("include_reasoning")] public bool? IncludeReasoning { get; set; }
     }
 
     private class ChatMessage

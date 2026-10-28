@@ -35,6 +35,18 @@ public class TranslationEngine : IDisposable
     private bool _disposed;
     private long _lastFrameHash;
 
+    // v1.0.30: vanished-text handling. When the text the overlay shows is
+    // gone from the screen (dialog closed, CG shown), the overlay used to
+    // keep the stale translation until new text appeared. Now it's dropped
+    // once the text has been missing for VanishConfirmFrames ticks in a row
+    // — one tick is not enough, OCR occasionally misses a line on a single
+    // frame. While a vanish is pending (0 < streak < confirm) a frame with
+    // an unchanged pixel hash is re-processed instead of skipped, otherwise
+    // a static screen would never produce the confirming tick.
+    private const int VanishConfirmFrames = 2;
+    private int _vanishStreak;
+    private bool VanishPending => _vanishStreak > 0 && _vanishStreak < VanishConfirmFrames;
+
     // Rolling average of "frame received → overlay updated" wall-clock time.
     // Cheap and useful as a single throughput indicator: covers OCR + grouping
     // + translation + overlay layout. Smoothed with EMA to avoid one slow
@@ -240,6 +252,7 @@ public class TranslationEngine : IDisposable
         // is on a fresh window and shouldn't reuse the previous game's
         // translations even if positions happened to overlap.
         lock (_lastCompletedFrameLock) _lastCompletedFrame = null;
+        _vanishStreak = 0;
         _history.EndSession(
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
@@ -324,7 +337,7 @@ public class TranslationEngine : IDisposable
             // Cheap (4096 pixel reads), deterministic, and good enough to
             // distinguish "still on the same dialog" from "scene changed".
             var hash = QuickSampleHash(bitmap);
-            if (hash == _lastFrameHash)
+            if (hash == _lastFrameHash && !VanishPending)
             {
                 bitmap.Dispose();
                 return;
@@ -342,7 +355,16 @@ public class TranslationEngine : IDisposable
 
             var rawRegions = _ocr.ProcessFrame(bytes);
             _logger.Debug("Frame: OCR -> {Count} raw regions", rawRegions.Count);
-            if (rawRegions.Count == 0) return;
+            if (rawRegions.Count == 0)
+            {
+                if (++_vanishStreak >= VanishConfirmFrames)
+                {
+                    if (_vanishStreak == VanishConfirmFrames)
+                        _logger.Debug("Frame: text gone for {N} ticks, hiding overlay", _vanishStreak);
+                    _overlay.Hide();
+                }
+                return;
+            }
 
             // v1.0.25: per-frame reuse short-circuit. If the new raw OCR
             // output is essentially identical to the previous frame's
@@ -353,11 +375,27 @@ public class TranslationEngine : IDisposable
             // This is what stops the merged-vs-split flicker: when the
             // source hasn't meaningfully changed, we literally stop
             // recomputing the output.
-            if (TryReusePreviousFrame(rawRegions, out var winRectShortcut, out var reusedRegions))
+            if (TryReusePreviousFrame(rawRegions, out var winRectShortcut, out var reusedRegions, out var stillVisible))
             {
-                _overlay.ShowRegions(reusedRegions!, winRectShortcut);
+                // Snapshot regions whose text left the screen are dropped
+                // only after the vanish is confirmed (see VanishConfirmFrames);
+                // until then the full snapshot keeps rendering.
+                if (stillVisible!.Count == reusedRegions!.Count)
+                {
+                    _vanishStreak = 0;
+                    _overlay.ShowRegions(reusedRegions, winRectShortcut);
+                }
+                else if (++_vanishStreak >= VanishConfirmFrames)
+                {
+                    _overlay.ShowRegions(stillVisible, winRectShortcut);
+                }
+                else
+                {
+                    _overlay.ShowRegions(reusedRegions, winRectShortcut);
+                }
                 return;
             }
+            _vanishStreak = 0;
 
             // Stitch adjacent lines of the same paragraph back together so a
             // dialog that wraps to N lines is translated as one sentence
@@ -402,7 +440,7 @@ public class TranslationEngine : IDisposable
             {
                 if (string.IsNullOrEmpty(r.TranslatedText)) return;
                 if (!partial.Contains(r)) partial.Add(r);
-                _overlay.ShowRegions(partial, winRect);
+                _overlay.ShowRegions(partial, winRect, isPartial: true);
             }
 
             var translated = await _translation.TranslateRegionsAsync(
@@ -463,14 +501,21 @@ public class TranslationEngine : IDisposable
     /// Snapshot regions that DON'T appear in the new frame are
     /// tolerated — OCR can briefly miss small elements without
     /// invalidating the scene.</para>
+    ///
+    /// <para>v1.0.30: <paramref name="stillVisible"/> is the subset of
+    /// <paramref name="reused"/> whose source text is still on screen (it
+    /// overlaps at least one matched snapshot region). The caller decides
+    /// when the missing ones are really gone.</para>
     /// </summary>
     private bool TryReusePreviousFrame(
         List<TranslationRegion> newRawRegions,
         out System.Windows.Rect winRect,
-        out List<TranslationRegion>? reused)
+        out List<TranslationRegion>? reused,
+        out List<TranslationRegion>? stillVisible)
     {
         winRect = default;
         reused = null;
+        stillVisible = null;
 
         FrameSnapshot? snap;
         lock (_lastCompletedFrameLock) snap = _lastCompletedFrame;
@@ -508,7 +553,20 @@ public class TranslationEngine : IDisposable
         }
 
         reused = snap.Translated;
-        _logger.Debug("Frame: reused previous translation ({N} regions)", reused.Count);
+        stillVisible = new List<TranslationRegion>(reused.Count);
+        foreach (var t in reused)
+        {
+            for (int j = 0; j < snap.RawBounds.Length; j++)
+            {
+                if (snapshotUsed[j] && RectOverlapRatio(t.Bounds, snap.RawBounds[j]) > 0)
+                {
+                    stillVisible.Add(t);
+                    break;
+                }
+            }
+        }
+        _logger.Debug("Frame: reused previous translation ({N} regions, {V} still on screen)",
+            reused.Count, stillVisible.Count);
         return true;
     }
 

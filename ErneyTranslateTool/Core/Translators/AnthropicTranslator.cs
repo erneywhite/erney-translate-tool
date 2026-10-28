@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -49,7 +50,7 @@ public class AnthropicTranslator : IStreamingTranslator
         int contextSize, bool useContext, ILogger logger)
     {
         _logger = logger;
-        _model = string.IsNullOrWhiteSpace(model) ? "claude-haiku-4-5" : model;
+        _model = string.IsNullOrWhiteSpace(model) ? ModelCatalog.DefaultAnthropic : model;
         // Anthropic clamps temperature to [0, 1] — values > 1 return 400.
         _temperature = Math.Clamp(temperature, 0.0, 1.0);
         _contextSize = Math.Clamp(contextSize, 0, 10);
@@ -67,14 +68,7 @@ public class AnthropicTranslator : IStreamingTranslator
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var (system, messages) = BuildPayload(text, targetName);
 
-        var request = new MessagesRequest
-        {
-            Model = _model,
-            System = system,
-            Messages = messages,
-            Temperature = _temperature,
-            MaxTokens = 1000,
-        };
+        var request = NewRequest(system, messages, maxTokens: 1000);
 
         using var resp = await _http.PostAsJsonAsync(EndpointUrl, request,
             new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
@@ -158,15 +152,8 @@ public class AnthropicTranslator : IStreamingTranslator
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var (system, messages) = BuildPayload(text, targetName);
 
-        var request = new MessagesRequest
-        {
-            Model = _model,
-            System = system,
-            Messages = messages,
-            Temperature = _temperature,
-            MaxTokens = 1000,
-            Stream = true,
-        };
+        var request = NewRequest(system, messages, maxTokens: 1000);
+        request.Stream = true;
 
         using var content = JsonContent.Create(request,
             options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
@@ -186,10 +173,10 @@ public class AnthropicTranslator : IStreamingTranslator
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(line)) continue;
             // We can ignore the "event:" line entirely — the type is also
             // inside the JSON payload as the "type" field.
@@ -238,17 +225,11 @@ public class AnthropicTranslator : IStreamingTranslator
     {
         try
         {
-            var probe = new MessagesRequest
-            {
-                Model = _model,
-                System = "You are a translator. Translate to Russian. Output only the translation.",
-                Messages = new List<MessagePart>
-                {
-                    new() { Role = "user", Content = "hello" },
-                },
-                Temperature = 0.0,
-                MaxTokens = 50,
-            };
+            var probe = NewRequest(
+                "You are a translator. Translate to Russian. Output only the translation.",
+                new List<MessagePart> { new() { Role = "user", Content = "hello" } },
+                maxTokens: 50,
+                temperature: 0.0);
 
             using var resp = await _http.PostAsJsonAsync(EndpointUrl, probe,
                 new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
@@ -268,6 +249,43 @@ public class AnthropicTranslator : IStreamingTranslator
         }
     }
 
+    /// <summary>
+    /// v1.0.30: request shape depends on the model generation.
+    /// <list type="bullet">
+    ///   <item>Claude 3.x and 4.0–4.6 take <c>temperature</c> and don't think
+    ///         unless asked — the original request shape.</item>
+    ///   <item>Claude 4.7+ and the 5.x line reject sampling params and think
+    ///         adaptively by default. A one-line game dialog needs no
+    ///         reasoning, so we drop <c>temperature</c>, ask for
+    ///         <c>effort: low</c> and switch thinking off where the model
+    ///         allows it (Haiku 5.x: <c>disabled</c>; Sonnet 5.5:
+    ///         <c>between_tools</c>; Opus can't). Thinking counts toward
+    ///         <c>max_tokens</c>, hence the bigger budget.</item>
+    /// </list>
+    /// </summary>
+    private MessagesRequest NewRequest(string system, List<MessagePart> messages, int maxTokens, double? temperature = null)
+    {
+        var request = new MessagesRequest { Model = _model, System = system, Messages = messages };
+        if (TakesSamplingParams(_model))
+        {
+            request.Temperature = temperature ?? _temperature;
+            request.MaxTokens = maxTokens;
+            return request;
+        }
+
+        request.MaxTokens = maxTokens * 4;
+        request.OutputConfig = new OutputConfigPart { Effort = "low" };
+        if (_model.StartsWith("claude-haiku-5", StringComparison.Ordinal))
+            request.Thinking = new ThinkingPart { Type = "disabled" };
+        else if (_model.StartsWith("claude-sonnet-5-5", StringComparison.Ordinal))
+            request.Thinking = new ThinkingPart { Type = "between_tools" };
+        return request;
+    }
+
+    /// <summary>True for the pre-4.7 models that still accept <c>temperature</c> (dated and dateless IDs).</summary>
+    internal static bool TakesSamplingParams(string model) =>
+        Regex.IsMatch(model, @"^claude-(3|(opus|sonnet|haiku)-4(-[0-6])?(-\d{8})?$)");
+
     private static string Truncate(string s, int max) =>
         string.IsNullOrEmpty(s) || s.Length <= max ? (s ?? string.Empty) : s.Substring(0, max) + "…";
 
@@ -286,12 +304,25 @@ public class AnthropicTranslator : IStreamingTranslator
         [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
         [JsonPropertyName("system")] public string System { get; set; } = string.Empty;
         [JsonPropertyName("messages")] public List<MessagePart> Messages { get; set; } = new();
-        [JsonPropertyName("temperature")] public double Temperature { get; set; }
+        // Null for 4.7+ / 5.x models, which reject it (see NewRequest).
+        [JsonPropertyName("temperature")] public double? Temperature { get; set; }
         [JsonPropertyName("max_tokens")] public int MaxTokens { get; set; }
         // Default null → JsonIgnoreCondition.WhenWritingNull keeps it out
         // of the regular non-streaming request. Set to true by
         // TranslateStreamAsync.
         [JsonPropertyName("stream")] public bool? Stream { get; set; }
+        [JsonPropertyName("output_config")] public OutputConfigPart? OutputConfig { get; set; }
+        [JsonPropertyName("thinking")] public ThinkingPart? Thinking { get; set; }
+    }
+
+    private class OutputConfigPart
+    {
+        [JsonPropertyName("effort")] public string Effort { get; set; } = "low";
+    }
+
+    private class ThinkingPart
+    {
+        [JsonPropertyName("type")] public string Type { get; set; } = "disabled";
     }
 
     private class MessagePart

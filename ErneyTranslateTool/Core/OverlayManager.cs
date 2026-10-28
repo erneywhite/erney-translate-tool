@@ -28,13 +28,17 @@ namespace ErneyTranslateTool.Core
 
         /// <summary>
         /// Draw a translation label on top of every detected region.
+        /// <paramref name="isPartial"/> marks an in-progress update (streaming
+        /// or per-region network translation): <paramref name="regions"/> is
+        /// only what's been translated so far, so labels missing from it must
+        /// not be treated as gone.
         /// </summary>
-        public void ShowRegions(IReadOnlyList<TranslationRegion> regions, Rect targetRect)
+        public void ShowRegions(IReadOnlyList<TranslationRegion> regions, Rect targetRect, bool isPartial = false)
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 EnsureWindow();
-                _overlayWindow!.SetRegions(regions, targetRect, _settings.Config);
+                _overlayWindow!.SetRegions(regions, targetRect, _settings.Config, isPartial);
             });
         }
 

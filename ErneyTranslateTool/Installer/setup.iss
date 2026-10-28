@@ -16,8 +16,8 @@
 ; =============================================================================
 
 #define MyAppName "Erney's Translate Tool"
-#define MyAppVersion "1.0.29"
-#define MyAppPublisher "Erney"
+#define MyAppVersion "1.0.30"
+#define MyAppPublisher "Erney White"
 #define MyAppURL "https://github.com/erneywhite/erney-translate-tool"
 #define MyAppExeName "ErneyTranslateTool.exe"
 
@@ -59,7 +59,7 @@ Name: "desktopicon"; Description: "Создать ярлык на рабочем
 
 [Files]
 ; Everything from the publish folder, including bundled tessdata and native DLLs.
-Source: "..\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\*"; \
+Source: "..\bin\Release\net10.0-windows10.0.19041.0\win-x64\publish\*"; \
     DestDir: "{app}"; \
     Flags: ignoreversion recursesubdirs createallsubdirs
 

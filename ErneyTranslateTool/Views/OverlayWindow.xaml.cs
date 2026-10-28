@@ -65,8 +65,16 @@ public partial class OverlayWindow : Window
     /// translated label on top of every detected region. Positions are snapped
     /// to a grid and existing regions stick to their previous spot while OCR
     /// rediscovers them at slightly different pixels.
+    ///
+    /// <para>v1.0.30: <paramref name="isPartial"/> = true for in-progress
+    /// updates. The list then holds only the regions translated so far, so
+    /// a label missing from it is "not reached yet", not "gone": we keep it
+    /// unless a new label overlaps it (that one is being replaced, e.g. a
+    /// merged paragraph re-translated as two lines). Before this every
+    /// streaming chunk wiped the labels further down the queue and the final
+    /// render re-created them — visible flicker on every network call.</para>
     /// </summary>
-    public void SetRegions(IReadOnlyList<TranslationRegion> regions, Rect targetWindowRect, AppConfig cfg)
+    public void SetRegions(IReadOnlyList<TranslationRegion> regions, Rect targetWindowRect, AppConfig cfg, bool isPartial = false)
     {
         Left = targetWindowRect.Left;
         Top = targetWindowRect.Top;
@@ -100,7 +108,21 @@ public partial class OverlayWindow : Window
             snapped.Add(new SnappedRegion(rect, r.OriginalText, r.TranslatedText));
         }
 
-        var fingerprint = string.Join("|",
+        if (isPartial)
+        {
+            // Nothing translated yet — leave the canvas exactly as it is.
+            if (snapped.Count == 0) return;
+            // Keep sticky positions of labels this partial list doesn't
+            // cover yet; the final render will settle them.
+            foreach (var (k, v) in _lastByOriginal)
+                next.TryAdd(k, v);
+        }
+
+        // The mode is part of the fingerprint: the last partial update of a
+        // frame often carries exactly the final region list, and if the
+        // final render short-circuited on it, labels of text that left the
+        // screen would never be dropped (partial updates don't drop them).
+        var fingerprint = (isPartial ? "P|" : "F|") + string.Join("|",
             snapped.Select(s => $"{s.Rect.X}:{s.Rect.Y}:{s.Rect.Width}:{s.Rect.Height}:{s.Text}"));
         var styleFingerprint = $"{cfg.BackgroundColor}|{cfg.TextColor}|{cfg.OverlayOpacity:F3}|" +
             $"{cfg.OverlayCornerRadius:F0}|{cfg.OverlayFontFamily}|{cfg.ManualFontSize:F0}";
@@ -236,9 +258,14 @@ public partial class OverlayWindow : Window
         }
 
         // Drop borders whose source text no longer appears in this frame.
+        // Partial update: only the ones a new label is drawn over.
         if (_activeBorders.Count != keep.Count)
         {
-            var toRemove = _activeBorders.Keys.Where(k => !keep.Contains(k)).ToList();
+            var toRemove = _activeBorders
+                .Where(kv => !keep.Contains(kv.Key)
+                             && (!isPartial || snapped.Any(s => RectsOverlap(BorderRect(kv.Value), s.Rect))))
+                .Select(kv => kv.Key)
+                .ToList();
             foreach (var k in toRemove)
             {
                 if (_activeBorders.TryGetValue(k, out var b))
@@ -257,6 +284,13 @@ public partial class OverlayWindow : Window
     }
 
     private static double Snap(double v) => Math.Round(v / SnapGrid) * SnapGrid;
+
+    /// <summary>Current on-canvas rect of a label; falls back to its min size before the first layout pass.</summary>
+    private static Rect BorderRect(Border b) => new(
+        Canvas.GetLeft(b),
+        Canvas.GetTop(b),
+        b.ActualWidth > 0 ? b.ActualWidth : b.MinWidth,
+        b.ActualHeight > 0 ? b.ActualHeight : b.MinHeight);
 
     private static bool RectsOverlap(Rect a, Rect b)
     {
