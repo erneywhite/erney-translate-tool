@@ -81,6 +81,29 @@ public class LayoutReplayTests
     }
 
     [Fact]
+    public void TwoLineLogo_GoesWhole_ButALoneBigSignStays()
+    {
+        // Night Adventure title screen.
+        var night = new List<TranslationRegion>
+        {
+            Line(228, 37, 163, 51, "HIGHT"), Line(151, 102, 322, 43, "ROENTUFE"),
+            Line(253, 408, 92, 22, "Continue"), Line(243, 462, 112, 23, "New Game"), Line(262, 513, 74, 28, "Gallery"),
+            Line(256, 569, 88, 26, "Settings"), Line(278, 622, 41, 25, "Exit"),
+        };
+        Assert.Equal(2, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.DropOversized(night));
+
+        // Yankee Massage: the START MSG clipboard is 1.7x the median but stands alone.
+        var yankee = new List<TranslationRegion>
+        {
+            Line(152, 77, 92, 25, "NORMAL"), Line(155, 109, 88, 25, "HARD"), Line(154, 142, 92, 26, "S.HARD"),
+            Line(72, 470, 175, 36, "< ENGLISH"), Line(103, 541, 54, 35, "BGM"), Line(263, 542, 36, 32, "SE"),
+            Line(737, 710, 94, 30, "ver.1.1.8"), Line(728, 751, 102, 24, "Visit Warumiyo"),
+            Line(588, 854, 103, 42, "STARTE"), Line(604, 898, 84, 40, "M SG"),
+        };
+        Assert.Equal(0, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.DropOversized(yankee));
+    }
+
+    [Fact]
     public void FewLines_AreNeverDroppedAsOversized()
     {
         var lines = new List<TranslationRegion> { Line(100, 100, 400, 80, "CHAPTER 1"), Line(100, 300, 600, 30, "The morning after.") };

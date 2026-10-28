@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ErneyTranslateTool.Models;
@@ -64,7 +65,34 @@ public static class OcrTextHelpers
         if (regions.Count < 3) return 0;
         var heights = regions.Select(r => r.Bounds.Height).OrderBy(h => h).ToList();
         var median = heights[heights.Count / 2];
-        return regions.RemoveAll(r => r.Bounds.Height > median * OversizedLineFactor);
+        var logo = regions.Where(r => r.Bounds.Height > median * OversizedLineFactor).ToList();
+        // A logo's other line can come out smaller ("NIGHT" 51 px, "ADVENTURE"
+        // 43 px at a 26 px median): a big line right next to a dropped one
+        // goes too. A big sign standing alone (a "START MSG" clipboard) stays.
+        bool grew;
+        do
+        {
+            grew = false;
+            foreach (var r in regions)
+            {
+                if (logo.Contains(r) || r.Bounds.Height < median * LogoNeighbourFactor) continue;
+                if (logo.Any(l => Touches(l.Bounds, r.Bounds, Math.Min(l.Bounds.Height, r.Bounds.Height) * 0.5)))
+                {
+                    logo.Add(r);
+                    grew = true;
+                }
+            }
+        } while (grew);
+        return regions.RemoveAll(logo.Contains);
+    }
+
+    /// <summary>How big a line next to a logo must be to count as part of it.</summary>
+    public const double LogoNeighbourFactor = 1.4;
+
+    private static bool Touches(System.Windows.Rect a, System.Windows.Rect b, double gap)
+    {
+        a.Inflate(gap, gap);
+        return a.IntersectsWith(b);
     }
 
     public static string DetectLanguage(string text)

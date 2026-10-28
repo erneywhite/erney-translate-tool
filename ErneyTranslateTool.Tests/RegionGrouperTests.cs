@@ -41,6 +41,18 @@ public class RegionGrouperTests
             L(174, 610, 300, 25, "一種傳說中的生物")));
 
     [Fact]
+    public void TitleCaseMenu_StaysSeparate() =>
+        Assert.Equal(new[] { "Continue", "New Game", "Gallery", "Settings", "Exit" },
+            Group(L(253, 408, 92, 22, "Continue"), L(243, 462, 112, 23, "New Game"), L(262, 513, 74, 28, "Gallery"),
+                  L(256, 569, 88, 26, "Settings"), L(278, 622, 41, 25, "Exit")));
+
+    [Fact]
+    public void ShortDialogueTail_StillMerges() =>
+        Assert.Single(Group(
+            L(100, 100, 700, 30, "I never thought I would see her again after all"),
+            L(100, 140, 200, 30, "these years")));
+
+    [Fact]
     public void DialogueWrap_StillMerges() =>
         Assert.Single(Group(
             L(440, 854, 818, 32, "Whether she doesn't recognize me or simply doesn't deem me"),
