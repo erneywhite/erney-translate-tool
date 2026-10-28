@@ -18,6 +18,15 @@ public sealed class FrameLayout
 {
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// Frames in a row one block may be missing from OCR before it is taken
+    /// off screen (reuse and HoldBriefDropouts). Three, not two: a small
+    /// label ("SE") dropped out for two frames in a row during typewriter
+    /// dialogue and blinked. A scene change still clears at once, and the
+    /// whole-screen vanish in the engine keeps its own two-frame rule.
+    /// </summary>
+    public const int BlockVanishFrames = 3;
+
     public FrameLayout(ILogger logger)
     {
         _logger = logger;
