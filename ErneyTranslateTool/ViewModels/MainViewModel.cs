@@ -73,8 +73,10 @@ public class MainViewModel : BaseViewModel
         OcrService ocr,
         TranslationService translation,
         ProfileManager profiles,
-        HistoryRepository history)
+        HistoryRepository history,
+        SnapshotService snapshot)
     {
+        _snapshot = snapshot;
         _engine = engine;
         _windowPicker = windowPicker;
         _settings = settings;
@@ -101,6 +103,7 @@ public class MainViewModel : BaseViewModel
         ToggleEngineCommand = new RelayCommand(async _ => await ToggleEngineAsync(), _ => CanToggle);
         TogglePauseCommand = new RelayCommand(_ => _engine.TogglePause(), _ => IsRunning);
         ToggleOverlayCommand = new RelayCommand(_ => _engine.ToggleOverlay(), _ => IsRunning);
+        ToggleSnapshotCommand = new RelayCommand(_ => ToggleSnapshotAsync().FireAndForgetSafeAsync(), _ => IsRunning || SelectedWindow != null);
         OpenHistoryCommand = new RelayCommand(_ => OpenHistoryRequested?.Invoke(this, EventArgs.Empty));
 
         // Direct field assign so the setter's persist + refresh doesn't run on load.
@@ -345,6 +348,8 @@ public class MainViewModel : BaseViewModel
     public string HotkeyHint => LanguageManager.Format("Strings.Main.HotkeyHintFmt",
         _settings.Config.ToggleTranslationHotkey, _settings.Config.ToggleOverlayHotkey);
     public string StartHotkey => _settings.Config.ToggleTranslationHotkey;
+    public string SnapshotHotkey => _settings.Config.SnapshotHotkey;
+    public bool HasSnapshotHotkey => !string.IsNullOrWhiteSpace(_settings.Config.SnapshotHotkey);
 
     public void RefreshStats()
     {
@@ -354,6 +359,8 @@ public class MainViewModel : BaseViewModel
         FrameTimeText = avg <= 0 ? "—" : $"{avg:F0}";
         OnPropertyChanged(nameof(HotkeyHint));
         OnPropertyChanged(nameof(StartHotkey));
+        OnPropertyChanged(nameof(SnapshotHotkey));
+        OnPropertyChanged(nameof(HasSnapshotHotkey));
     }
 
     // ---- live feed ----
@@ -393,6 +400,7 @@ public class MainViewModel : BaseViewModel
     public ICommand ToggleEngineCommand { get; }
     public ICommand TogglePauseCommand { get; }
     public ICommand ToggleOverlayCommand { get; }
+    public ICommand ToggleSnapshotCommand { get; }
     public ICommand OpenHistoryCommand { get; }
 
     private async Task ToggleEngineAsync()
@@ -422,6 +430,14 @@ public class MainViewModel : BaseViewModel
     /// backend, LLM context and stats stay alive, unlike a full stop.
     /// </summary>
     public void TogglePauseFromHotkey() => _engine.TogglePause();
+
+    private readonly SnapshotService _snapshot;
+
+    /// <summary>
+    /// v1.0.37: translate one snapshot of the picked (or, from the hotkey, the
+    /// active) window and freeze it; a second call removes it.
+    /// </summary>
+    public Task ToggleSnapshotAsync() => _snapshot.ToggleAsync(SelectedWindow?.Info);
 
     private static void OnUi(Action action)
     {

@@ -252,6 +252,9 @@ public class AppConfig
     /// </summary>
     public string PauseTranslationHotkey { get; set; } = string.Empty;
 
+    /// <summary>v1.0.37: translate one snapshot of the window and freeze it; press again to remove.</summary>
+    public string SnapshotHotkey { get; set; } = "Ctrl+Shift+E";
+
     /// <summary>
     /// Source OCR language tag (e.g. "en-US"). Empty = auto.
     /// </summary>

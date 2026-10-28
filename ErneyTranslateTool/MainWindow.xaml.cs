@@ -182,6 +182,7 @@ public partial class MainWindow : Window
         _hotkeys.UnregisterHotkey("toggle-translation");
         _hotkeys.UnregisterHotkey("toggle-overlay");
         _hotkeys.UnregisterHotkey("toggle-pause");
+        _hotkeys.UnregisterHotkey("snapshot");
 
         if (HotkeyParser.TryParse(_settings.Config.ToggleTranslationHotkey, out var mod1, out var vk1))
         {
@@ -199,6 +200,11 @@ public partial class MainWindow : Window
         {
             _hotkeys.RegisterHotkey("toggle-pause", mod3, vk3,
                 () => MainVM.TogglePauseFromHotkey());
+        }
+        if (HotkeyParser.TryParse(_settings.Config.SnapshotHotkey, out var mod4, out var vk4))
+        {
+            _hotkeys.RegisterHotkey("snapshot", mod4, vk4,
+                () => MainVM.ToggleSnapshotAsync().FireAndForgetSafeAsync());
         }
     }
 

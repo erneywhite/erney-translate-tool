@@ -60,6 +60,7 @@ public class SettingsViewModel : BaseViewModel
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
     private string _pauseTranslationHotkey = string.Empty;
+    private string _snapshotHotkey = string.Empty;
     private string _selectedOcrEngine = OcrService.EnginePaddle;
     private OcrLanguageOption? _selectedOcrLanguage;
     private string _saveStatus = string.Empty;
@@ -674,6 +675,21 @@ public class SettingsViewModel : BaseViewModel
         }
     }
 
+    /// <summary>v1.0.37: translate a snapshot of the window and freeze it; press again to remove.</summary>
+    public string SnapshotHotkey
+    {
+        get => _snapshotHotkey;
+        set
+        {
+            if (SetProperty(ref _snapshotHotkey, value))
+            {
+                _appSettings.Config.SnapshotHotkey = value ?? string.Empty;
+                _appSettings.Save();
+                HotkeysChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+    }
+
     public string SelectedOcrEngine
     {
         get => _selectedOcrEngine;
@@ -1058,6 +1074,8 @@ public class SettingsViewModel : BaseViewModel
         OnPropertyChanged(nameof(ToggleOverlayHotkey));
         _pauseTranslationHotkey = c.PauseTranslationHotkey;
         OnPropertyChanged(nameof(PauseTranslationHotkey));
+        _snapshotHotkey = c.SnapshotHotkey;
+        OnPropertyChanged(nameof(SnapshotHotkey));
 
         SelectedOcrEngine = string.IsNullOrWhiteSpace(c.OcrEngine) ? OcrService.EnginePaddle : c.OcrEngine;
         UseBestTessdata = c.UseBestTessdata;
@@ -1281,6 +1299,7 @@ public class SettingsViewModel : BaseViewModel
         c.ToggleTranslationHotkey = ToggleTranslationHotkey;
         c.ToggleOverlayHotkey = ToggleOverlayHotkey;
         c.PauseTranslationHotkey = PauseTranslationHotkey ?? string.Empty;
+        c.SnapshotHotkey = SnapshotHotkey ?? string.Empty;
     }
 
     private void Save()

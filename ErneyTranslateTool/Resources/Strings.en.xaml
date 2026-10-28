@@ -178,6 +178,15 @@
     <sys:String x:Key="Strings.OS.RecordOcr">Record recognised text</sys:String>
     <sys:String x:Key="Strings.OS.RecordOcrHint">While this is on, the app saves what OCR found on every frame: line positions and text, no images. It helps track down a flickering translation: turn it on, wait half a minute on the scene that flickers and send the file to the developer. Recording turns off when the app restarts.</sys:String>
     <sys:String x:Key="Strings.OS.OpenRecordings">Open recordings folder</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeySnapshot">Translate snapshot:</sys:String>
+    <sys:String x:Key="Strings.Main.Snapshot">Snapshot</sys:String>
+    <sys:String x:Key="Strings.Main.SnapshotTip">Translate the screen once and keep the translation. Press again to remove it. Handy for animated screens.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NoWindow">Snapshot: pick a window on the main tab or make the game window active.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.Working">Translating a snapshot: {0}…</sys:String>
+    <sys:String x:Key="Strings.Snapshot.Done">Snapshot translated: {0}. Press again to remove it.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NoText">Snapshot: no text found.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NoPicture">Snapshot: could not capture the window. Is the game in exclusive fullscreen?</sys:String>
+    <sys:String x:Key="Strings.Snapshot.Failed">Snapshot failed: {0}</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTray">Minimise to tray on "×" instead of exiting</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTrayHint">Full exit — right-click the tray icon → "Exit".</sys:String>
     <sys:String x:Key="Strings.OS.CheckUpdates">Check for updates on startup (background, silent)</sys:String>

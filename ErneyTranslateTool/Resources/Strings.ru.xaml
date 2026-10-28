@@ -180,6 +180,15 @@
     <sys:String x:Key="Strings.OS.RecordOcr">Записывать распознанный текст</sys:String>
     <sys:String x:Key="Strings.OS.RecordOcrHint">Пока галочка стоит, программа сохраняет, что OCR нашёл на каждом кадре: координаты строк и текст, без картинок. Нужно, чтобы разобрать мерцание перевода: включи, подожди полминуты на проблемной сцене и пришли файл разработчику. После перезапуска программы запись выключается.</sys:String>
     <sys:String x:Key="Strings.OS.OpenRecordings">Открыть папку записей</sys:String>
+    <sys:String x:Key="Strings.TS.HotkeySnapshot">Перевести снимок:</sys:String>
+    <sys:String x:Key="Strings.Main.Snapshot">Снимок</sys:String>
+    <sys:String x:Key="Strings.Main.SnapshotTip">Перевести экран один раз и оставить перевод. Нажми ещё раз, чтобы убрать. Удобно для экранов с анимацией.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NoWindow">Снимок: выбери окно на Главной или сделай активным окно игры.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.Working">Перевожу снимок: {0}…</sys:String>
+    <sys:String x:Key="Strings.Snapshot.Done">Снимок переведён: {0}. Нажми ещё раз, чтобы убрать.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NoText">Снимок: текст не найден.</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NoPicture">Снимок: не удалось снять окно. Игра в полноэкранном режиме?</sys:String>
+    <sys:String x:Key="Strings.Snapshot.Failed">Снимок не удался: {0}</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTray">Сворачивать в трей при нажатии «×» вместо выхода</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTrayHint">Полный выход — через ПКМ по иконке в трее → «Выход».</sys:String>
     <sys:String x:Key="Strings.OS.CheckUpdates">Проверять обновления при запуске (фоном, тихо)</sys:String>

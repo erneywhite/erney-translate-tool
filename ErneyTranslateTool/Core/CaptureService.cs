@@ -150,6 +150,9 @@ namespace ErneyTranslateTool.Core
         /// (works for hardware-rendered apps like Chromium browsers and most modern UI),
         /// falls back to GDI BitBlt when PrintWindow can't honor the request.
         /// </summary>
+        /// <summary>v1.0.37: one frame of any window, for the snapshot translation.</summary>
+        public Bitmap? CaptureOnce(IntPtr hWnd) => CaptureWindow(hWnd);
+
         private Bitmap? CaptureWindow(IntPtr hWnd)
         {
             if (!GetWindowRect(hWnd, out RECT rect))

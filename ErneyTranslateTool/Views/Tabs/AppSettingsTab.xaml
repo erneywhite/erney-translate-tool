@@ -95,6 +95,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyToggle}"
@@ -115,7 +116,14 @@
                                    Foreground="{DynamicResource TextPrimaryBrush}"
                                    VerticalAlignment="Center"/>
                         <controls:HotkeyCaptureBox Grid.Row="2" Grid.Column="1"
-                                                   Hotkey="{Binding PauseTranslationHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                   Hotkey="{Binding PauseTranslationHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeySnapshot}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="3" Grid.Column="1"
+                                                   Hotkey="{Binding SnapshotHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </Grid>
                 </StackPanel>
             </GroupBox>

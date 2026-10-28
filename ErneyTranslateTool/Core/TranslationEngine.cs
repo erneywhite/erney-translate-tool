@@ -123,6 +123,9 @@ public class TranslationEngine : IDisposable
 
     public event EventHandler? StateChanged;
     public event EventHandler<string>? StatusUpdated;
+
+    /// <summary>Show a line in the main status (the snapshot translation reports through here).</summary>
+    public void ReportStatus(string message) => StatusUpdated?.Invoke(this, message);
     /// <summary>Raised when <see cref="IsUserPaused"/> flips. Tray + main VM listen so the icon and status text stay accurate.</summary>
     public event EventHandler<bool>? UserPauseChanged;
 
