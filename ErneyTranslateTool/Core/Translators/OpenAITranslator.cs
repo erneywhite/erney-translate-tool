@@ -333,7 +333,9 @@ public class OpenAITranslator : IStreamingTranslator
                     new() { Role = "user", Content = "hello" },
                 };
                 using var resp = await _http.PostAsJsonAsync(_endpoint,
-                    NewRequest(messages, maxTokens: 50, temperature: 0.0),
+                    // Compatible servers often run reasoning models whose
+                    // thinking eats a 50-token budget before any answer.
+                    NewRequest(messages, maxTokens: _compat ? 400 : 50, temperature: 0.0),
                     new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
                 if (!resp.IsSuccessStatusCode)
                 {

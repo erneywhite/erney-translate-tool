@@ -7,7 +7,7 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>ErneyTranslateTool</RootNamespace>
     <AssemblyName>ErneyTranslateTool</AssemblyName>
-    <Version>1.0.33</Version>
+    <Version>1.0.34</Version>
     <Authors>Erney White</Authors>
     <Company>Erney White</Company>
     <Product>Erney's Translate Tool</Product>

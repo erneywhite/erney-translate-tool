@@ -26,6 +26,9 @@ namespace ErneyTranslateTool.Core;
 /// </summary>
 public class TranslationService : IDisposable
 {
+    /// <summary>Upper bound for one streamed reply, start to finish.</summary>
+    private static readonly TimeSpan StreamTimeout = TimeSpan.FromSeconds(90);
+
     /// <summary>How many primary failures in a row trigger the switch to fallback.</summary>
     private const int FailureThreshold = 3;
 
@@ -315,10 +318,18 @@ public class TranslationService : IDisposable
         Action<TranslationRegion> onRegionUpdated,
         CancellationToken ct)
     {
+        // v1.0.34: HttpClient.Timeout only covers getting the response
+        // headers when a stream is read with ResponseHeadersRead; the body
+        // itself had no limit. A server that keeps the stream open (OpenRouter
+        // sends ": PROCESSING" keep-alive comments while a free model sits in
+        // a queue) held this region — and with single-flight frames, the whole
+        // pipeline — for minutes.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(StreamTimeout);
         try
         {
             string final = string.Empty;
-            await foreach (var chunk in streamer.TranslateStreamAsync(region.OriginalText, targetLanguage, ct))
+            await foreach (var chunk in streamer.TranslateStreamAsync(region.OriginalText, targetLanguage, timeout.Token))
             {
                 if (string.IsNullOrEmpty(chunk)) continue;
                 region.TranslatedText = chunk;
@@ -329,6 +340,12 @@ public class TranslationService : IDisposable
             // so the existing fallback machinery's invariants hold.
             if (!_usingFallback) _consecutiveFailures = 0;
             return final;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // Our timeout, not a Stop: a failed request, not the end of the frame.
+            throw new TimeoutException(
+                $"{streamer.Name}: no complete reply within {StreamTimeout.TotalSeconds:F0} s");
         }
         catch (OperationCanceledException)
         {

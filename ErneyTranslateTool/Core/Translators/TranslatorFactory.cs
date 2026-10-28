@@ -48,6 +48,17 @@ public static class TranslatorFactory
         _ => provider
     };
 
+    /// <summary>Short name for status chips ("Перевод: Google Translate").</summary>
+    public static string ShortName(string provider) => provider switch
+    {
+        ProviderGoogleFree => "Google Translate",
+        ProviderLibreTranslate => "LibreTranslate",
+        ProviderGemini => "Gemini",
+        ProviderAnthropic => "Claude",
+        ProviderCustomLlm => "свой сервер",
+        _ => provider,
+    };
+
     /// <summary>
     /// Build a translator instance from current settings. Returns null and a
     /// human-readable error if required credentials are missing.
