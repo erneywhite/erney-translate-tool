@@ -117,6 +117,8 @@ public partial class OverlayWindow : Window
         {
             if (string.IsNullOrWhiteSpace(r.TranslatedText)) continue;
             if (r.Bounds.Width <= 0 || r.Bounds.Height <= 0) continue;
+            // Nothing to replace: leave the game's own lettering visible.
+            if (ErneyTranslateTool.Core.Ocr.OcrTextHelpers.IsUntranslated(r.OriginalText, r.TranslatedText)) continue;
 
             var rect = new Rect(
                 Snap(r.Bounds.X),
