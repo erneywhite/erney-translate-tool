@@ -42,6 +42,18 @@ public class AppConfig
     public string GroqModel { get; set; } = Core.Translators.ModelCatalog.DefaultGroq;
 
     /// <summary>
+    /// v1.0.34: any OpenAI-compatible server — Ollama, LM Studio, OpenRouter,
+    /// DeepSeek. Base URL as the server's docs give it (".../v1" or not).
+    /// </summary>
+    public string CustomLlmBaseUrl { get; set; } = "http://localhost:11434/v1";
+
+    /// <summary>Model id on that server, e.g. "qwen2.5:7b". No default — it depends on what the user has.</summary>
+    public string CustomLlmModel { get; set; } = string.Empty;
+
+    /// <summary>Optional key (OpenRouter, DeepSeek); local servers need none.</summary>
+    public string? EncryptedCustomLlmKey { get; set; }
+
+    /// <summary>
     /// Sampling temperature for LLM providers (0.0 = deterministic,
     /// 1.0 = creative). Translation usually wants low temperature so
     /// the same line doesn't render five different ways across a

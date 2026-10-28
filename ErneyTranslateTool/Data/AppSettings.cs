@@ -284,6 +284,17 @@ public class AppSettings
     /// <summary>Returns the decrypted Groq key or null if not set.</summary>
     public string? GetGroqKey() => DecryptOrNull(_config.EncryptedGroqKey, "Groq");
 
+    /// <summary>Key for the OpenAI-compatible server. Empty clears it (local servers need none).</summary>
+    public void SetCustomLlmKey(string apiKey)
+    {
+        var value = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey;
+        if (value == GetCustomLlmKey()) return;
+        _config.EncryptedCustomLlmKey = value == null ? null : Convert.ToBase64String(Protect(value));
+        _logger.Information("Custom LLM key updated");
+    }
+
+    public string? GetCustomLlmKey() => DecryptOrNull(_config.EncryptedCustomLlmKey, "Custom LLM");
+
     /// <summary>Shared decrypt helper — DRY for the LLM-key getters.</summary>
     private string? DecryptOrNull(string? encryptedB64, string label)
     {

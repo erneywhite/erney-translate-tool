@@ -111,9 +111,19 @@
     <sys:String x:Key="Strings.TS.GeminiKey">API-ключ Google Gemini (AIzaSy...):</sys:String>
     <sys:String x:Key="Strings.TS.GroqKey">API-ключ Groq (gsk_...):</sys:String>
     <sys:String x:Key="Strings.TS.Model">Модель:</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.Url">Адрес сервера:</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.Quick">Быстро:</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.Key">API-ключ (только для облачных сервисов, для Ollama и LM Studio не нужен):</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.Fetch">Получить список моделей</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.ListHint">Модели, которые нашлись на сервере</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.Fetching">Спрашиваю сервер…</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.NoModels">Сервер ответил, но моделей нет. В Ollama модель скачивается командой ollama pull.</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.Unreachable">Сервер не отвечает. Проверь, что Ollama или LM Studio запущены и адрес верный.</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.FoundFmt">Найдено моделей: {0}</sys:String>
+    <sys:String x:Key="Strings.TS.Custom.FetchErrorFmt">Не удалось получить список: {0}</sys:String>
     <sys:String x:Key="Strings.TS.ModelTextHint">Введи id модели или выбери из пресетов справа</sys:String>
     <sys:String x:Key="Strings.TS.ModelPresetsHint">Пресеты — выбор подставит id в поле слева</sys:String>
-    <sys:String x:Key="Strings.TS.LlmHelp">Параметры ниже общие для OpenAI и Anthropic — задаются здесь и применяются к тому, что выбрано как основной провайдер выше.</sys:String>
+    <sys:String x:Key="Strings.TS.LlmHelp">Параметры ниже общие для всех ИИ-переводчиков — задаются здесь и применяются к тому, что выбрано как основной провайдер выше.</sys:String>
     <sys:String x:Key="Strings.TS.Temperature">Температура:</sys:String>
     <sys:String x:Key="Strings.TS.Temperature.Tooltip">0 = одинаковый перевод каждый раз, 1 = более свободный/креативный. Для перевода обычно 0.2–0.4.</sys:String>
     <sys:String x:Key="Strings.TS.UseContext">Передавать контекст последних реплик</sys:String>
@@ -238,7 +248,7 @@
     <sys:String x:Key="Strings.About.HotkeyOverlay">Показать/скрыть оверлей:</sys:String>
     <sys:String x:Key="Strings.About.WhatInside">Что внутри</sys:String>
     <sys:String x:Key="Strings.About.OcrInside">Распознавание (OCR): три движка — PaddleOCR (нейросеть, по умолчанию, лучшая точность), Tesseract (быстрее, средняя точность), Windows OCR (нужны системные языковые пакеты). Tesseract поддерживает 30+ языков (Европа целиком, кириллица, японский, китайский, корейский). PaddleOCR — 12 семейств моделей включая режим «Авто» (англ+яп+кириллица одновременно).</sys:String>
-    <sys:String x:Key="Strings.About.TranslateInside">Перевод: восемь сервисов — MyMemory (бесплатно), Google Translate (бесплатно, без ключа), DeepL (нужен ключ + карта), LibreTranslate (open source), Google Gemini (LLM, бесплатный free tier), Groq (LLM, бесплатно, очень быстрый), OpenAI (LLM, платный), Anthropic Claude (LLM, платный). Можно настроить резервный провайдер на случай если основной упал.</sys:String>
+    <sys:String x:Key="Strings.About.TranslateInside">Перевод: девять сервисов — MyMemory (бесплатно), Google Translate (бесплатно, без ключа), DeepL (нужен ключ + карта), LibreTranslate (open source), Google Gemini (LLM, бесплатный free tier), Groq (LLM, бесплатно, очень быстрый), свой сервер: Ollama, LM Studio, OpenRouter (LLM, локально бесплатно), OpenAI (LLM, платный), Anthropic Claude (LLM, платный). Можно настроить резервный провайдер на случай если основной упал.</sys:String>
     <sys:String x:Key="Strings.About.CaptureInside">Захват экрана: Windows API PrintWindow с флагом RENDERFULLCONTENT — работает с современными играми, Chromium-браузерами и UWP.</sys:String>
     <sys:String x:Key="Strings.About.FilesGroup">Где хранятся файлы программы</sys:String>
     <sys:String x:Key="Strings.About.FilesIntro">Все данные хранятся рядом с программой (или в %AppData%\ErneyTranslateTool если папка только для чтения):</sys:String>

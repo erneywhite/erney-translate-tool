@@ -30,9 +30,18 @@ namespace ErneyTranslateTool.Core.Translators;
 /// </summary>
 public class OpenAITranslator : IStreamingTranslator
 {
-    private const string EndpointUrl = "https://api.openai.com/v1/chat/completions";
+    private const string OpenAIEndpoint = "https://api.openai.com/v1/chat/completions";
 
-    public string Name => "OpenAI";
+    public string Name { get; }
+
+    // v1.0.34: the same class serves any OpenAI-compatible server (Ollama,
+    // LM Studio, OpenRouter, DeepSeek...) when built with a base URL. Such
+    // servers get the classic request shape (temperature + max_tokens) —
+    // OpenAI's newer fields are not universally understood — no auth header
+    // when there's no key, and a longer timeout: a local model loads into
+    // memory on its first request.
+    private readonly string _endpoint;
+    private readonly bool _compat;
 
     private readonly HttpClient _http;
     private readonly ILogger _logger;
@@ -46,18 +55,88 @@ public class OpenAITranslator : IStreamingTranslator
     private readonly object _contextLock = new();
     private bool _disposed;
 
-    public OpenAITranslator(string apiKey, string model, double temperature,
-        int contextSize, bool useContext, ILogger logger)
+    public OpenAITranslator(string? apiKey, string model, double temperature,
+        int contextSize, bool useContext, ILogger logger,
+        string? baseUrl = null, string name = "OpenAI")
     {
         _logger = logger;
+        Name = name;
+        _compat = !string.IsNullOrWhiteSpace(baseUrl);
+        _endpoint = _compat ? ChatCompletionsUrl(baseUrl!) : OpenAIEndpoint;
         _model = string.IsNullOrWhiteSpace(model) ? ModelCatalog.DefaultOpenAI : model;
         _temperature = Math.Clamp(temperature, 0.0, 2.0);
         _contextSize = Math.Clamp(contextSize, 0, 10);
         _useContext = useContext;
 
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        _http.DefaultRequestHeaders.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(_compat ? 120 : 30) };
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            _http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+    }
+
+    /// <summary>
+    /// "http://localhost:11434" / ".../v1" / ".../v1/chat/completions" all
+    /// mean the same server — users paste whichever their tool's docs show.
+    /// </summary>
+    internal static string ChatCompletionsUrl(string baseUrl) =>
+        ApiRoot(baseUrl) + "/chat/completions";
+
+    /// <summary>Base URL normalised to the API root, e.g. "http://localhost:11434/v1".</summary>
+    internal static string ApiRoot(string baseUrl)
+    {
+        var url = baseUrl.Trim().TrimEnd('/');
+        if (url.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+            url = url[..^"/chat/completions".Length];
+        if (url.EndsWith("/models", StringComparison.OrdinalIgnoreCase))
+            url = url[..^"/models".Length];
+        if (!Regex.IsMatch(url, @"/v\d+(/|$)"))
+            url += "/v1";
+        return url;
+    }
+
+    /// <summary>
+    /// Ids from GET {root}/models — fills the model dropdown for a local
+    /// server, so nobody has to remember "qwen2.5:7b-instruct-q4_K_M".
+    /// </summary>
+    public static async Task<List<string>> ListModelsAsync(string baseUrl, string? apiKey, CancellationToken ct = default)
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        using var doc = JsonDocument.Parse(await http.GetStringAsync(ApiRoot(baseUrl) + "/models", ct));
+        var ids = new List<string>();
+        if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+            foreach (var m in data.EnumerateArray())
+                if (m.TryGetProperty("id", out var id) && id.GetString() is { Length: > 0 } s)
+                    ids.Add(s);
+        ids.Sort(StringComparer.OrdinalIgnoreCase);
+        return ids;
+    }
+
+    /// <summary>
+    /// Reasoning models served through a compatible API (Qwen3, DeepSeek-R1
+    /// on Ollama / LM Studio) can put their chain of thought inline as
+    /// &lt;think&gt;...&lt;/think&gt;; it must never reach the overlay. An unclosed
+    /// block (still streaming) hides everything from its start, and a
+    /// half-received "&lt;thi" at the very end is held back too.
+    /// </summary>
+    internal static string StripThinking(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        var result = Regex.Replace(text, @"<think>.*?</think>", string.Empty, RegexOptions.Singleline);
+        var open = result.IndexOf("<think>", StringComparison.Ordinal);
+        if (open >= 0) result = result[..open];
+        const string tag = "<think>";
+        for (int len = Math.Min(tag.Length - 1, result.Length); len > 0; len--)
+        {
+            if (result.EndsWith(tag[..len], StringComparison.Ordinal))
+            {
+                result = result[..^len];
+                break;
+            }
+        }
+        return result;
     }
 
     public async Task<string> TranslateAsync(string text, string targetLanguage, CancellationToken ct = default)
@@ -72,7 +151,7 @@ public class OpenAITranslator : IStreamingTranslator
         // sentence on long subtitles.
         var request = NewRequest(messages, maxTokens: 1000);
 
-        using var resp = await _http.PostAsJsonAsync(EndpointUrl, request,
+        using var resp = await _http.PostAsJsonAsync(_endpoint, request,
             new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
 
         if (!resp.IsSuccessStatusCode)
@@ -81,11 +160,11 @@ public class OpenAITranslator : IStreamingTranslator
             // useful than a bare status code in the log.
             var body = await resp.Content.ReadAsStringAsync(ct);
             throw new HttpRequestException(
-                $"OpenAI API {(int)resp.StatusCode}: {Truncate(body, 300)}");
+                $"{Name} API {(int)resp.StatusCode}: {Truncate(body, 300)}");
         }
 
         var parsed = await resp.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken: ct);
-        var translated = parsed?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? string.Empty;
+        var translated = StripThinking(parsed?.Choices?.FirstOrDefault()?.Message?.Content ?? string.Empty).Trim();
 
         if (!string.IsNullOrEmpty(translated))
             RememberContext(text, translated);
@@ -169,7 +248,7 @@ public class OpenAITranslator : IStreamingTranslator
 
         using var content = JsonContent.Create(request,
             options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
-        using var req = new HttpRequestMessage(HttpMethod.Post, EndpointUrl) { Content = content };
+        using var req = new HttpRequestMessage(HttpMethod.Post, _endpoint) { Content = content };
         // ResponseHeadersRead so we don't buffer the whole body — without it
         // HttpClient waits for the response to finish before returning,
         // defeating the entire point of streaming.
@@ -179,7 +258,7 @@ public class OpenAITranslator : IStreamingTranslator
         {
             var body = await resp.Content.ReadAsStringAsync(ct);
             throw new HttpRequestException(
-                $"OpenAI API {(int)resp.StatusCode}: {Truncate(body, 300)}");
+                $"{Name} API {(int)resp.StatusCode}: {Truncate(body, 300)}");
         }
 
         var accumulated = new StringBuilder();
@@ -223,11 +302,14 @@ public class OpenAITranslator : IStreamingTranslator
             // Trim only the leading whitespace progressively — the model
             // sometimes prefixes the first token with a space; users would
             // see " Перевод..." which looks broken.
-            var snapshot = accumulated.ToString();
-            yield return accumulated.Length == delta.Length ? snapshot.TrimStart() : snapshot;
+            // Inline <think> blocks of local reasoning models are cut, so the
+            // overlay stays empty until the actual answer starts.
+            var visible = StripThinking(accumulated.ToString()).TrimStart();
+            if (visible.Length == 0) continue;
+            yield return visible;
         }
 
-        var final = accumulated.ToString().Trim();
+        var final = StripThinking(accumulated.ToString()).Trim();
         if (!string.IsNullOrEmpty(final))
             RememberContext(text, final);
     }
@@ -250,17 +332,17 @@ public class OpenAITranslator : IStreamingTranslator
                     new() { Role = "system", Content = "You are a translator. Translate to Russian. Output only the translation." },
                     new() { Role = "user", Content = "hello" },
                 };
-                using var resp = await _http.PostAsJsonAsync(EndpointUrl,
+                using var resp = await _http.PostAsJsonAsync(_endpoint,
                     NewRequest(messages, maxTokens: 50, temperature: 0.0),
                     new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
                 if (!resp.IsSuccessStatusCode)
                 {
                     var body = await resp.Content.ReadAsStringAsync(ct);
-                    return (false, $"OpenAI: {(int)resp.StatusCode} — {Truncate(body, 200)}");
+                    return (false, $"{Name}: {(int)resp.StatusCode} — {Truncate(body, 200)}");
                 }
                 var parsed = await resp.Content.ReadFromJsonAsync<ChatResponse>(cancellationToken: ct);
-                var sample = parsed?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? "?";
-                return (true, $"OpenAI ({_model}): соединение OK.\nПример: hello → {sample}");
+                var sample = StripThinking(parsed?.Choices?.FirstOrDefault()?.Message?.Content ?? "?").Trim();
+                return (true, $"{Name} ({_model}): соединение OK.\nПример: hello → {sample}");
             }
             finally
             {
@@ -269,8 +351,8 @@ public class OpenAITranslator : IStreamingTranslator
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "OpenAI verify failed");
-            return (false, $"OpenAI: {ex.Message}");
+            _logger.Error(ex, "{Name} verify failed", Name);
+            return (false, $"{Name}: {ex.Message}");
         }
     }
 
@@ -286,6 +368,14 @@ public class OpenAITranslator : IStreamingTranslator
     private ChatRequest NewRequest(List<ChatMessage> messages, int maxTokens, double? temperature = null)
     {
         var request = new ChatRequest { Model = _model, Messages = messages };
+        if (_compat)
+        {
+            // Classic fields every compatible server knows. Budget x4: local
+            // reasoning models spend tokens on <think> before the answer.
+            request.Temperature = temperature ?? _temperature;
+            request.MaxTokens = maxTokens * 4;
+            return request;
+        }
         var effort = ReasoningEffortFor(_model);
         if (effort == null)
         {
@@ -330,7 +420,9 @@ public class OpenAITranslator : IStreamingTranslator
         [JsonPropertyName("messages")] public List<ChatMessage> Messages { get; set; } = new();
         // Null for reasoning models, which reject it (see NewRequest).
         [JsonPropertyName("temperature")] public double? Temperature { get; set; }
-        [JsonPropertyName("max_completion_tokens")] public int MaxCompletionTokens { get; set; }
+        [JsonPropertyName("max_completion_tokens")] public int? MaxCompletionTokens { get; set; }
+        // Compatible servers only (Ollama, LM Studio, OpenRouter...).
+        [JsonPropertyName("max_tokens")] public int? MaxTokens { get; set; }
         [JsonPropertyName("reasoning_effort")] public string? ReasoningEffort { get; set; }
         // Default false → JsonIgnoreCondition.WhenWritingNull keeps it out
         // of the payload for the regular non-streaming path. Set to true

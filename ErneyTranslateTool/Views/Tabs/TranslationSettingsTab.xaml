@@ -158,6 +158,51 @@
                         </Grid>
                     </StackPanel>
 
+                    <!-- v1.0.34: any OpenAI-compatible server (Ollama, LM Studio,
+                         OpenRouter, DeepSeek). Same translator as OpenAI in
+                         compatibility mode; key optional. -->
+                    <StackPanel Visibility="{Binding IsCustomLlm, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{DynamicResource Strings.TS.Custom.Url}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding CustomLlmBaseUrl, UpdateSourceTrigger=PropertyChanged}"
+                                 FontFamily="Consolas" Margin="0,0,0,6"/>
+                        <WrapPanel Margin="0,0,0,10">
+                            <TextBlock Text="{DynamicResource Strings.TS.Custom.Quick}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Button Content="Ollama" Padding="10,4" Margin="0,0,6,0"
+                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="http://localhost:11434/v1"/>
+                            <Button Content="LM Studio" Padding="10,4" Margin="0,0,6,0"
+                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="http://localhost:1234/v1"/>
+                            <Button Content="OpenRouter" Padding="10,4" Margin="0,0,6,0"
+                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="https://openrouter.ai/api/v1"/>
+                            <Button Content="DeepSeek" Padding="10,4"
+                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="https://api.deepseek.com/v1"/>
+                        </WrapPanel>
+                        <TextBlock Text="{DynamicResource Strings.TS.Custom.Key}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <controls:MaskedSecretBox Secret="{Binding CustomLlmApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                                                  Margin="0,0,0,8"/>
+                        <TextBlock Text="{DynamicResource Strings.TS.Model}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="280"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding CustomLlmModel, UpdateSourceTrigger=PropertyChanged}"
+                                     FontFamily="Consolas"
+                                     Margin="0,0,8,0"
+                                     ToolTip="{DynamicResource Strings.TS.ModelTextHint}"/>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding CustomLlmModels}"
+                                      SelectedItem="{Binding CustomLlmModel, Mode=OneWayToSource, UpdateSourceTrigger=PropertyChanged}"
+                                      ToolTip="{DynamicResource Strings.TS.Custom.ListHint}"/>
+                        </Grid>
+                        <Button Content="{DynamicResource Strings.TS.Custom.Fetch}"
+                                Command="{Binding FetchCustomLlmModelsCommand}" Padding="12,5"
+                                HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                        <TextBlock Text="{Binding CustomLlmModelsStatus}" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    </StackPanel>
+
                     <!-- Temperature + context controls — common to both LLM providers. -->
                     <StackPanel Visibility="{Binding IsLlm, Converter={StaticResource BoolToVis}}"
                                 Margin="0,12,0,0">
