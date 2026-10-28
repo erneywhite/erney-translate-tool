@@ -52,4 +52,13 @@ public class TranslationRegion
     /// Whether the text contains Cyrillic characters (skip translation).
     /// </summary>
     public bool ContainsCyrillic { get; set; }
+
+    /// <summary>v1.0.35: colour behind the text in the game frame (see ColorSampler); null if not sampled.</summary>
+    public System.Windows.Media.Color? SampledBackground { get; set; }
+
+    /// <summary>v1.0.35: colour of the letters in the game frame; null when they don't stand out.</summary>
+    public System.Windows.Media.Color? SampledText { get; set; }
+
+    /// <summary>v1.0.35: height of one source line in pixels — caps the font size in "replace text" mode.</summary>
+    public double SourceLineHeight { get; set; }
 }

@@ -185,6 +185,11 @@
     <sys:String x:Key="Strings.OS.CheckUpdates">Проверять обновления при запуске (фоном, тихо)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStart">Запускать с Windows (свёрнутым в трей)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStartHint">При входе в Windows программа сразу появится в трее. Открыть — клик по иконке.</sys:String>
+    <sys:String x:Key="Strings.OS.Mode">Как показывать перевод</sys:String>
+    <sys:String x:Key="Strings.OS.ModeReplace">Заменять текст в игре</sys:String>
+    <sys:String x:Key="Strings.OS.ModeReplaceHint">Перевод встаёт на место оригинала: фон и цвет букв берутся с картинки, размер шрифта подбирается под строку. Как камера в Google Переводчике.</sys:String>
+    <sys:String x:Key="Strings.OS.ModePlate">Плашки</sys:String>
+    <sys:String x:Key="Strings.OS.ModePlateHint">Перевод на плашке своего цвета. Цвета, прозрачность, скругление и размер шрифта задаются ниже.</sys:String>
     <sys:String x:Key="Strings.OS.Presets">Готовые стили</sys:String>
     <sys:String x:Key="Strings.OS.PresetsHelp">Один клик — применятся фон, цвет текста, прозрачность и скругление углов.</sys:String>
     <sys:String x:Key="Strings.OS.Appearance">Внешний вид</sys:String>

@@ -183,6 +183,11 @@
     <sys:String x:Key="Strings.OS.CheckUpdates">Check for updates on startup (background, silent)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStart">Start with Windows (minimised to tray)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStartHint">On login the app appears in the tray right away. Click the icon to open.</sys:String>
+    <sys:String x:Key="Strings.OS.Mode">How to show the translation</sys:String>
+    <sys:String x:Key="Strings.OS.ModeReplace">Replace the text in the game</sys:String>
+    <sys:String x:Key="Strings.OS.ModeReplaceHint">The translation takes the place of the original: background and letter colours come from the picture, the font size is fitted to the line. Like the camera in Google Translate.</sys:String>
+    <sys:String x:Key="Strings.OS.ModePlate">Labels</sys:String>
+    <sys:String x:Key="Strings.OS.ModePlateHint">The translation sits on a label of its own colour. Colours, opacity, corner radius and font size are set below.</sys:String>
     <sys:String x:Key="Strings.OS.Presets">Styles</sys:String>
     <sys:String x:Key="Strings.OS.PresetsHelp">One click — applies background, text colour, opacity and corner radius.</sys:String>
     <sys:String x:Key="Strings.OS.Appearance">Appearance</sys:String>

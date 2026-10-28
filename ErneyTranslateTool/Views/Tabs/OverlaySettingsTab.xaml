@@ -54,7 +54,33 @@
         <!-- ===== settings ===== -->
         <ScrollViewer Grid.Row="1" Grid.Column="0" VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <!-- v1.0.35: how the translation is drawn. -->
                 <Border Style="{StaticResource FlatCardStyle}" Padding="16" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.OS.Mode}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                        <RadioButton GroupName="OverlayMode" IsChecked="{Binding IsReplaceMode}"
+                                     Content="{DynamicResource Strings.OS.ModeReplace}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{DynamicResource Strings.OS.ModeReplaceHint}" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="22,2,0,10"/>
+                        <RadioButton GroupName="OverlayMode" IsChecked="{Binding IsPlateMode}"
+                                     Content="{DynamicResource Strings.OS.ModePlate}"
+                                     Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{DynamicResource Strings.OS.ModePlateHint}" Style="{StaticResource Caption}"
+                                   TextWrapping="Wrap" Margin="22,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Padding="16" Margin="0,0,0,14" IsEnabled="{Binding IsPlateMode}">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource FlatCardStyle}">
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.45"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <StackPanel>
                         <TextBlock Text="{DynamicResource Strings.OS.Presets}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
                         <ItemsControl ItemsSource="{Binding OverlayPresets}">
@@ -138,22 +164,23 @@
                                   ItemsSource="{Binding SystemFonts}" SelectedItem="{Binding OverlayFontFamily}"
                                   Margin="0,0,0,10"/>
 
+                        <!-- Rows 2-6 only shape the plate; "replace" takes them from the game. -->
                         <TextBlock Grid.Row="2" Text="{DynamicResource Strings.OS.FontSize}" Style="{StaticResource RowLabel}"/>
-                        <Slider Grid.Row="2" Grid.Column="1" Minimum="8" Maximum="32"
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="8" Maximum="32" IsEnabled="{Binding IsPlateMode}"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
                                 Value="{Binding ManualFontSize}" Margin="0,0,8,10" VerticalAlignment="Center"/>
                         <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding ManualFontSize, StringFormat={}{0:F0} pt}"
                                    Style="{StaticResource RowValue}" Margin="0,0,0,10"/>
 
                         <TextBlock Grid.Row="3" Text="{DynamicResource Strings.OS.OverlayOpacity}" Style="{StaticResource RowLabel}"/>
-                        <Slider Grid.Row="3" Grid.Column="1" Minimum="0.5" Maximum="1.0"
+                        <Slider Grid.Row="3" Grid.Column="1" Minimum="0.5" Maximum="1.0" IsEnabled="{Binding IsPlateMode}"
                                 TickFrequency="0.05" IsSnapToTickEnabled="True"
                                 Value="{Binding OverlayOpacity}" Margin="0,0,8,10" VerticalAlignment="Center"/>
                         <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
                                    Style="{StaticResource RowValue}" Margin="0,0,0,10"/>
 
                         <TextBlock Grid.Row="4" Text="{DynamicResource Strings.OS.CornerRadius}" Style="{StaticResource RowLabel}"/>
-                        <Slider Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="16"
+                        <Slider Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="16" IsEnabled="{Binding IsPlateMode}"
                                 TickFrequency="1" IsSnapToTickEnabled="True"
                                 Value="{Binding OverlayCornerRadius}" Margin="0,0,8,10" VerticalAlignment="Center"/>
                         <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding OverlayCornerRadius, StringFormat={}{0:F0} px}"
@@ -165,7 +192,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
+                            <TextBox Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"
+                                     IsEnabled="{Binding IsPlateMode}"/>
                             <Border Grid.Column="1" Width="30" Height="30" Margin="8,0,0,0" CornerRadius="6"
                                     Background="{Binding BackgroundColor}"
                                     BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"/>
@@ -177,7 +205,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
+                            <TextBox Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"
+                                     IsEnabled="{Binding IsPlateMode}"/>
                             <Border Grid.Column="1" Width="30" Height="30" Margin="8,0,0,0" CornerRadius="6"
                                     Background="{Binding TextColor}"
                                     BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"/>
@@ -208,12 +237,12 @@
                         <!-- The label covers the source line like the real
                              overlay (MinWidth = source width), so it stretches. -->
                         <Border Background="{Binding PreviewBackgroundBrush}"
-                                CornerRadius="{Binding OverlayCornerRadius}"
+                                CornerRadius="{Binding PreviewCornerRadius}"
                                 Padding="4,1" VerticalAlignment="Top">
                             <TextBlock Text="{DynamicResource Strings.OS.PreviewText}" TextWrapping="Wrap"
                                        Foreground="{Binding PreviewTextBrush}"
                                        FontFamily="{Binding OverlayFontFamily}"
-                                       FontSize="{Binding ManualFontSize}"/>
+                                       FontSize="{Binding PreviewFontSize}"/>
                         </Border>
                     </Grid>
                 </Border>

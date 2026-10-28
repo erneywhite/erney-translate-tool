@@ -387,7 +387,8 @@ public class TranslationEngine : IDisposable
                 bitmap.Save(ms, ImageFormat.Png);
                 bytes = ms.ToArray();
             }
-            bitmap.Dispose();
+            // v1.0.35: the frame stays alive until the blocks are grouped —
+            // ColorSampler reads their colours from it. Disposed in finally.
 
             var rawRegions = _ocr.ProcessFrame(bytes);
             _logger.Debug("Frame: OCR -> {Count} raw regions", rawRegions.Count);
@@ -447,6 +448,15 @@ public class TranslationEngine : IDisposable
             // otherwise miss the cache and produce visibly-different
             // translations of essentially the same line.
             _layout.StabiliseAgainstRecent(regions);
+            try
+            {
+                ColorSampler.Sample(bitmap, regions, rawRegions);
+            }
+            catch (Exception ex)
+            {
+                // The overlay falls back to the plate colours.
+                _logger.Debug(ex, "Frame: colour sampling failed");
+            }
             foreach (var r in regions)
                 _logger.Debug("  -> tx[{Y:F0},{H:F0}]: '{Text}'",
                     r.Bounds.Top, r.Bounds.Height,
@@ -521,6 +531,7 @@ public class TranslationEngine : IDisposable
                     ? _lastFrameMs
                     : _avgFrameMs * 0.8 + _lastFrameMs * 0.2;
             }
+            bitmap.Dispose(); // safe if an early exit already disposed it
             Interlocked.Exchange(ref _processingFlag, 0);
         }
     }
