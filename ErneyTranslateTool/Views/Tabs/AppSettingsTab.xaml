@@ -162,6 +162,22 @@
                 </StackPanel>
             </GroupBox>
 
+            <GroupBox Header="{DynamicResource Strings.OS.Diagnostics}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <CheckBox Content="{DynamicResource Strings.OS.RecordOcr}"
+                              IsChecked="{Binding RecordOcr}"
+                              Foreground="{DynamicResource TextPrimaryBrush}"
+                              Margin="0,0,0,6"/>
+                    <TextBlock Text="{DynamicResource Strings.OS.RecordOcrHint}"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" FontSize="11"
+                               Margin="22,0,0,10"/>
+                    <Button Content="{DynamicResource Strings.OS.OpenRecordings}"
+                            Command="{Binding OpenOcrRecordingsCommand}"
+                            Padding="14,6" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </GroupBox>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

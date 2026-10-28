@@ -229,6 +229,7 @@ public class SettingsViewModel : BaseViewModel
         ApplyOverlayPresetCommand = new RelayCommand(p => ApplyOverlayPreset(p as OverlayPreset));
         ClearCacheCommand = new RelayCommand(_ => ClearCache());
         RefreshCacheStatsCommand = new RelayCommand(_ => RefreshCacheStats());
+        OpenOcrRecordingsCommand = new RelayCommand(_ => OpenOcrRecordings());
 
         BuildTessdataCatalog();
         LoadFromConfig();
@@ -693,6 +694,32 @@ public class SettingsViewModel : BaseViewModel
     public ICommand ApplyOverlayPresetCommand { get; }
     public ICommand ClearCacheCommand { get; }
     public ICommand RefreshCacheStatsCommand { get; }
+    public ICommand OpenOcrRecordingsCommand { get; }
+
+    /// <summary>Diagnostics toggle; lives on the engine and is not saved (see TranslationEngine.RecordOcr).</summary>
+    public bool RecordOcr
+    {
+        get => _engine.RecordOcr;
+        set
+        {
+            if (_engine.RecordOcr == value) return;
+            _engine.RecordOcr = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private void OpenOcrRecordings()
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(_engine.OcrRecordingsFolder);
+            Process.Start(new ProcessStartInfo(_engine.OcrRecordingsFolder) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Could not open OCR recordings folder");
+        }
+    }
 
     /// <summary>Cache size limit options shown in the dropdown. 0 == "no limit".</summary>
     public ObservableCollection<CacheSizeOption> CacheSizeOptions { get; } = new()

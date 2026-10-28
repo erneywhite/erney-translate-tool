@@ -176,6 +176,10 @@
     <sys:String x:Key="Strings.OS.AppThemeHelp">Цветовая палитра самого окна программы (применяется сразу):</sys:String>
     <sys:String x:Key="Strings.OS.AppLanguage">Язык программы:</sys:String>
     <sys:String x:Key="Strings.OS.Behavior">Поведение программы</sys:String>
+    <sys:String x:Key="Strings.OS.Diagnostics">Диагностика</sys:String>
+    <sys:String x:Key="Strings.OS.RecordOcr">Записывать распознанный текст</sys:String>
+    <sys:String x:Key="Strings.OS.RecordOcrHint">Пока галочка стоит, программа сохраняет, что OCR нашёл на каждом кадре: координаты строк и текст, без картинок. Нужно, чтобы разобрать мерцание перевода: включи, подожди полминуты на проблемной сцене и пришли файл разработчику. После перезапуска программы запись выключается.</sys:String>
+    <sys:String x:Key="Strings.OS.OpenRecordings">Открыть папку записей</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTray">Сворачивать в трей при нажатии «×» вместо выхода</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTrayHint">Полный выход — через ПКМ по иконке в трее → «Выход».</sys:String>
     <sys:String x:Key="Strings.OS.CheckUpdates">Проверять обновления при запуске (фоном, тихо)</sys:String>
