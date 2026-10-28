@@ -171,6 +171,12 @@ public sealed class SnapshotService
         var translated = await _translation.TranslateRegionsAsync(
             regions, _settings.Config.TargetLanguage, OnRegionUpdated, CancellationToken.None);
         if (!StillWanted()) return;
+        if (translated.Count == 0)
+        {
+            _engine.ReportStatus(_translation.LastProblem ?? LanguageManager.Get("Strings.Snapshot.NotTranslated"));
+            Hide();
+            return;
+        }
         _overlay.ShowRegions(translated, rect, isPartial: false, StillWanted);
         _engine.ReportStatus(LanguageManager.Format("Strings.Snapshot.Done", target.Title));
     }

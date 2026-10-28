@@ -187,6 +187,11 @@
     <sys:String x:Key="Strings.Snapshot.NoText">Snapshot: no text found.</sys:String>
     <sys:String x:Key="Strings.Snapshot.NoPicture">Snapshot: could not capture the window. Is the game in exclusive fullscreen?</sys:String>
     <sys:String x:Key="Strings.Snapshot.Failed">Snapshot failed: {0}</sys:String>
+    <sys:String x:Key="Strings.Engine.MyMemoryLimit">MyMemory: the daily limit is used up. Add an email in the MyMemory settings (50,000 characters a day instead of 5,000) or pick another translator, such as Google.</sys:String>
+    <sys:String x:Key="Strings.Engine.TranslatorLimitFmt">{0}: the request limit is used up. Wait a little or pick another translator.</sys:String>
+    <sys:String x:Key="Strings.Engine.TranslatorErrorFmt">{0} is not translating: {1}</sys:String>
+    <sys:String x:Key="Strings.Main.Chip.FallbackBrokenFmt">Fallback: {0} not set up</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NotTranslated">Snapshot: text found, but it could not be translated.</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTray">Minimise to tray on "×" instead of exiting</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTrayHint">Full exit — right-click the tray icon → "Exit".</sys:String>
     <sys:String x:Key="Strings.OS.CheckUpdates">Check for updates on startup (background, silent)</sys:String>

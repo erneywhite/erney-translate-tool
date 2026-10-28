@@ -86,6 +86,22 @@ public sealed class ParallelTranslationTests : IDisposable
     }
 
     [Fact]
+    public async Task FailedTranslation_IsReported_AndClearedAfterSuccess()
+    {
+        var reported = 0;
+        _service.TranslatorProblem += (_, _) => Interlocked.Increment(ref reported);
+
+        _service.UseTranslatorsForTests(new SlowTranslator("p", 10, fail: true), null);
+        Assert.Empty(await _service.TranslateRegionsAsync(Lines(3), "RU"));
+        Assert.NotNull(_service.LastProblem);
+        Assert.Equal(1, reported); // three failures, one message (throttled)
+
+        _service.UseTranslatorsForTests(new SlowTranslator("p", 10), null);
+        Assert.Equal(3, (await _service.TranslateRegionsAsync(Lines(3), "RU")).Count);
+        Assert.Null(_service.LastProblem);
+    }
+
+    [Fact]
     public async Task PrimaryFailingInParallel_SwitchesToFallbackOnce()
     {
         var primary = new SlowTranslator("p", 50, fail: true);

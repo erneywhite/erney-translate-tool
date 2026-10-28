@@ -97,6 +97,7 @@ public class MainViewModel : BaseViewModel
         _engine.StateChanged += (_, _) => OnUi(SyncEngineState);
         _engine.UserPauseChanged += (_, _) => OnUi(SyncEngineState);
         _engine.StatusUpdated += (_, msg) => OnUi(() => StatusMessage = msg);
+        _translation.TranslatorProblem += (_, msg) => OnUi(() => StatusMessage = msg);
         _history.TranslationAdded += (_, entry) => OnUi(() => AddToFeed(entry));
 
         RefreshWindowsCommand = new RelayCommand(_ => RefreshWindows(), _ => !IsRunning);
@@ -310,6 +311,9 @@ public class MainViewModel : BaseViewModel
             Core.Translators.TranslatorFactory.ShortName(cfg.TranslationProvider));
         FallbackChipText = string.IsNullOrEmpty(cfg.FallbackProvider)
             ? LanguageManager.Get("Strings.Main.Chip.FallbackNone")
+            // Chosen but not built (no key): say so, it won't step in.
+            : _translation.IsReady && !_translation.HasFallback
+                ? LanguageManager.Format("Strings.Main.Chip.FallbackBrokenFmt", Core.Translators.TranslatorFactory.ShortName(cfg.FallbackProvider))
             : LanguageManager.Format(_translation.IsUsingFallback
                 ? "Strings.Main.Chip.FallbackActiveFmt"
                 : "Strings.Main.Chip.FallbackFmt", Core.Translators.TranslatorFactory.ShortName(cfg.FallbackProvider));

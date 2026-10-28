@@ -53,6 +53,40 @@ public class TranslationService : IDisposable
     /// <summary>True when we've fallen back to the secondary translator.</summary>
     public bool IsUsingFallback => _usingFallback;
 
+    /// <summary>A fallback was chosen in settings and could be built (it may lack a key).</summary>
+    public bool HasFallback => _fallback != null;
+
+    /// <summary>
+    /// v1.0.37: why the last translation failed, in words for the user; null
+    /// after a success. Failures used to go only to the log: with MyMemory's
+    /// daily limit used up the overlay just stayed empty, as if OCR had read
+    /// nothing.
+    /// </summary>
+    public string? LastProblem { get; private set; }
+
+    /// <summary>Raised on a failed translation, at most every 30 seconds.</summary>
+    public event EventHandler<string>? TranslatorProblem;
+    private DateTime _lastProblemReported = DateTime.MinValue;
+
+    private void ReportProblem(Exception ex)
+    {
+        var name = CurrentProvider;
+        string message;
+        if (ex is System.Net.Http.HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests })
+            message = string.Equals(name, "MyMemory", StringComparison.OrdinalIgnoreCase)
+                ? LanguageManager.Get("Strings.Engine.MyMemoryLimit")
+                : LanguageManager.Format("Strings.Engine.TranslatorLimitFmt", name);
+        else
+            message = LanguageManager.Format("Strings.Engine.TranslatorErrorFmt", name, ex.Message);
+        LastProblem = message;
+        lock (_stateLock)
+        {
+            if (DateTime.UtcNow - _lastProblemReported < TimeSpan.FromSeconds(30)) return;
+            _lastProblemReported = DateTime.UtcNow;
+        }
+        TranslatorProblem?.Invoke(this, message);
+    }
+
     /// <summary>Raised whenever the active translator switches (primary -> fallback or back). Payload is a human-readable status line for the UI.</summary>
     public event EventHandler<string>? FallbackStateChanged;
 
@@ -321,6 +355,7 @@ public class TranslationService : IDisposable
                 // Step 4 (post-process): glossary word-boundary replace.
                 region.TranslatedText = _glossary.Apply(region.TranslatedText, targetLanguage);
                 added = true;
+                LastProblem = null;
                 // Final notify so the overlay shows the post-glossary
                 // text. For streaming this overrides the last partial
                 // chunk; for non-streaming this is the only notify.
@@ -331,6 +366,7 @@ public class TranslationService : IDisposable
         catch (Exception ex)
         {
             _logger.Error(ex, "Translation failed for: {Text}", region.OriginalText);
+            ReportProblem(ex);
             if (Volatile.Read(ref _consecutiveFailures) >= FailureThreshold)
             {
                 lock (_stateLock)

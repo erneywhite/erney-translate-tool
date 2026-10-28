@@ -189,6 +189,11 @@
     <sys:String x:Key="Strings.Snapshot.NoText">Снимок: текст не найден.</sys:String>
     <sys:String x:Key="Strings.Snapshot.NoPicture">Снимок: не удалось снять окно. Игра в полноэкранном режиме?</sys:String>
     <sys:String x:Key="Strings.Snapshot.Failed">Снимок не удался: {0}</sys:String>
+    <sys:String x:Key="Strings.Engine.MyMemoryLimit">MyMemory: дневной лимит исчерпан. Укажи email в настройках MyMemory (50 000 символов в день вместо 5 000) или выбери другой переводчик, например Google.</sys:String>
+    <sys:String x:Key="Strings.Engine.TranslatorLimitFmt">{0}: лимит запросов исчерпан. Подожди немного или выбери другой переводчик.</sys:String>
+    <sys:String x:Key="Strings.Engine.TranslatorErrorFmt">{0} не переводит: {1}</sys:String>
+    <sys:String x:Key="Strings.Main.Chip.FallbackBrokenFmt">Резерв: {0} не настроен</sys:String>
+    <sys:String x:Key="Strings.Snapshot.NotTranslated">Снимок: текст найден, но перевести не удалось.</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTray">Сворачивать в трей при нажатии «×» вместо выхода</sys:String>
     <sys:String x:Key="Strings.OS.CloseToTrayHint">Полный выход — через ПКМ по иконке в трее → «Выход».</sys:String>
     <sys:String x:Key="Strings.OS.CheckUpdates">Проверять обновления при запуске (фоном, тихо)</sys:String>
