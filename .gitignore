@@ -20,3 +20,10 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# Local AI-assistant context (Claude Code, Codex): stays on the machine
+CLAUDE.md
+AGENTS.md
+docs/SESSION-HANDOFF.md
+docs/ANALYSIS-IMPROVEMENTS.md
+.claude/
