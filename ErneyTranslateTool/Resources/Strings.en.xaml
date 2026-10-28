@@ -158,7 +158,7 @@
     <sys:String x:Key="Strings.TS.SaveBtn">Save settings</sys:String>
 
     <!-- OverlaySettings -->
-    <sys:String x:Key="Strings.OS.Title">Overlay and interface settings</sys:String>
+    <sys:String x:Key="Strings.OS.Title">Overlay</sys:String>
     <sys:String x:Key="Strings.OS.Subtitle">Look of the translation "label" overlay and the app's own theme.</sys:String>
     <sys:String x:Key="Strings.OS.AppTheme">App theme</sys:String>
     <sys:String x:Key="Strings.OS.AppThemeHelp">Colour palette of the app's own window (applied immediately):</sys:String>
@@ -169,7 +169,7 @@
     <sys:String x:Key="Strings.OS.CheckUpdates">Check for updates on startup (background, silent)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStart">Start with Windows (minimised to tray)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStartHint">On login the app appears in the tray right away. Click the icon to open.</sys:String>
-    <sys:String x:Key="Strings.OS.Presets">Overlay presets</sys:String>
+    <sys:String x:Key="Strings.OS.Presets">Styles</sys:String>
     <sys:String x:Key="Strings.OS.PresetsHelp">One click — applies background, text colour, opacity and corner radius.</sys:String>
     <sys:String x:Key="Strings.OS.Appearance">Appearance</sys:String>
     <sys:String x:Key="Strings.OS.OverlayFont">Translation font:</sys:String>
@@ -179,7 +179,10 @@
     <sys:String x:Key="Strings.OS.BgColor">Background colour:</sys:String>
     <sys:String x:Key="Strings.OS.FgColor">Text colour:</sys:String>
     <sys:String x:Key="Strings.OS.Preview">Preview</sys:String>
-    <sys:String x:Key="Strings.OS.PreviewText">Sample translated text</sys:String>
+    <sys:String x:Key="Strings.OS.PreviewText">Your translation shows up here, over the line</sys:String>
+    <sys:String x:Key="Strings.OS.AppliedInstantly">Changes apply instantly</sys:String>
+    <sys:String x:Key="Strings.OS.PreviewTitle">How it looks in the game</sys:String>
+    <sys:String x:Key="Strings.OS.ClickThroughHint">The label sits over the original line and lets clicks pass through.</sys:String>
     <sys:String x:Key="Strings.OS.SaveBtn">Save settings</sys:String>
 
     <!-- Glossary -->

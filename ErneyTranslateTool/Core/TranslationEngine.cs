@@ -271,6 +271,17 @@ public class TranslationEngine : IDisposable
         _logger.Information("Engine stopped");
     }
 
+    /// <summary>
+    /// Overlay style changed in settings: re-render on the next tick even
+    /// on a static screen, where unchanged frames are otherwise skipped.
+    /// The frame then goes through reuse, and OverlayWindow rebuilds the
+    /// labels because its style fingerprint changed.
+    /// </summary>
+    public void RequestOverlayRestyle()
+    {
+        if (IsRunning) _lastFrameHash = 0;
+    }
+
     /// <summary>True while the user has hidden the overlay with the button or hotkey.</summary>
     public bool IsOverlayHiddenByUser => _overlay.HiddenByUser;
 
@@ -331,6 +342,18 @@ public class TranslationEngine : IDisposable
         // frame can land immediately. No state mutation here — capture
         // service keeps polling, OCR/LLM/overlay just skip work.
         if (IsUserPaused)
+        {
+            bitmap.Dispose();
+            return;
+        }
+
+        // v1.0.31: OCR still loading (Start reloads the backend; PaddleOCR
+        // takes seconds to bring its models up) — drop the frame WITHOUT
+        // recording its hash. Before, the "0 regions" result of a not-ready
+        // backend got the frame hash remembered, and on a static screen every
+        // later frame matched it and was skipped: translation never started
+        // until something on screen moved.
+        if (_ocr.State != OcrBackendState.Ready)
         {
             bitmap.Dispose();
             return;

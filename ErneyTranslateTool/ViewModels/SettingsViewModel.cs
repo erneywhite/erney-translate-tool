@@ -186,8 +186,12 @@ public class SettingsViewModel : BaseViewModel
         TessdataManager tessdata,
         CacheRepository cache,
         ProfileManager profiles,
+        TranslationEngine engine,
         ILogger logger)
     {
+        _engine = engine;
+        _overlaySaveTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        _overlaySaveTimer.Tick += (_, _) => { _overlaySaveTimer.Stop(); SaveOverlayStyle(); };
         _appSettings = appSettings;
         _translationService = translationService;
         _ocrService = ocrService;
@@ -473,37 +477,37 @@ public class SettingsViewModel : BaseViewModel
     public string OverlayFontFamily
     {
         get => _overlayFontFamily;
-        set => SetProperty(ref _overlayFontFamily, value);
+        set { if (SetProperty(ref _overlayFontFamily, value)) OnOverlayStyleChanged(); }
     }
 
     public double OverlayOpacity
     {
         get => _overlayOpacity;
-        set => SetProperty(ref _overlayOpacity, value);
+        set { if (SetProperty(ref _overlayOpacity, value)) OnOverlayStyleChanged(); }
     }
 
     public string BackgroundColor
     {
         get => _backgroundColor;
-        set => SetProperty(ref _backgroundColor, value);
+        set { if (SetProperty(ref _backgroundColor, value)) OnOverlayStyleChanged(); }
     }
 
     public string TextColor
     {
         get => _textColor;
-        set => SetProperty(ref _textColor, value);
+        set { if (SetProperty(ref _textColor, value)) OnOverlayStyleChanged(); }
     }
 
     public double ManualFontSize
     {
         get => _manualFontSize;
-        set => SetProperty(ref _manualFontSize, value);
+        set { if (SetProperty(ref _manualFontSize, value)) OnOverlayStyleChanged(); }
     }
 
     public double OverlayCornerRadius
     {
         get => _overlayCornerRadius;
-        set => SetProperty(ref _overlayCornerRadius, value);
+        set { if (SetProperty(ref _overlayCornerRadius, value)) OnOverlayStyleChanged(); }
     }
 
     public string FontSizeMode
@@ -688,6 +692,88 @@ public class SettingsViewModel : BaseViewModel
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    // ---- v1.0.31 overlay tab: live preview + instant save ----
+
+    private readonly TranslationEngine _engine;
+    private readonly System.Windows.Threading.DispatcherTimer _overlaySaveTimer;
+    private Brush _previewBackgroundBrush = Brushes.Black;
+    private Brush _previewTextBrush = Brushes.White;
+    private OverlayPreset? _activePreset;
+
+    /// <summary>Label background exactly as the overlay paints it: colour + opacity on the fill only.</summary>
+    public Brush PreviewBackgroundBrush
+    {
+        get => _previewBackgroundBrush;
+        private set => SetProperty(ref _previewBackgroundBrush, value);
+    }
+
+    public Brush PreviewTextBrush
+    {
+        get => _previewTextBrush;
+        private set => SetProperty(ref _previewTextBrush, value);
+    }
+
+    /// <summary>The preset matching the current values, null after manual tweaks.</summary>
+    public OverlayPreset? ActivePreset
+    {
+        get => _activePreset;
+        private set => SetProperty(ref _activePreset, value);
+    }
+
+    private void OnOverlayStyleChanged()
+    {
+        // Same rules as OverlayWindow.SetRegions: alpha from opacity clamped
+        // to 60..255, invalid hex falls back to black / white.
+        var bg = ParseHexColor(BackgroundColor, Colors.Black);
+        bg.A = (byte)Math.Clamp(OverlayOpacity * 255, 60, 255);
+        var bgBrush = new SolidColorBrush(bg);
+        bgBrush.Freeze();
+        PreviewBackgroundBrush = bgBrush;
+        var fgBrush = new SolidColorBrush(ParseHexColor(TextColor, Colors.White));
+        fgBrush.Freeze();
+        PreviewTextBrush = fgBrush;
+
+        ActivePreset = OverlayPresets.FirstOrDefault(p =>
+            string.Equals(p.Background, BackgroundColor, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(p.Text, TextColor, StringComparison.OrdinalIgnoreCase)
+            && Math.Abs(p.Opacity - OverlayOpacity) < 0.005
+            && Math.Abs(p.CornerRadius - OverlayCornerRadius) < 0.5);
+
+        // Debounced: a slider drag fires dozens of changes per second.
+        _overlaySaveTimer?.Stop();
+        _overlaySaveTimer?.Start();
+    }
+
+    /// <summary>
+    /// Persist only the overlay fields. The full Save() also reloads the
+    /// translator and the OCR backend (seconds for PaddleOCR) — far too
+    /// heavy to run on every slider tick.
+    /// </summary>
+    private void SaveOverlayStyle()
+    {
+        var c = _appSettings.Config;
+        if (c.OverlayFontFamily == OverlayFontFamily && c.OverlayOpacity == OverlayOpacity
+            && c.BackgroundColor == BackgroundColor && c.TextColor == TextColor
+            && c.ManualFontSize == ManualFontSize && c.OverlayCornerRadius == OverlayCornerRadius)
+            return;
+        c.OverlayFontFamily = OverlayFontFamily;
+        c.OverlayOpacity = OverlayOpacity;
+        c.BackgroundColor = BackgroundColor;
+        c.TextColor = TextColor;
+        c.ManualFontSize = ManualFontSize;
+        c.OverlayCornerRadius = OverlayCornerRadius;
+        _appSettings.Save();
+        _profiles.SaveActiveProfileFromCurrentConfig();
+        _engine.RequestOverlayRestyle();
+    }
+
+    private static Color ParseHexColor(string hex, Color fallback)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return fallback;
+        try { return (Color)ColorConverter.ConvertFromString(hex); }
+        catch { return fallback; }
+    }
+
     private void ApplyOverlayPreset(OverlayPreset? preset)
     {
         if (preset == null) return;
@@ -706,13 +792,13 @@ public class SettingsViewModel : BaseViewModel
         SelectedFallbackProvider = c.FallbackProvider ?? string.Empty;
 
         OpenAIApiKey = _appSettings.GetOpenAIKey() ?? string.Empty;
-        OpenAIModel = string.IsNullOrWhiteSpace(c.OpenAIModel) ? "gpt-4o-mini" : c.OpenAIModel;
+        OpenAIModel = string.IsNullOrWhiteSpace(c.OpenAIModel) ? ModelCatalog.DefaultOpenAI : c.OpenAIModel;
         AnthropicApiKey = _appSettings.GetAnthropicKey() ?? string.Empty;
-        AnthropicModel = string.IsNullOrWhiteSpace(c.AnthropicModel) ? "claude-haiku-4-5" : c.AnthropicModel;
+        AnthropicModel = string.IsNullOrWhiteSpace(c.AnthropicModel) ? ModelCatalog.DefaultAnthropic : c.AnthropicModel;
         GeminiApiKey = _appSettings.GetGeminiKey() ?? string.Empty;
-        GeminiModel = string.IsNullOrWhiteSpace(c.GeminiModel) ? "gemini-2.0-flash" : c.GeminiModel;
+        GeminiModel = string.IsNullOrWhiteSpace(c.GeminiModel) ? ModelCatalog.DefaultGemini : c.GeminiModel;
         GroqApiKey = _appSettings.GetGroqKey() ?? string.Empty;
-        GroqModel = string.IsNullOrWhiteSpace(c.GroqModel) ? "llama-3.3-70b-versatile" : c.GroqModel;
+        GroqModel = string.IsNullOrWhiteSpace(c.GroqModel) ? ModelCatalog.DefaultGroq : c.GroqModel;
         LlmTemperature = c.LlmTemperature;
         LlmUseContext = c.LlmUseContext;
         LlmContextSize = c.LlmContextSize;
@@ -925,10 +1011,10 @@ public class SettingsViewModel : BaseViewModel
         c.MyMemoryEmail = MyMemoryEmail ?? string.Empty;
         c.LibreTranslateUrl = string.IsNullOrWhiteSpace(LibreUrl) ? "https://libretranslate.com" : LibreUrl;
         c.LibreTranslateApiKey = LibreApiKey ?? string.Empty;
-        c.OpenAIModel = string.IsNullOrWhiteSpace(OpenAIModel) ? "gpt-4o-mini" : OpenAIModel;
-        c.AnthropicModel = string.IsNullOrWhiteSpace(AnthropicModel) ? "claude-haiku-4-5" : AnthropicModel;
-        c.GeminiModel = string.IsNullOrWhiteSpace(GeminiModel) ? "gemini-2.0-flash" : GeminiModel;
-        c.GroqModel = string.IsNullOrWhiteSpace(GroqModel) ? "llama-3.3-70b-versatile" : GroqModel;
+        c.OpenAIModel = string.IsNullOrWhiteSpace(OpenAIModel) ? ModelCatalog.DefaultOpenAI : OpenAIModel;
+        c.AnthropicModel = string.IsNullOrWhiteSpace(AnthropicModel) ? ModelCatalog.DefaultAnthropic : AnthropicModel;
+        c.GeminiModel = string.IsNullOrWhiteSpace(GeminiModel) ? ModelCatalog.DefaultGemini : GeminiModel;
+        c.GroqModel = string.IsNullOrWhiteSpace(GroqModel) ? ModelCatalog.DefaultGroq : GroqModel;
         c.LlmTemperature = LlmTemperature;
         c.LlmUseContext = LlmUseContext;
         c.LlmContextSize = LlmContextSize;

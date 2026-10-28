@@ -160,7 +160,7 @@
     <sys:String x:Key="Strings.TS.SaveBtn">Сохранить настройки</sys:String>
 
     <!-- OverlaySettings -->
-    <sys:String x:Key="Strings.OS.Title">Настройки оверлея и интерфейса</sys:String>
+    <sys:String x:Key="Strings.OS.Title">Оверлей</sys:String>
     <sys:String x:Key="Strings.OS.Subtitle">Внешний вид «таблички» с переводом и тема самой программы.</sys:String>
     <sys:String x:Key="Strings.OS.AppTheme">Тема программы</sys:String>
     <sys:String x:Key="Strings.OS.AppThemeHelp">Цветовая палитра самого окна программы (применяется сразу):</sys:String>
@@ -171,7 +171,7 @@
     <sys:String x:Key="Strings.OS.CheckUpdates">Проверять обновления при запуске (фоном, тихо)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStart">Запускать с Windows (свёрнутым в трей)</sys:String>
     <sys:String x:Key="Strings.OS.AutoStartHint">При входе в Windows программа сразу появится в трее. Открыть — клик по иконке.</sys:String>
-    <sys:String x:Key="Strings.OS.Presets">Готовые темы оверлея</sys:String>
+    <sys:String x:Key="Strings.OS.Presets">Готовые стили</sys:String>
     <sys:String x:Key="Strings.OS.PresetsHelp">Один клик — применятся фон, цвет текста, прозрачность и скругление углов.</sys:String>
     <sys:String x:Key="Strings.OS.Appearance">Внешний вид</sys:String>
     <sys:String x:Key="Strings.OS.OverlayFont">Шрифт перевода:</sys:String>
@@ -181,7 +181,10 @@
     <sys:String x:Key="Strings.OS.BgColor">Цвет фона:</sys:String>
     <sys:String x:Key="Strings.OS.FgColor">Цвет текста:</sys:String>
     <sys:String x:Key="Strings.OS.Preview">Предпросмотр</sys:String>
-    <sys:String x:Key="Strings.OS.PreviewText">Пример переведённого текста</sys:String>
+    <sys:String x:Key="Strings.OS.PreviewText">Где вы положили ключ от старого дома?</sys:String>
+    <sys:String x:Key="Strings.OS.AppliedInstantly">Изменения применяются сразу</sys:String>
+    <sys:String x:Key="Strings.OS.PreviewTitle">Как это выглядит в игре</sys:String>
+    <sys:String x:Key="Strings.OS.ClickThroughHint">Табличка ложится поверх оригинальной реплики и не перехватывает клики.</sys:String>
     <sys:String x:Key="Strings.OS.SaveBtn">Сохранить настройки</sys:String>
 
     <!-- Glossary -->
