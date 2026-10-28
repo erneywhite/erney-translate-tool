@@ -133,7 +133,8 @@ public partial class OverlayWindow : Window
 
             var key = r.OriginalText;
             if (!next.ContainsKey(key)) next[key] = rect;
-            snapped.Add(new SnappedRegion(rect, r.OriginalText, r.TranslatedText));
+            snapped.Add(new SnappedRegion(rect, r.OriginalText, r.TranslatedText,
+                r.SampledBackground, r.SampledText, r.SourceLineHeight));
         }
 
         if (isPartial)
@@ -152,7 +153,8 @@ public partial class OverlayWindow : Window
         // screen would never be dropped (partial updates don't drop them).
         var fingerprint = (isPartial ? "P|" : "F|") + string.Join("|",
             snapped.Select(s => $"{s.Rect.X}:{s.Rect.Y}:{s.Rect.Width}:{s.Rect.Height}:{s.Text}"));
-        var styleFingerprint = $"{cfg.BackgroundColor}|{cfg.TextColor}|{cfg.OverlayOpacity:F3}|" +
+        var replace = cfg.OverlayMode != OverlayModes.Plate;
+        var styleFingerprint = $"{cfg.OverlayMode}|{cfg.BackgroundColor}|{cfg.TextColor}|{cfg.OverlayOpacity:F3}|" +
             $"{cfg.OverlayCornerRadius:F0}|{cfg.OverlayFontFamily}|{cfg.ManualFontSize:F0}";
 
         if (fingerprint == _lastFingerprint
@@ -208,6 +210,12 @@ public partial class OverlayWindow : Window
         var keep = new HashSet<string>(StringComparer.Ordinal);
         foreach (var s in snapped)
         {
+            if (replace)
+            {
+                keep.Add(s.Original);
+                PlaceReplacement(s, cfg, fontFamily);
+                continue;
+            }
             const double rightMargin = 12;
             // v1.0.21: tighter cap. The v1.0.20 formula
             // (source × 1.3 × fontScale + 60 × fontScale) double-counted
@@ -311,6 +319,112 @@ public partial class OverlayWindow : Window
         Height = Math.Max(1, windowRect.Height);
     }
 
+    // ---- v1.0.35 "replace text" mode ----
+
+    // Grow the box past the OCR rect: glyph edges and antialiasing reach a
+    // pixel or two outside it, and Snap() may have moved the rect by 2 px.
+    private const double ReplaceInflateX = 4, ReplaceInflateY = 3;
+    private const double MinReplaceFont = 9;
+
+    /// <summary>
+    /// Draw <paramref name="s"/> over the original in the game's colours:
+    /// opaque box of the sampled background, letters in the sampled text
+    /// colour (or black/white when that is too close to the background),
+    /// and the largest font that fits the source box, capped by the source
+    /// line height. If even the smallest font doesn't fit, the box grows down.
+    /// </summary>
+    private void PlaceReplacement(SnappedRegion s, AppConfig cfg, FontFamily fontFamily)
+    {
+        var rect = new Rect(s.Rect.X - ReplaceInflateX, s.Rect.Y - ReplaceInflateY,
+            s.Rect.Width + 2 * ReplaceInflateX, s.Rect.Height + 2 * ReplaceInflateY);
+
+        var bg = s.Background ?? ParseColor(cfg.BackgroundColor, Colors.Black);
+        bg.A = 255;
+        var fg = s.Foreground is { } t && ContrastRatio(t, bg) >= 3 ? t
+               : Luminance(bg) > 0.4 ? Colors.Black : Colors.White;
+
+        var padding = new Thickness(ReplaceInflateX, 0, ReplaceInflateX, 0);
+        var textWidth = Math.Max(10, rect.Width - padding.Left - padding.Right);
+        var lineHeight = s.LineHeight > 0 ? s.LineHeight : s.Rect.Height;
+        var fontSize = FitFontSize(s.Text, fontFamily, textWidth, rect.Height,
+            Math.Max(MinReplaceFont, lineHeight * 0.8));
+
+        if (!_activeBorders.TryGetValue(s.Original, out var border))
+        {
+            border = new Border
+            {
+                SnapsToDevicePixels = true,
+                UseLayoutRounding = true,
+                Child = new TextBlock
+                {
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalAlignment = VerticalAlignment.Center,
+                },
+            };
+            RegionCanvas.Children.Add(border);
+            _activeBorders[s.Original] = border;
+        }
+        Canvas.SetLeft(border, rect.X);
+        Canvas.SetTop(border, rect.Y);
+        border.Width = rect.Width;
+        border.MinHeight = rect.Height;
+        border.MinWidth = 0;
+        border.MaxWidth = double.PositiveInfinity;
+        border.Padding = padding;
+        border.CornerRadius = new CornerRadius(2);
+        if (border.Background is not SolidColorBrush { Color: var oldBg } || oldBg != bg)
+            border.Background = Frozen(bg);
+        var tb = (TextBlock)border.Child;
+        tb.MaxWidth = textWidth;
+        tb.FontFamily = fontFamily;
+        tb.FontSize = fontSize;
+        if (tb.Foreground is not SolidColorBrush { Color: var oldFg } || oldFg != fg)
+            tb.Foreground = Frozen(fg);
+        if (tb.Text != s.Text) tb.Text = s.Text;
+    }
+
+    /// <summary>Largest font size (step 0.5) whose wrapped text fits width × height; never below the minimum.</summary>
+    private double FitFontSize(string text, FontFamily family, double width, double height, double max)
+    {
+        var dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var typeface = new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+        bool Fits(double size)
+        {
+            var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture,
+                FlowDirection.LeftToRight, typeface, size, Brushes.White, dip) { MaxTextWidth = width };
+            return ft.Height <= height && ft.WidthIncludingTrailingWhitespace <= width + 0.5;
+        }
+        double lo = MinReplaceFont, hi = Math.Max(MinReplaceFont, max);
+        if (Fits(hi)) return hi;
+        if (!Fits(lo)) return lo;
+        while (hi - lo > 0.5)
+        {
+            var mid = (lo + hi) / 2;
+            if (Fits(mid)) lo = mid; else hi = mid;
+        }
+        return Math.Floor(lo * 2) / 2;
+    }
+
+    private static SolidColorBrush Frozen(Color c)
+    {
+        var b = new SolidColorBrush(c);
+        b.Freeze();
+        return b;
+    }
+
+    private static double Luminance(Color c)
+    {
+        static double Ch(byte v) { var x = v / 255.0; return x <= 0.03928 ? x / 12.92 : Math.Pow((x + 0.055) / 1.055, 2.4); }
+        return 0.2126 * Ch(c.R) + 0.7152 * Ch(c.G) + 0.0722 * Ch(c.B);
+    }
+
+    /// <summary>WCAG contrast ratio, 1..21.</summary>
+    public static double ContrastRatio(Color a, Color b)
+    {
+        double la = Luminance(a), lb = Luminance(b);
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+    }
+
     private static double Snap(double v) => Math.Round(v / SnapGrid) * SnapGrid;
 
     /// <summary>Current on-canvas rect of a label; falls back to its min size before the first layout pass.</summary>
@@ -339,5 +453,6 @@ public partial class OverlayWindow : Window
     /// streaming chunks). Text = the current translation to display, which
     /// can grow chunk-by-chunk during a streaming LLM call.
     /// </summary>
-    private readonly record struct SnappedRegion(Rect Rect, string Original, string Text);
+    private readonly record struct SnappedRegion(Rect Rect, string Original, string Text,
+        Color? Background = null, Color? Foreground = null, double LineHeight = 0);
 }

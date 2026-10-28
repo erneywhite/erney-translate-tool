@@ -55,6 +55,7 @@ public class SettingsViewModel : BaseViewModel
     private string _textColor = "#FFFFFF";
     private double _manualFontSize;
     private double _overlayCornerRadius = 4;
+    private string _overlayMode = OverlayModes.Replace;
     private string _fontSizeMode = "Auto";
     private string _toggleTranslationHotkey = "Ctrl+Shift+T";
     private string _toggleOverlayHotkey = "Ctrl+Shift+H";
@@ -581,6 +582,35 @@ public class SettingsViewModel : BaseViewModel
         set { if (SetProperty(ref _overlayCornerRadius, value)) OnOverlayStyleChanged(); }
     }
 
+    /// <summary>v1.0.35: "Replace" (default, game colours, fitted font) or "Plate".</summary>
+    public string OverlayMode
+    {
+        get => _overlayMode;
+        set
+        {
+            if (!SetProperty(ref _overlayMode, value == OverlayModes.Plate ? OverlayModes.Plate : OverlayModes.Replace)) return;
+            OnPropertyChanged(nameof(IsReplaceMode));
+            OnPropertyChanged(nameof(IsPlateMode));
+            OnOverlayStyleChanged();
+        }
+    }
+
+    public bool IsReplaceMode
+    {
+        get => _overlayMode != OverlayModes.Plate;
+        set { if (value) OverlayMode = OverlayModes.Replace; }
+    }
+
+    public bool IsPlateMode
+    {
+        get => _overlayMode == OverlayModes.Plate;
+        set { if (value) OverlayMode = OverlayModes.Plate; }
+    }
+
+    // Preview stand-ins for "replace": the sample dialog box's own colours.
+    public double PreviewCornerRadius => IsPlateMode ? OverlayCornerRadius : 0;
+    public double PreviewFontSize => IsPlateMode ? ManualFontSize : 15;
+
     public string FontSizeMode
     {
         get => _fontSizeMode;
@@ -823,12 +853,22 @@ public class SettingsViewModel : BaseViewModel
         // to 60..255, invalid hex falls back to black / white.
         var bg = ParseHexColor(BackgroundColor, Colors.Black);
         bg.A = (byte)Math.Clamp(OverlayOpacity * 255, 60, 255);
+        var fg = ParseHexColor(TextColor, Colors.White);
+        if (IsReplaceMode)
+        {
+            // The preview's dialog box (#1B1726, text #E9E4F5) is what the
+            // sampler would read off a real game.
+            bg = Color.FromRgb(0x1B, 0x17, 0x26);
+            fg = Color.FromRgb(0xE9, 0xE4, 0xF5);
+        }
         var bgBrush = new SolidColorBrush(bg);
         bgBrush.Freeze();
         PreviewBackgroundBrush = bgBrush;
-        var fgBrush = new SolidColorBrush(ParseHexColor(TextColor, Colors.White));
+        var fgBrush = new SolidColorBrush(fg);
         fgBrush.Freeze();
         PreviewTextBrush = fgBrush;
+        OnPropertyChanged(nameof(PreviewCornerRadius));
+        OnPropertyChanged(nameof(PreviewFontSize));
 
         ActivePreset = OverlayPresets.FirstOrDefault(p =>
             string.Equals(p.Background, BackgroundColor, StringComparison.OrdinalIgnoreCase)
@@ -851,8 +891,10 @@ public class SettingsViewModel : BaseViewModel
         var c = _appSettings.Config;
         if (c.OverlayFontFamily == OverlayFontFamily && c.OverlayOpacity == OverlayOpacity
             && c.BackgroundColor == BackgroundColor && c.TextColor == TextColor
-            && c.ManualFontSize == ManualFontSize && c.OverlayCornerRadius == OverlayCornerRadius)
+            && c.ManualFontSize == ManualFontSize && c.OverlayCornerRadius == OverlayCornerRadius
+            && c.OverlayMode == OverlayMode)
             return;
+        c.OverlayMode = OverlayMode;
         c.OverlayFontFamily = OverlayFontFamily;
         c.OverlayOpacity = OverlayOpacity;
         c.BackgroundColor = BackgroundColor;
@@ -1005,6 +1047,7 @@ public class SettingsViewModel : BaseViewModel
         TextColor = c.TextColor;
         ManualFontSize = c.ManualFontSize;
         OverlayCornerRadius = c.OverlayCornerRadius;
+        OverlayMode = c.OverlayMode;
         FontSizeMode = c.FontSizeMode;
         // Direct field assign — setter would trigger HotkeysChanged + Save
         // on every load. We just want to mirror the persisted value into
@@ -1229,6 +1272,7 @@ public class SettingsViewModel : BaseViewModel
         c.TextColor = TextColor;
         c.ManualFontSize = ManualFontSize;
         c.OverlayCornerRadius = OverlayCornerRadius;
+        c.OverlayMode = OverlayMode;
         c.FontSizeMode = FontSizeMode;
         c.AppTheme = SelectedAppTheme;
         c.UiLanguage = SelectedAppLanguage;

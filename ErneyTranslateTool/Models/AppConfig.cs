@@ -91,6 +91,14 @@ public class AppConfig
     public string OverlayFontFamily { get; set; } = "Segoe UI";
 
     /// <summary>
+    /// v1.0.35: "Replace" — the translation is drawn over the original in the
+    /// game's own colours, font fitted to the source box (like Google
+    /// Translate's camera mode). "Plate" — the older label with fixed colours,
+    /// opacity, corner radius and font size. Global, not per game profile.
+    /// </summary>
+    public string OverlayMode { get; set; } = OverlayModes.Replace;
+
+    /// <summary>
     /// Overlay font size mode: "Auto" or "Manual".
     /// </summary>
     public string FontSizeMode { get; set; } = "Auto";
@@ -312,4 +320,11 @@ public class AppConfig
     /// having to delete rules.
     /// </summary>
     public bool GlossaryEnabled { get; set; } = true;
+}
+
+/// <summary>Values of <see cref="AppConfig.OverlayMode"/>.</summary>
+public static class OverlayModes
+{
+    public const string Replace = "Replace";
+    public const string Plate = "Plate";
 }
