@@ -29,9 +29,11 @@
     <sys:String x:Key="Strings.Tab.OverlaySettings">Оверлей</sys:String>
     <sys:String x:Key="Strings.Tab.History">История</sys:String>
     <sys:String x:Key="Strings.Tab.Glossary">Глоссарий</sys:String>
-    <sys:String x:Key="Strings.Tab.Profiles">Профили</sys:String>
+    <sys:String x:Key="Strings.Tab.Profiles">Профили игр</sys:String>
     <sys:String x:Key="Strings.Tab.AppSettings">Программа</sys:String>
     <sys:String x:Key="Strings.Tab.About">О программе</sys:String>
+    <sys:String x:Key="Strings.Tab.Recognition">Распознавание</sys:String>
+    <sys:String x:Key="Strings.Nav.SettingsGroup">НАСТРОЙКА</sys:String>
 
     <!-- App settings (separated from Overlay tab in v1.0.12 hotfix) -->
     <sys:String x:Key="Strings.AppSettings.Title">Настройки программы</sys:String>

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ErneyTranslateTool.Views.Controls"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="800"
              Background="{DynamicResource BackgroundBrush}">
@@ -64,6 +65,92 @@
                                Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="11"
                                Margin="22,0,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="{DynamicResource Strings.TS.Hotkeys}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <!-- v1.0.14: HotkeyCaptureBox replaces the old plain TextBox.
+                         Click → press combo → it's saved AND re-registered with
+                         Win32 immediately (no restart needed — that was the
+                         "I changed it but it doesn't work" v1.0.13 bug). -->
+                    <TextBlock Text="{DynamicResource Strings.TS.HotkeysHelp}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,10"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyToggle}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="0" Grid.Column="1"
+                                                   Hotkey="{Binding ToggleTranslationHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyOverlay}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="1" Grid.Column="1"
+                                                   Hotkey="{Binding ToggleOverlayHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Strings.TS.HotkeyPause}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <controls:HotkeyCaptureBox Grid.Row="2" Grid.Column="1"
+                                                   Hotkey="{Binding PauseTranslationHotkey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
+            <GroupBox Header="{DynamicResource Strings.TS.Cache}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
+                <StackPanel Margin="5">
+                    <TextBlock Text="{DynamicResource Strings.TS.CacheHelp}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,10"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{DynamicResource Strings.TS.CacheLimit}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding CacheSizeOptions}"
+                                  SelectedItem="{Binding SelectedCacheSizeOption}"
+                                  DisplayMemberPath="DisplayName"
+                                  Width="260"
+                                  HorizontalAlignment="Left"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="{DynamicResource Strings.TS.CacheCurrent}"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock Text="{Binding CacheStatsText}"
+                                   Foreground="{DynamicResource PrimaryBrush}"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="{DynamicResource Strings.Common.Refresh}"
+                                Command="{Binding RefreshCacheStatsCommand}"
+                                Padding="14,6" Margin="0,0,8,0"/>
+                        <Button Content="{DynamicResource Strings.TS.ClearCache}"
+                                Command="{Binding ClearCacheCommand}"
+                                Padding="14,6"/>
+                    </StackPanel>
                 </StackPanel>
             </GroupBox>
 

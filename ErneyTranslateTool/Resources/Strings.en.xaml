@@ -27,9 +27,11 @@
     <sys:String x:Key="Strings.Tab.OverlaySettings">Overlay</sys:String>
     <sys:String x:Key="Strings.Tab.History">History</sys:String>
     <sys:String x:Key="Strings.Tab.Glossary">Glossary</sys:String>
-    <sys:String x:Key="Strings.Tab.Profiles">Profiles</sys:String>
+    <sys:String x:Key="Strings.Tab.Profiles">Game profiles</sys:String>
     <sys:String x:Key="Strings.Tab.AppSettings">App</sys:String>
     <sys:String x:Key="Strings.Tab.About">About</sys:String>
+    <sys:String x:Key="Strings.Tab.Recognition">Recognition</sys:String>
+    <sys:String x:Key="Strings.Nav.SettingsGroup">SETTINGS</sys:String>
 
     <!-- App settings -->
     <sys:String x:Key="Strings.AppSettings.Title">App settings</sys:String>

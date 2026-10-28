@@ -18,9 +18,58 @@
          UseLayoutRounding + SnapsToDevicePixels align all WPF geometry to
          whole pixels (border, text, shadows). -->
 
+    <Window.Resources>
+        <!-- Sidebar entry: soft background + primary bar on the left when
+             selected (the old full primary fill was the loudest thing on
+             screen and competed with the Start button). -->
+        <Style x:Key="NavItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="Margin" Value="8,1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="b" CornerRadius="8" Background="Transparent">
+                            <Grid>
+                                <Border x:Name="bar" Width="3" CornerRadius="1.5" Margin="0,8"
+                                        HorizontalAlignment="Left" Background="{DynamicResource PrimaryBrush}"
+                                        Visibility="Collapsed"/>
+                                <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
+                                <Setter TargetName="bar" Property="Visibility" Value="Visible"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="NavListStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource NavItemStyle}"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled"/>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="190"/>
+            <ColumnDefinition Width="210"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
@@ -57,96 +106,77 @@
                     </StackPanel>
                 </StackPanel>
 
-                <ListBox x:Name="NavList"
-                         Background="Transparent"
-                         BorderThickness="0"
-                         Foreground="{DynamicResource TextPrimaryBrush}"
-                         SelectionChanged="OnNavSelectionChanged"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Padding" Value="12,10"/>
-                            <Setter Property="Margin" Value="6,2"/>
-                            <Setter Property="Cursor" Value="Hand"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ListBoxItem">
-                                        <Border x:Name="b"
-                                                CornerRadius="10"
-                                                Background="Transparent"
-                                                Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter VerticalAlignment="Center"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="b" Property="Background" Value="{DynamicResource BackgroundLightBrush}"/>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="b" Property="Background" Value="{DynamicResource PrimaryBrush}"/>
-                                                <Setter Property="Foreground" Value="{DynamicResource PrimaryForegroundBrush}"/>
-                                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-
-                    <!-- Icon glyphs: Segoe MDL2 Assets code points.
-                         E80F=Home, F2B7=Dictionary, E790=PaintBrush,
-                         E81C=History, E82D=Library, E748=Contact,
-                         E713=Settings, E946=Info. -->
-                    <ListBoxItem Tag="Main">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE80F;" FontSize="14" Width="20" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource Strings.Tab.Main}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="Translation">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xF2B7;" FontSize="14" Width="20" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource Strings.Tab.TranslationSettings}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="Overlay">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE790;" FontSize="14" Width="20" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource Strings.Tab.OverlaySettings}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="History">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" FontSize="14" Width="20" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource Strings.Tab.History}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="Glossary">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE82D;" FontSize="14" Width="20" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource Strings.Tab.Glossary}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="Profiles">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE748;" FontSize="14" Width="20" Margin="0,0,8,0"/>
-                            <TextBlock Text="{DynamicResource Strings.Tab.Profiles}" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </ListBoxItem>
+                <!-- v1.0.31 sidebar (redesign step 2): three lists — work, a
+                     "settings" group, and app/about pinned to the bottom.
+                     OnNavSelectionChanged keeps a single selection across
+                     them. Glyphs: Segoe MDL2 Assets. -->
+                <ListBox x:Name="NavListBottom" DockPanel.Dock="Bottom" Style="{StaticResource NavListStyle}"
+                         SelectionChanged="OnNavSelectionChanged">
                     <ListBoxItem Tag="AppSettings">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="14" Width="20" Margin="0,0,8,0"/>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{DynamicResource Strings.Tab.AppSettings}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </ListBoxItem>
                     <ListBoxItem Tag="About">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE946;" FontSize="14" Width="20" Margin="0,0,8,0"/>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE946;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{DynamicResource Strings.Tab.About}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </ListBoxItem>
                 </ListBox>
+                <ListBox x:Name="NavList" DockPanel.Dock="Top" Style="{StaticResource NavListStyle}"
+                         SelectionChanged="OnNavSelectionChanged">
+                    <ListBoxItem Tag="Main">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE80F;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Main}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="History">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE81C;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.History}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                </ListBox>
+                <TextBlock DockPanel.Dock="Top" Text="{DynamicResource Strings.Nav.SettingsGroup}"
+                           FontSize="11" Margin="22,16,0,6"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                <ListBox x:Name="NavListSettings" DockPanel.Dock="Top" Style="{StaticResource NavListStyle}"
+                         SelectionChanged="OnNavSelectionChanged">
+                    <ListBoxItem Tag="Translation">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xF2B7;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.TranslationSettings}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Recognition">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B3;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Recognition}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Overlay">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE790;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.OverlaySettings}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Glossary">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE82D;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Glossary}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                    <ListBoxItem Tag="Profiles">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE748;" FontSize="14" Width="20" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Strings.Tab.Profiles}" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ListBoxItem>
+                </ListBox>
+                <Border/>
             </DockPanel>
         </Border>
 
@@ -159,6 +189,9 @@
             <tabs:TranslationSettingsTab x:Name="TranslationTabHost"
                                          DataContext="{Binding SettingsVM}"
                                          Visibility="Collapsed"/>
+            <tabs:RecognitionTab x:Name="RecognitionTabHost"
+                                 DataContext="{Binding SettingsVM}"
+                                 Visibility="Collapsed"/>
             <tabs:OverlaySettingsTab x:Name="OverlayTabHost"
                                      DataContext="{Binding SettingsVM}"
                                      Visibility="Collapsed"/>
