@@ -33,7 +33,7 @@ public partial class AboutTab : UserControl
     {
         try
         {
-            Process.Start(new ProcessStartInfo("https://dalink.to/toristarm")
+            Process.Start(new ProcessStartInfo("https://ko-fi.com/erneywhite")
             {
                 UseShellExecute = true
             });

@@ -3,172 +3,224 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:ErneyTranslateTool.Views.Tabs"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="680" d:DesignWidth="890"
              Background="{DynamicResource BackgroundBrush}">
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
-        <StackPanel>
-            <TextBlock Text="{DynamicResource Strings.OS.Title}"
-                       FontSize="24" FontWeight="Bold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       Margin="0,0,0,5"/>
-            <TextBlock Text="{DynamicResource Strings.OS.Subtitle}"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       TextWrapping="Wrap"
-                       Margin="0,0,0,15"/>
 
-            <GroupBox Header="{DynamicResource Strings.OS.Presets}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <StackPanel Margin="5">
-                    <TextBlock Text="{DynamicResource Strings.OS.PresetsHelp}"
-                               Foreground="{DynamicResource TextSecondaryBrush}"
-                               TextWrapping="Wrap"
-                               FontSize="11"
-                               Margin="0,0,0,8"/>
-                    <ItemsControl ItemsSource="{Binding OverlayPresets}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Margin="0,0,8,8"
-                                        Padding="14,8"
-                                        Background="{Binding Background}"
-                                        BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="1"
-                                        Command="{Binding DataContext.ApplyOverlayPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                        CommandParameter="{Binding}">
-                                    <TextBlock Text="{Binding Name}"
-                                               Foreground="{Binding Text}"
-                                               FontWeight="SemiBold"/>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </GroupBox>
+    <!-- v1.0.31 redesign step 3: settings on the left, a live preview of
+         the label over a game line on the right. No Save button — every
+         change is persisted (debounced) by SettingsViewModel.SaveOverlayStyle
+         and the running overlay re-renders right away. -->
+    <UserControl.Resources>
+        <local:SameObjectConverter x:Key="SameObject"/>
+        <Style x:Key="Caption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style x:Key="RowLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="RowValue" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+        </Style>
+    </UserControl.Resources>
 
-            <GroupBox Header="{DynamicResource Strings.OS.Appearance}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <Grid Margin="5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="180"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="60"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+    <Grid Margin="28,22,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="340"/>
+            <ColumnDefinition Width="18"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Strings.OS.OverlayFont}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2"
-                              ItemsSource="{Binding SystemFonts}"
-                              SelectedItem="{Binding OverlayFontFamily}"
-                              Margin="0,0,0,8"/>
+        <DockPanel Grid.Row="0" Grid.ColumnSpan="3" Margin="0,0,0,18" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Text="{DynamicResource Strings.OS.Title}"
+                       FontSize="24" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock DockPanel.Dock="Right" Text="{DynamicResource Strings.OS.AppliedInstantly}"
+                       Style="{StaticResource Caption}" VerticalAlignment="Bottom" Margin="0,0,0,4"/>
+        </DockPanel>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Strings.OS.FontSize}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Slider Grid.Row="1" Grid.Column="1"
-                            Minimum="8" Maximum="32"
-                            Value="{Binding ManualFontSize}"
-                            Margin="0,0,8,8"/>
-                    <TextBlock Grid.Row="1" Grid.Column="2"
-                               Text="{Binding ManualFontSize, StringFormat={}{0:F0}}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Strings.OS.OverlayOpacity}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Slider Grid.Row="2" Grid.Column="1"
-                            Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
-                            Value="{Binding OverlayOpacity}"
-                            Margin="0,0,8,8"/>
-                    <TextBlock Grid.Row="2" Grid.Column="2"
-                               Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Strings.OS.CornerRadius}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Slider Grid.Row="3" Grid.Column="1"
-                            Minimum="0" Maximum="16" TickFrequency="1" IsSnapToTickEnabled="True"
-                            Value="{Binding OverlayCornerRadius}"
-                            Margin="0,0,8,8"/>
-                    <TextBlock Grid.Row="3" Grid.Column="2"
-                               Text="{Binding OverlayCornerRadius, StringFormat={}{0:F0} px}"
-                               Foreground="{DynamicResource TextPrimaryBrush}"
-                               VerticalAlignment="Center"/>
-
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Strings.OS.BgColor}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Grid Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}"
-                                 FontFamily="Consolas"/>
-                        <Border Grid.Column="1"
-                                Width="32" Height="28" Margin="8,0,0,0"
-                                Background="{Binding BackgroundColor}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="3"/>
-                    </Grid>
-
-                    <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource Strings.OS.FgColor}"
-                               Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center"/>
-                    <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0"
-                                 Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}"
-                                 FontFamily="Consolas"/>
-                        <Border Grid.Column="1"
-                                Width="32" Height="28" Margin="8,0,0,0"
-                                Background="{Binding TextColor}"
-                                BorderBrush="{DynamicResource BorderBrush}"
-                                BorderThickness="1"
-                                CornerRadius="3"/>
-                    </Grid>
-                </Grid>
-            </GroupBox>
-
-            <GroupBox Header="{DynamicResource Strings.OS.Preview}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
-                <Border Background="{Binding BackgroundColor}"
-                        Padding="12"
-                        CornerRadius="{Binding OverlayCornerRadius}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1"
-                        Opacity="{Binding OverlayOpacity}">
-                    <TextBlock Text="{DynamicResource Strings.OS.PreviewText}"
-                               Foreground="{Binding TextColor}"
-                               FontFamily="{Binding OverlayFontFamily}"
-                               FontSize="{Binding ManualFontSize}"/>
+        <!-- ===== settings ===== -->
+        <ScrollViewer Grid.Row="1" Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource FlatCardStyle}" Padding="16" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.OS.Presets}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                        <ItemsControl ItemsSource="{Binding OverlayPresets}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="4"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Margin="0,0,6,6" Cursor="Hand" ToolTip="{Binding Name}"
+                                            AutomationProperties.Name="{Binding Name}"
+                                            Command="{Binding DataContext.ApplyOverlayPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="tile" CornerRadius="10" Padding="6,8"
+                                                        Background="{DynamicResource BackgroundBrush}"
+                                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                                    <StackPanel>
+                                                        <Border Height="30" CornerRadius="{Binding CornerRadius}"
+                                                                Background="{Binding Background}"
+                                                                BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1">
+                                                            <TextBlock Text="Аа" FontWeight="SemiBold" Foreground="{Binding Text}"
+                                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                        <TextBlock Text="{Binding Name}" FontSize="11" Margin="0,5,0,0"
+                                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                                   TextWrapping="Wrap" TextAlignment="Center"/>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="tile" Property="BorderBrush" Value="{DynamicResource BorderLightBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                                        <Setter TargetName="tile" Property="BorderBrush" Value="{DynamicResource PrimaryLightBrush}"/>
+                                                    </Trigger>
+                                                    <DataTrigger Value="True">
+                                                        <DataTrigger.Binding>
+                                                            <MultiBinding Converter="{StaticResource SameObject}">
+                                                                <Binding/>
+                                                                <Binding Path="DataContext.ActivePreset" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                            </MultiBinding>
+                                                        </DataTrigger.Binding>
+                                                        <Setter TargetName="tile" Property="BorderBrush" Value="{DynamicResource PrimaryBrush}"/>
+                                                        <Setter TargetName="tile" Property="BorderThickness" Value="2"/>
+                                                    </DataTrigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </Border>
-            </GroupBox>
 
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="{DynamicResource Strings.OS.SaveBtn}"
-                        Command="{Binding SaveCommand}"
-                        Padding="20,10" FontWeight="SemiBold"
-                        Background="{DynamicResource PrimaryBrush}"
-                        Foreground="{DynamicResource PrimaryForegroundBrush}"/>
-                <TextBlock Text="{Binding SaveStatus}"
-                           Foreground="{DynamicResource SuccessBrush}"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"
-                           Margin="15,0,0,0"/>
+                <Border Style="{StaticResource FlatCardStyle}" Padding="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="112"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="48"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.ColumnSpan="3" Text="{DynamicResource Strings.OS.Appearance}"
+                                   Style="{StaticResource CardTitle}" Margin="0,0,0,12"/>
+
+                        <TextBlock Grid.Row="1" Text="{DynamicResource Strings.OS.OverlayFont}" Style="{StaticResource RowLabel}"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
+                                  ItemsSource="{Binding SystemFonts}" SelectedItem="{Binding OverlayFontFamily}"
+                                  Margin="0,0,0,10"/>
+
+                        <TextBlock Grid.Row="2" Text="{DynamicResource Strings.OS.FontSize}" Style="{StaticResource RowLabel}"/>
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="8" Maximum="32"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding ManualFontSize}" Margin="0,0,8,10" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding ManualFontSize, StringFormat={}{0:F0} pt}"
+                                   Style="{StaticResource RowValue}" Margin="0,0,0,10"/>
+
+                        <TextBlock Grid.Row="3" Text="{DynamicResource Strings.OS.OverlayOpacity}" Style="{StaticResource RowLabel}"/>
+                        <Slider Grid.Row="3" Grid.Column="1" Minimum="0.5" Maximum="1.0"
+                                TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                Value="{Binding OverlayOpacity}" Margin="0,0,8,10" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
+                                   Style="{StaticResource RowValue}" Margin="0,0,0,10"/>
+
+                        <TextBlock Grid.Row="4" Text="{DynamicResource Strings.OS.CornerRadius}" Style="{StaticResource RowLabel}"/>
+                        <Slider Grid.Row="4" Grid.Column="1" Minimum="0" Maximum="16"
+                                TickFrequency="1" IsSnapToTickEnabled="True"
+                                Value="{Binding OverlayCornerRadius}" Margin="0,0,8,10" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding OverlayCornerRadius, StringFormat={}{0:F0} px}"
+                                   Style="{StaticResource RowValue}" Margin="0,0,0,10"/>
+
+                        <TextBlock Grid.Row="5" Text="{DynamicResource Strings.OS.BgColor}" Style="{StaticResource RowLabel}"/>
+                        <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding BackgroundColor, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
+                            <Border Grid.Column="1" Width="30" Height="30" Margin="8,0,0,0" CornerRadius="6"
+                                    Background="{Binding BackgroundColor}"
+                                    BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"/>
+                        </Grid>
+
+                        <TextBlock Grid.Row="6" Text="{DynamicResource Strings.OS.FgColor}" Style="{StaticResource RowLabel}"/>
+                        <Grid Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding TextColor, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas"/>
+                            <Border Grid.Column="1" Width="30" Height="30" Margin="8,0,0,0" CornerRadius="6"
+                                    Background="{Binding TextColor}"
+                                    BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"/>
+                        </Grid>
+                    </Grid>
+                </Border>
             </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+        </ScrollViewer>
+
+        <!-- ===== live preview ===== -->
+        <Grid Grid.Row="1" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="{DynamicResource Strings.OS.PreviewTitle}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+
+            <!-- A stand-in game frame. Fixed colours on purpose: it plays the
+                 game's picture, which doesn't follow the app theme. -->
+            <Border Grid.Row="1" CornerRadius="12" Background="#3A3350"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <Border VerticalAlignment="Bottom" Margin="22" CornerRadius="10" MinHeight="140"
+                        Background="#1B1726" BorderBrush="#5B4F7A" BorderThickness="1" Padding="20,18">
+                    <Grid VerticalAlignment="Top">
+                        <TextBlock Text="Where did you put the key to the old house?" TextWrapping="Wrap"
+                                   FontFamily="Georgia" FontSize="15" Foreground="#E9E4F5"/>
+                        <!-- The label covers the source line like the real
+                             overlay (MinWidth = source width), so it stretches. -->
+                        <Border Background="{Binding PreviewBackgroundBrush}"
+                                CornerRadius="{Binding OverlayCornerRadius}"
+                                Padding="4,1" VerticalAlignment="Top">
+                            <TextBlock Text="{DynamicResource Strings.OS.PreviewText}" TextWrapping="Wrap"
+                                       Foreground="{Binding PreviewTextBrush}"
+                                       FontFamily="{Binding OverlayFontFamily}"
+                                       FontSize="{Binding ManualFontSize}"/>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Border>
+
+            <TextBlock Grid.Row="2" Text="{DynamicResource Strings.OS.ClickThroughHint}" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,10,0,0"/>
+        </Grid>
+    </Grid>
 </UserControl>
