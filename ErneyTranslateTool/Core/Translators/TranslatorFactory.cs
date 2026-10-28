@@ -27,9 +27,11 @@ public static class TranslatorFactory
         // options to find them.
         ProviderGemini,
         ProviderGroq,
-        ProviderCustomLlm,
         ProviderOpenAI,
         ProviderAnthropic,
+        // Last on purpose: an advanced option. Picked by mistake it only
+        // says "server not answering" — the app is meant to be run-n-go.
+        ProviderCustomLlm,
     };
 
     public static string DisplayName(string provider) => provider switch
@@ -40,7 +42,7 @@ public static class TranslatorFactory
         ProviderLibreTranslate => "LibreTranslate (open source)",
         ProviderGemini => "Google Gemini (LLM, бесплатный free tier)",
         ProviderGroq => "Groq (LLM, бесплатно, очень быстро)",
-        ProviderCustomLlm => "Свой сервер: Ollama, LM Studio, OpenRouter (LLM, локально бесплатно)",
+        ProviderCustomLlm => "Свой сервер (для опытных): OpenRouter, Ollama, LM Studio…",
         ProviderOpenAI => "OpenAI (LLM, лучшее качество, нужен платный API-ключ)",
         ProviderAnthropic => "Anthropic Claude (LLM, лучшее качество, нужен платный API-ключ)",
         _ => provider
