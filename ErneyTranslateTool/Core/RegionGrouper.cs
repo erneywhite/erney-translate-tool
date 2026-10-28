@@ -171,6 +171,14 @@ public static class RegionGrouper
             && (IsShortCaps(last.OriginalText) || signal == LineEndSignal.Terminator))
             return false;
 
+        // A short caps line next to a line of ordinary text is a heading or
+        // a tag, not part of it: "BREAKING NEWS" over the news text, "RIGHT
+        // NOW" under it (Fatal Countdown). CJK has no lowercase and is left
+        // to the rules above.
+        if (IsShortCaps(last.OriginalText) && HasLowercase(candidate.OriginalText)
+            || IsShortCaps(candidate.OriginalText) && HasLowercase(last.OriginalText))
+            return false;
+
         // Same for title-case menus: "Continue / New Game / Gallery /
         // Settings / Exit". A paragraph's upper line is long, so two short
         // capitalised lines in a row are items, not a wrap.
@@ -351,6 +359,9 @@ public static class RegionGrouper
         var lastChar = trimmed[^1];
         return !IsTerminator(lastChar) && !IsStrongContinuation(lastChar) && lastChar != '-';
     }
+
+    private static bool HasLowercase(string? text) =>
+        !string.IsNullOrEmpty(text) && text.Any(IsLowerLatinCyrillic);
 
     /// <summary>Kana, CJK ideographs and hangul — letters, not punctuation.</summary>
     private static bool IsCjk(char c) =>
