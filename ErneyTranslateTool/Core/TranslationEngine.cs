@@ -402,6 +402,8 @@ public class TranslationEngine : IDisposable
             // After recording, so recordings keep what OCR really saw.
             var noise = OcrTextHelpers.DropNoise(rawRegions);
             if (noise > 0) _logger.Debug("Frame: dropped {N} noise regions", noise);
+            var logos = OcrTextHelpers.DropOversized(rawRegions);
+            if (logos > 0) _logger.Debug("Frame: left {N} oversized lines (logos, titles) untranslated", logos);
             if (rawRegions.Count == 0)
             {
                 if (++_vanishStreak >= VanishConfirmFrames)

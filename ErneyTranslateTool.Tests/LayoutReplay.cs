@@ -34,6 +34,7 @@ public sealed class LayoutReplay
             // FrameLayout rewrites regions in place; never hand it the caller's objects.
             var raw = recorded.Select(r => new TranslationRegion { Bounds = r.Bounds, OriginalText = r.OriginalText }).ToList();
             OcrTextHelpers.DropNoise(raw);
+            OcrTextHelpers.DropOversized(raw);
 
             if (raw.Count == 0)
             {
