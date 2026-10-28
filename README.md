@@ -4,7 +4,7 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2B-blue)
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-purple)
 
 ---
 
@@ -14,7 +14,7 @@
 - **3 OCR-движка на выбор** — PaddleOCR (нейросеть, лучшее качество), Tesseract (быстрее), Windows OCR (системный, нужны языковые пакеты)
 - **30+ языков для Tesseract** — Европа целиком (от английского и немецкого до прибалтийских и скандинавских), кириллица, восточноазиатские (jpn/chi/kor + вертикальные), арабский. Скачиваются одной кнопкой из встроенного каталога
 - **12 языков для PaddleOCR** — латиница, кириллица, японский, китайский (упр./трад.), корейский, арабский, хинди + индийские, плюс **режим «Авто»** — несколько моделей параллельно
-- **8 переводчиков** — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (любой инстанс, можно свой), **Google Gemini** (LLM, бесплатный free tier — ключ за 30 секунд на aistudio.google.com), **Groq · Llama 3.3** (LLM, бесплатно, экстремально быстрый инференс), **OpenAI** (LLM, платный, лучшее качество для художественных текстов), **Anthropic Claude** (LLM, платный)
+- **8 переводчиков** — MyMemory (бесплатно, без регистрации), Google Translate (бесплатно, без ключа), DeepL (нужен ключ), LibreTranslate (любой инстанс, можно свой), **Google Gemini** (LLM, бесплатный free tier — ключ за 30 секунд на aistudio.google.com), **Groq** (LLM, бесплатно, очень быстрый инференс), **OpenAI** (LLM, платный, лучшее качество для художественных текстов), **Anthropic Claude** (LLM, платный)
 - **Резервный провайдер** — если основной несколько раз подряд возвращает ошибку, программа автоматически переключается на запасной и каждую минуту проверяет восстановился ли основной
 - **Контекст последних реплик для LLM-провайдеров** — последние N (настраивается, по умолчанию 3) пар «оригинал — перевод» передаются как conversation history. Помогает корректно обрабатывать местоимения и продолжающиеся диалоги
 - **Стриминг LLM-перевода** — текст появляется в оверлее по мере генерации (~200 мс до первых символов вместо ~1-2 сек ожидания полного ответа). Включено по умолчанию для всех LLM-провайдеров (OpenAI, Anthropic, Gemini, Groq), выключается одним чекбоксом
@@ -74,7 +74,7 @@
 ## Системные требования
 
 - Windows 10 (1809+) или Windows 11, x64
-- [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) (или Windows Desktop Runtime) — устанавливается вместе с программой если её нет
+- .NET ставить не нужно: он уже включён в установщик
 - [Visual C++ Redistributable 2015–2022](https://aka.ms/vs/17/release/vc_redist.x64.exe) — нужен для PaddleOCR
 - ~2 ГБ свободной RAM (для PaddleOCR с моделями)
 
@@ -158,7 +158,7 @@ logs/            — журналы работы (хранится 30 дней)
 tessdata/        — модели Tesseract (английский/русский/японский встроены, остальные качаются по кнопке)
 ```
 
-PaddleOCR кэширует свои модели в `%LocalAppData%\Sdcb\`.
+PaddleOCR кэширует свои модели в `%APPDATA%\paddleocr-models\`.
 
 Установщик безопасный: при удалении сохраняет `settings.json`, `cache.db`, `history.db`, `glossary.db`, `profiles.db` (чистит только логи и tessdata) — переустановка не теряет твою конфигурацию.
 
@@ -173,7 +173,7 @@ dotnet build
 dotnet run
 ```
 
-Требуется .NET 8 SDK ([download](https://dotnet.microsoft.com/download/dotnet/8.0)).
+Требуется .NET 10 SDK ([download](https://dotnet.microsoft.com/download/dotnet/10.0)). Тесты: `dotnet test ErneyTranslateTool.Tests` из корня репозитория.
 
 ### Сборка установщика
 
@@ -220,7 +220,7 @@ ErneyTranslateTool/
 │   │   ├── OpenAITranslator       — OpenAI Chat Completions + sliding context
 │   │   ├── AnthropicTranslator    — Anthropic Messages API + sliding context
 │   │   ├── GeminiTranslator       — Google Gemini generateContent + sliding context (free tier)
-│   │   ├── GroqTranslator         — Groq Chat Completions (Llama 3.3) + sliding context (free tier)
+│   │   ├── GroqTranslator         — Groq Chat Completions (GPT-OSS) + sliding context (free tier)
 │   │   ├── IStreamingTranslator   — optional streaming SSE capability (OpenAI/Anthropic/Gemini/Groq implement)
 │   │   └── LlmLanguageNames       — DeepL-codes -> English names for LLM prompts
 │   ├── Startup/

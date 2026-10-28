@@ -23,8 +23,9 @@ namespace ErneyTranslateTool.Core.Translators;
 /// a key in 30 seconds.
 ///
 /// <para>Differences vs OpenAI/Anthropic that this class has to handle:
-/// the API key goes in the URL query string (<c>?key=...</c>) instead of
-/// an Authorization header; the request body uses
+/// the API key goes in an <c>x-goog-api-key</c> header (v1.0.30 — it used
+/// to ride in the <c>?key=</c> query string, where it leaked into proxy
+/// logs and error texts) instead of a Bearer token; the request body uses
 /// <c>system_instruction</c> at the top level + <c>contents</c> with role
 /// <c>"model"</c> instead of <c>"assistant"</c>; the response wraps text
 /// in <c>candidates[0].content.parts[*].text</c>; and the streaming
@@ -53,14 +54,14 @@ public class GeminiTranslator : IStreamingTranslator
     {
         _logger = logger;
         _apiKey = apiKey ?? string.Empty;
-        _model = string.IsNullOrWhiteSpace(model) ? "gemini-2.0-flash" : model;
+        _model = string.IsNullOrWhiteSpace(model) ? ModelCatalog.DefaultGemini : model;
         // Gemini accepts 0.0–2.0 like OpenAI; pin to that range.
         _temperature = Math.Clamp(temperature, 0.0, 2.0);
         _contextSize = Math.Clamp(contextSize, 0, 10);
         _useContext = useContext;
 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        // No Authorization header — Gemini wants ?key= in the URL.
+        _http.DefaultRequestHeaders.Add("x-goog-api-key", _apiKey);
     }
 
     public async Task<string> TranslateAsync(string text, string targetLanguage, CancellationToken ct = default)
@@ -69,7 +70,7 @@ public class GeminiTranslator : IStreamingTranslator
 
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var request = BuildRequest(text, targetName);
-        var url = $"{BaseUrl}{_model}:generateContent?key={Uri.EscapeDataString(_apiKey)}";
+        var url = $"{BaseUrl}{_model}:generateContent";
 
         using var resp = await _http.PostAsJsonAsync(url, request,
             new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
@@ -106,7 +107,7 @@ public class GeminiTranslator : IStreamingTranslator
 
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var request = BuildRequest(text, targetName);
-        var url = $"{BaseUrl}{_model}:streamGenerateContent?alt=sse&key={Uri.EscapeDataString(_apiKey)}";
+        var url = $"{BaseUrl}{_model}:streamGenerateContent?alt=sse";
 
         using var content = JsonContent.Create(request,
             options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
@@ -124,10 +125,10 @@ public class GeminiTranslator : IStreamingTranslator
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(line)) continue;
             if (line.StartsWith(':')) continue;
             if (!line.StartsWith("data:")) continue;
@@ -224,12 +225,33 @@ public class GeminiTranslator : IStreamingTranslator
                 }
             },
             Contents = contents,
-            GenerationConfig = new GeminiGenerationConfig
-            {
-                Temperature = _temperature,
-                MaxOutputTokens = 1000,
-            }
+            GenerationConfig = NewGenerationConfig(_temperature, maxTokens: 1000),
         };
+    }
+
+    /// <summary>
+    /// v1.0.30: every Gemini model still on the free tier thinks before
+    /// answering, and thought tokens count against <c>maxOutputTokens</c>
+    /// (hit the cap mid-thought and the answer comes back empty). Gemini 3
+    /// models take a <c>thinkingLevel</c>: we ask for the lowest one each
+    /// accepts. 2.5 uses a different knob (<c>thinkingBudget</c>) and would
+    /// reject <c>thinkingLevel</c>, so it only gets the bigger budget.
+    /// </summary>
+    private GeminiGenerationConfig NewGenerationConfig(double temperature, int maxTokens)
+    {
+        var config = new GeminiGenerationConfig { Temperature = temperature, MaxOutputTokens = maxTokens * 4 };
+        var level = ThinkingLevelFor(_model);
+        if (level != null)
+            config.ThinkingConfig = new GeminiThinkingConfig { ThinkingLevel = level };
+        return config;
+    }
+
+    /// <summary>Lowest thinking level a Gemini 3 model accepts; null for models that don't take the field.</summary>
+    internal static string? ThinkingLevelFor(string model)
+    {
+        if (!model.StartsWith("gemini-3", StringComparison.Ordinal)) return null;
+        // 3.8 Flash dropped "minimal"; the rest of the 3.x line has it.
+        return model.StartsWith("gemini-3.8", StringComparison.Ordinal) ? "low" : "minimal";
     }
 
     private static string? ExtractText(GeminiResponse? resp)
@@ -270,9 +292,9 @@ public class GeminiTranslator : IStreamingTranslator
                         Parts = new List<GeminiPart> { new() { Text = "hello" } }
                     }
                 },
-                GenerationConfig = new GeminiGenerationConfig { Temperature = 0.0, MaxOutputTokens = 50 }
+                GenerationConfig = NewGenerationConfig(0.0, maxTokens: 50)
             };
-            var url = $"{BaseUrl}{_model}:generateContent?key={Uri.EscapeDataString(_apiKey)}";
+            var url = $"{BaseUrl}{_model}:generateContent";
             using var resp = await _http.PostAsJsonAsync(url, probe,
                 new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
             if (!resp.IsSuccessStatusCode)
@@ -331,6 +353,12 @@ public class GeminiTranslator : IStreamingTranslator
     {
         [JsonPropertyName("temperature")] public double Temperature { get; set; }
         [JsonPropertyName("maxOutputTokens")] public int MaxOutputTokens { get; set; }
+        [JsonPropertyName("thinkingConfig")] public GeminiThinkingConfig? ThinkingConfig { get; set; }
+    }
+
+    private class GeminiThinkingConfig
+    {
+        [JsonPropertyName("thinkingLevel")] public string ThinkingLevel { get; set; } = "minimal";
     }
 
     private class GeminiResponse

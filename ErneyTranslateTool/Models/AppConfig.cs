@@ -25,30 +25,21 @@ public class AppConfig
     /// <summary>Encrypted Groq API key. Free tier ~30 RPM on Llama-family models with very high tokens/sec.</summary>
     public string? EncryptedGroqKey { get; set; }
 
-    /// <summary>
-    /// OpenAI model id used by the OpenAI translator. Defaults to the
-    /// cheapest production model — power users can override.
-    /// </summary>
-    public string OpenAIModel { get; set; } = "gpt-4o-mini";
+    // LLM model ids. Defaults, presets and retired ids live in
+    // Core.Translators.ModelCatalog; saved ids a provider has shut down are
+    // migrated on load (AppSettings.Load).
 
-    /// <summary>
-    /// Anthropic model id used by the Anthropic translator. Defaults to
-    /// the cheapest fast tier.
-    /// </summary>
-    public string AnthropicModel { get; set; } = "claude-haiku-4-5";
+    /// <summary>OpenAI model id used by the OpenAI translator.</summary>
+    public string OpenAIModel { get; set; } = Core.Translators.ModelCatalog.DefaultOpenAI;
 
-    /// <summary>
-    /// Gemini model id (e.g. "gemini-2.0-flash"). Flash variants are the
-    /// only ones with a sustainable free tier — Pro is paid.
-    /// </summary>
-    public string GeminiModel { get; set; } = "gemini-2.0-flash";
+    /// <summary>Anthropic model id used by the Anthropic translator.</summary>
+    public string AnthropicModel { get; set; } = Core.Translators.ModelCatalog.DefaultAnthropic;
 
-    /// <summary>
-    /// Groq model id. Llama 3.3 70B Versatile is the strongest free
-    /// general-purpose model on Groq right now — solid translation quality
-    /// and Groq's hardware delivers it at 250-400 tokens/sec.
-    /// </summary>
-    public string GroqModel { get; set; } = "llama-3.3-70b-versatile";
+    /// <summary>Gemini model id. Flash / Flash-Lite variants have a free tier — Pro is paid.</summary>
+    public string GeminiModel { get; set; } = Core.Translators.ModelCatalog.DefaultGemini;
+
+    /// <summary>Groq model id.</summary>
+    public string GroqModel { get; set; } = Core.Translators.ModelCatalog.DefaultGroq;
 
     /// <summary>
     /// Sampling temperature for LLM providers (0.0 = deterministic,

@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
+using ErneyTranslateTool.Core.Translators;
 using ErneyTranslateTool.Models;
 using Serilog;
 
@@ -49,6 +50,16 @@ public class AppSettings
                 {
                     _config = loadedConfig;
                     _logger.Information("Settings loaded from {Path}", _settingsPath);
+
+                    // Providers shut models down; a saved dead id would make
+                    // every request fail until the user noticed and changed it.
+                    var migrated = ModelCatalog.MigrateRetired(_config);
+                    if (migrated.Count > 0)
+                    {
+                        foreach (var change in migrated)
+                            _logger.Information("Retired model replaced: {Change}", change);
+                        Save();
+                    }
                 }
             }
             else

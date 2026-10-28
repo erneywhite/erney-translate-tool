@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -49,7 +50,7 @@ public class OpenAITranslator : IStreamingTranslator
         int contextSize, bool useContext, ILogger logger)
     {
         _logger = logger;
-        _model = string.IsNullOrWhiteSpace(model) ? "gpt-4o-mini" : model;
+        _model = string.IsNullOrWhiteSpace(model) ? ModelCatalog.DefaultOpenAI : model;
         _temperature = Math.Clamp(temperature, 0.0, 2.0);
         _contextSize = Math.Clamp(contextSize, 0, 10);
         _useContext = useContext;
@@ -66,16 +67,10 @@ public class OpenAITranslator : IStreamingTranslator
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var messages = BuildMessages(text, targetName);
 
-        var request = new ChatRequest
-        {
-            Model = _model,
-            Messages = messages,
-            Temperature = _temperature,
-            // Generous cap: a typical translated dialogue line is well
-            // under 200 tokens. Big buffer means we never truncate mid-
-            // sentence on long subtitles.
-            MaxTokens = 1000,
-        };
+        // Generous cap: a typical translated dialogue line is well
+        // under 200 tokens. Big buffer means we never truncate mid-
+        // sentence on long subtitles.
+        var request = NewRequest(messages, maxTokens: 1000);
 
         using var resp = await _http.PostAsJsonAsync(EndpointUrl, request,
             new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
@@ -169,14 +164,8 @@ public class OpenAITranslator : IStreamingTranslator
         var targetName = LlmLanguageNames.EnglishNameFor(targetLanguage);
         var messages = BuildMessages(text, targetName);
 
-        var request = new ChatRequest
-        {
-            Model = _model,
-            Messages = messages,
-            Temperature = _temperature,
-            MaxTokens = 1000,
-            Stream = true,
-        };
+        var request = NewRequest(messages, maxTokens: 1000);
+        request.Stream = true;
 
         using var content = JsonContent.Create(request,
             options: new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull });
@@ -197,10 +186,10 @@ public class OpenAITranslator : IStreamingTranslator
         await using var stream = await resp.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream, Encoding.UTF8);
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(ct);
             if (string.IsNullOrEmpty(line)) continue;
             // SSE comment lines start with ":" — used as keep-alives, ignore.
             if (line.StartsWith(':')) continue;
@@ -262,7 +251,7 @@ public class OpenAITranslator : IStreamingTranslator
                     new() { Role = "user", Content = "hello" },
                 };
                 using var resp = await _http.PostAsJsonAsync(EndpointUrl,
-                    new ChatRequest { Model = _model, Messages = messages, Temperature = 0.0, MaxTokens = 50 },
+                    NewRequest(messages, maxTokens: 50, temperature: 0.0),
                     new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }, ct);
                 if (!resp.IsSuccessStatusCode)
                 {
@@ -285,6 +274,43 @@ public class OpenAITranslator : IStreamingTranslator
         }
     }
 
+    /// <summary>
+    /// v1.0.30: GPT-5 / GPT-6 and the o-series are reasoning models. They
+    /// reject <c>max_tokens</c> (renamed <c>max_completion_tokens</c>, which
+    /// older models accept too) and non-default <c>temperature</c>, and by
+    /// default they reason before answering — seconds of latency a dialog
+    /// line doesn't need. For them we drop temperature, ask for the lowest
+    /// reasoning effort the family supports and leave room for any reasoning
+    /// tokens in the completion budget.
+    /// </summary>
+    private ChatRequest NewRequest(List<ChatMessage> messages, int maxTokens, double? temperature = null)
+    {
+        var request = new ChatRequest { Model = _model, Messages = messages };
+        var effort = ReasoningEffortFor(_model);
+        if (effort == null)
+        {
+            request.Temperature = temperature ?? _temperature;
+            request.MaxCompletionTokens = maxTokens;
+        }
+        else
+        {
+            request.ReasoningEffort = effort;
+            request.MaxCompletionTokens = maxTokens * 4;
+        }
+        return request;
+    }
+
+    /// <summary>Lowest reasoning effort for a reasoning model, or null for a classic chat model.</summary>
+    internal static string? ReasoningEffortFor(string model)
+    {
+        if (model.StartsWith("gpt-6", StringComparison.Ordinal)) return "none";
+        // gpt-5 itself bottoms out at "minimal"; gpt-5.1 and later accept "none".
+        if (model.StartsWith("gpt-5.", StringComparison.Ordinal)) return "none";
+        if (model.StartsWith("gpt-5", StringComparison.Ordinal)) return "minimal";
+        if (Regex.IsMatch(model, @"^o\d")) return "low";
+        return null;
+    }
+
     private static string Truncate(string s, int max) =>
         string.IsNullOrEmpty(s) || s.Length <= max ? (s ?? string.Empty) : s.Substring(0, max) + "…";
 
@@ -302,8 +328,10 @@ public class OpenAITranslator : IStreamingTranslator
     {
         [JsonPropertyName("model")] public string Model { get; set; } = string.Empty;
         [JsonPropertyName("messages")] public List<ChatMessage> Messages { get; set; } = new();
-        [JsonPropertyName("temperature")] public double Temperature { get; set; }
-        [JsonPropertyName("max_tokens")] public int MaxTokens { get; set; }
+        // Null for reasoning models, which reject it (see NewRequest).
+        [JsonPropertyName("temperature")] public double? Temperature { get; set; }
+        [JsonPropertyName("max_completion_tokens")] public int MaxCompletionTokens { get; set; }
+        [JsonPropertyName("reasoning_effort")] public string? ReasoningEffort { get; set; }
         // Default false → JsonIgnoreCondition.WhenWritingNull keeps it out
         // of the payload for the regular non-streaming path. Set to true
         // explicitly by TranslateStreamAsync.
