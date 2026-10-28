@@ -40,7 +40,7 @@ public sealed class LayoutReplay
             {
                 if (++vanish >= VanishConfirmFrames) shown = null;
             }
-            else if (layout.TryReusePreviousFrame(raw, VanishConfirmFrames, out var reused))
+            else if (layout.TryReusePreviousFrame(raw, FrameLayout.BlockVanishFrames, out var reused))
             {
                 trace?.Invoke(index, $"reuse {reused!.Count}");
                 vanish = 0;
@@ -57,7 +57,7 @@ public sealed class LayoutReplay
                 if (translated.Count > 0)
                 {
                     layout.RememberRecentRegions(translated);
-                    translated = layout.HoldBriefDropouts(translated, VanishConfirmFrames);
+                    translated = layout.HoldBriefDropouts(translated, FrameLayout.BlockVanishFrames);
                     layout.RememberCompletedFrame(raw, translated);
                     shown = Signature(translated);
                 }
