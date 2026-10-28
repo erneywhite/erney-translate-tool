@@ -335,6 +335,15 @@ public class AppSettings
     /// <param name="isCacheHit">Whether translation was from cache.</param>
     public void UpdateStats(int charactersCount, bool isCacheHit)
     {
+        // v1.0.35: blocks of a frame are translated in parallel.
+        lock (_statsLock)
+            UpdateStatsLocked(charactersCount, isCacheHit);
+    }
+
+    private readonly object _statsLock = new();
+
+    private void UpdateStatsLocked(int charactersCount, bool isCacheHit)
+    {
         if (_config.CharactersResetDate.Date < DateTime.UtcNow.Date)
         {
             _config.CharactersTranslatedToday = 0;

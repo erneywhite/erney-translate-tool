@@ -478,12 +478,19 @@ public class TranslationEngine : IDisposable
             // region as the SSE stream arrives. We re-render the overlay
             // each time so the user sees the translation appear word-by-
             // word — TTFT ~200 ms vs the ~1-2 s of a full round-trip.
+            // v1.0.35: blocks are translated in parallel, so this is called
+            // from several threads; each render gets its own copy of the list.
             var partial = new List<TranslationRegion>();
             void OnRegionUpdated(TranslationRegion r)
             {
                 if (string.IsNullOrEmpty(r.TranslatedText)) return;
-                if (!partial.Contains(r)) partial.Add(r);
-                ShowIfCurrent(generation, partial, winRect, isPartial: true);
+                List<TranslationRegion> snapshot;
+                lock (partial)
+                {
+                    if (!partial.Contains(r)) partial.Add(r);
+                    snapshot = new List<TranslationRegion>(partial);
+                }
+                ShowIfCurrent(generation, snapshot, winRect, isPartial: true);
             }
 
             var translated = await _translation.TranslateRegionsAsync(
