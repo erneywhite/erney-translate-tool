@@ -66,6 +66,28 @@ public class LayoutReplayTests
         Assert.Single(layout.HoldBriefDropouts(dialogue, 2));
     }
 
+    /// <summary>
+    /// A HUD whose labels change in place: grouping inherited from an earlier
+    /// frame by position alone glued a label to a hint across the screen
+    /// (blocks 175 and 406 px tall). The real blocks there are under 70 px.
+    /// </summary>
+    [Fact]
+    public void InheritedGrouping_DoesNotGlueUnrelatedText()
+    {
+        var frames = OcrRecorder.Load(Path.Combine(AppContext.BaseDirectory, "Recordings", "vn-minigame-hud.jsonl"));
+        var layout = new FrameLayout(new LoggerConfiguration().CreateLogger());
+        foreach (var recorded in frames)
+        {
+            var raw = recorded.ToList();
+            ErneyTranslateTool.Core.Ocr.OcrTextHelpers.DropNoise(raw);
+            if (raw.Count == 0 || layout.TryReusePreviousFrame(raw, FrameLayout.BlockVanishFrames, out _)) continue;
+            var blocks = layout.ApplyGroupingHysteresisOrGroup(raw);
+            Assert.All(blocks, b => Assert.True(b.Bounds.Height < 200, $"{b.Bounds.Height:F0} px: '{b.OriginalText}'"));
+            foreach (var b in blocks) b.TranslatedText = b.OriginalText;
+            layout.RememberCompletedFrame(raw, blocks);
+        }
+    }
+
     [Fact]
     public void HoldBriefDropouts_DoesNotHoldABlockWhoseTextIsGone()
     {

@@ -59,7 +59,7 @@ public sealed class FrameLayout
     private readonly LinkedList<GroupingSnapshot> _recentGroupings = new();
     private readonly object _recentGroupingsLock = new();
     /// <summary>One frame's worth of grouping memory. RawBounds[i] is the input region position; SourceToGroup[i] is which merged group it landed in.</summary>
-    private readonly record struct GroupingSnapshot(System.Windows.Rect[] RawBounds, int[] SourceToGroup);
+    private readonly record struct GroupingSnapshot(System.Windows.Rect[] RawBounds, int[] SourceToGroup, string[] RawTexts);
 
     // v1.0.25: full-frame translation reuse. The previous v1.0.23/v1.0.24
     // hysteresis layers tried to make the GROUPING decision consistent
@@ -378,7 +378,12 @@ public sealed class FrameLayout
                 for (int j = 0; j < snapshot.RawBounds.Length; j++)
                 {
                     var ov = RectOverlapRatio(current[i].Bounds, snapshot.RawBounds[j]);
-                    if (ov > matchOverlap)
+                    // v1.0.39: the same place is not enough — after a scene
+                    // change new text stood where an old paragraph's lines
+                    // were and inherited their merge: a label glued to a
+                    // hint at the other end of the screen. Only the same
+                    // text (within OCR jitter) inherits.
+                    if (ov > matchOverlap && RawTextsMatch(current[i].OriginalText, snapshot.RawTexts[j]))
                     {
                         matchOverlap = ov;
                         matchSnapIdx = snapIdx;
@@ -404,12 +409,17 @@ public sealed class FrameLayout
     private void RememberGroupingSnapshot(List<TranslationRegion> rawRegions, IList<int> sourceToGroup)
     {
         var rawBounds = new System.Windows.Rect[rawRegions.Count];
-        for (int i = 0; i < rawRegions.Count; i++) rawBounds[i] = rawRegions[i].Bounds;
+        var rawTexts = new string[rawRegions.Count];
+        for (int i = 0; i < rawRegions.Count; i++)
+        {
+            rawBounds[i] = rawRegions[i].Bounds;
+            rawTexts[i] = rawRegions[i].OriginalText ?? string.Empty;
+        }
         var indices = sourceToGroup as int[] ?? sourceToGroup.ToArray();
 
         lock (_recentGroupingsLock)
         {
-            _recentGroupings.AddLast(new GroupingSnapshot(rawBounds, indices));
+            _recentGroupings.AddLast(new GroupingSnapshot(rawBounds, indices, rawTexts));
             while (_recentGroupings.Count > RecentGroupingsCapacity)
                 _recentGroupings.RemoveFirst();
         }
