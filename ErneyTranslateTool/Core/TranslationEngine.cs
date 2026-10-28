@@ -253,6 +253,8 @@ public class TranslationEngine : IDisposable
         // translations even if positions happened to overlap.
         lock (_lastCompletedFrameLock) _lastCompletedFrame = null;
         _vanishStreak = 0;
+        // A fresh Start shows the overlay again even if it was hidden.
+        _overlay.HiddenByUser = false;
         _history.EndSession(
             _settings.Config.CharactersTranslatedToday,
             _settings.Config.CacheHits + _settings.Config.CacheMisses);
@@ -269,12 +271,25 @@ public class TranslationEngine : IDisposable
         _logger.Information("Engine stopped");
     }
 
+    /// <summary>True while the user has hidden the overlay with the button or hotkey.</summary>
+    public bool IsOverlayHiddenByUser => _overlay.HiddenByUser;
+
+    /// <summary>
+    /// Hide / show the overlay on user request. v1.0.31: hiding is sticky
+    /// (see <see cref="OverlayManager.HiddenByUser"/>), and showing actually
+    /// shows it: the old "show" branch only moved the window without calling
+    /// Show(), so the overlay came back only when new text appeared — never
+    /// on a static screen, where unchanged frames are skipped. Now the frame
+    /// hash is reset so the very next tick re-renders.
+    /// </summary>
     public void ToggleOverlay()
     {
-        if (_overlay.IsVisible)
+        _overlay.HiddenByUser = !_overlay.HiddenByUser;
+        if (_overlay.HiddenByUser)
             _overlay.Hide();
         else
-            _overlay.UpdatePosition(TargetWindowHandle);
+            _lastFrameHash = 0;
+        StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

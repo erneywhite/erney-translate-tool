@@ -4,147 +4,396 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="800"
+             d:DesignHeight="680" d:DesignWidth="890"
              Background="{DynamicResource BackgroundBrush}">
 
-    <!-- v1.0.13 padding standardisation: every tab uses the same root
-         layout — outer ScrollViewer with Padding="28,20,28,20" + a
-         StackPanel of children. Title sits at the StackPanel's top so
-         it lines up at the same x position as headings on every other
-         tab. Internal two-column dashboard for cards lives below. -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
-        <StackPanel>
-            <TextBlock Text="{DynamicResource Strings.Main.Title}"
-                       FontSize="24" FontWeight="Bold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       Margin="0,0,0,4"/>
-            <TextBlock Text="{Binding StatusMessage}"
-                       Foreground="{DynamicResource TextSecondaryBrush}"
-                       Margin="0,0,0,18"/>
+    <!-- v1.0.31 redesign ("control panel", variant A of the 2026-10-28
+         sketches). Two states share the header: idle = picked window + big
+         Start + searchable window list + recent translations; running = card
+         of the running game with Pause / Hide overlay / Stop, stats and a
+         live feed. No outer ScrollViewer: the window list and the feed
+         scroll inside their own cards so the Start button never scrolls away. -->
+    <UserControl.Resources>
+        <Style x:Key="Caption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <Style x:Key="Glyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
 
+        <!-- App icon from the exe, or a coloured letter tile when there is none. -->
+        <DataTemplate x:Key="WindowIcon">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="320"/>
-                </Grid.ColumnDefinitions>
+                <Border CornerRadius="7" Background="{Binding TileBrush}">
+                    <TextBlock Text="{Binding Initial}" FontWeight="Bold" Foreground="#151520"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasIcon}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+                <Image Source="{Binding Icon}" RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Grid>
+        </DataTemplate>
 
-                <!-- Window picker card (left column) -->
-                <GroupBox Grid.Column="0"
-                          Header="{DynamicResource Strings.Main.WindowGroup}"
-                          Style="{DynamicResource DarkGroupBoxStyle}"
-                          Margin="0,0,18,0">
+        <!-- Text shown only while a list is empty. -->
+        <Style x:Key="ShownWhenNoFeed" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasFeed}" Value="False">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="28,22,28,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header: title + status chips -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,18" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Text="{DynamicResource Strings.Main.Title}"
+                       FontSize="24" FontWeight="Bold" VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                <Border Style="{StaticResource StatusChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="7" Height="7" Fill="{Binding OcrDotBrush}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding OcrChipText}" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource StatusChipStyle}">
+                    <TextBlock Text="{Binding ProviderChipText}" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                </Border>
+                <Border Style="{StaticResource StatusChipStyle}">
+                    <TextBlock Text="{Binding FallbackChipText}" Style="{StaticResource Caption}"/>
+                </Border>
+            </WrapPanel>
+        </DockPanel>
+
+        <!-- ================= IDLE ================= -->
+        <Grid Grid.Row="1" Visibility="{Binding IsIdle, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="18"/>
+                <ColumnDefinition Width="290"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="14"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Picked window + Start -->
+                <Border Grid.Row="0" Style="{StaticResource FlatCardStyle}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="{DynamicResource Strings.Main.SelectedCaption}" Style="{StaticResource Caption}"/>
+                            <TextBlock Text="{Binding SelectedWindowTitle}" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
+                                       Margin="0,2,0,2"/>
+                            <TextBlock Text="{Binding SelectedSubtitle}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Style="{DynamicResource PrimaryButtonStyle}"
+                                Command="{Binding ToggleEngineCommand}" Height="48" FontSize="15">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE768;" FontSize="14"/>
+                                <TextBlock Text="{DynamicResource Strings.Main.StartTranslation}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderLightBrush}" BorderThickness="1"
+                                CornerRadius="6" Padding="7,3" Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding StartHotkey}" Style="{StaticResource Caption}"/>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- Window list -->
+                <Border Grid.Row="2" Style="{StaticResource FlatCardStyle}" Padding="16,14,16,12">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0"
-                                   Text="{DynamicResource Strings.Main.WindowHelp}"
-                                   Foreground="{DynamicResource TextSecondaryBrush}"
-                                   TextWrapping="Wrap"
-                                   Margin="0,0,0,10"/>
-                        <!-- Refresh + selected label live in their own row so
-                             the long window title has the full card width to
-                             ellipsis-trim into. -->
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8">
-                            <Button Content="{DynamicResource Strings.Main.RefreshList}"
-                                    Command="{Binding RefreshWindowsCommand}"
-                                    Padding="14,8" Margin="0,0,12,0"
-                                    ToolTip="{DynamicResource Strings.Main.RefreshList.Tooltip}"/>
-                            <TextBlock Text="{DynamicResource Strings.Main.SelectedLabel}" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
-                            <TextBlock Text="{Binding SelectedWindowTitle}" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="420"/>
-                        </StackPanel>
-                        <!-- v1.0.28: opt-out filter for the picker. Default
-                             hides Explorer/Telegram/VPN/peripheral utility
-                             windows that nobody wants to translate; flip
-                             this on to see everything if your game/app
-                             happens to share a name with the filter.
-                             v1.0.29: moved to its own row so the "Selected:"
-                             line above doesn't have to share horizontal
-                             space with the long checkbox label. -->
-                        <CheckBox Grid.Row="2"
-                                  Content="{DynamicResource Strings.Main.ShowHiddenApps}"
-                                  IsChecked="{Binding ShowHiddenWindows}"
-                                  ToolTip="{DynamicResource Strings.Main.ShowHiddenApps.Tooltip}"
-                                  Foreground="{DynamicResource TextSecondaryBrush}"
-                                  Margin="0,0,0,10"/>
-                        <ListBox Grid.Row="3"
-                                 ItemsSource="{Binding Windows}"
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Strings.Main.WindowListTitle}"
+                                       Style="{StaticResource CardTitle}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Border Grid.Column="1" Height="36" CornerRadius="8"
+                                    Background="{DynamicResource BackgroundBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <Grid Margin="10,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Style="{StaticResource Glyph}" Text="&#xE721;" FontSize="13"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBox x:Name="SearchBox" Grid.Column="1"
+                                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                                             Foreground="{DynamicResource TextPrimaryBrush}"
+                                             CaretBrush="{DynamicResource TextPrimaryBrush}"
+                                             AutomationProperties.Name="{DynamicResource Strings.Main.SearchPlaceholder}"/>
+                                    <TextBlock Grid.Column="1" Text="{DynamicResource Strings.Main.SearchPlaceholder}"
+                                               Style="{StaticResource Caption}" FontSize="13" Margin="3,0,0,0"
+                                               VerticalAlignment="Center" IsHitTestVisible="False">
+                                        <TextBlock.Visibility>
+                                            <Binding Path="Text" ElementName="SearchBox">
+                                                <Binding.Converter>
+                                                    <local:EmptyToVisibleConverter xmlns:local="clr-namespace:ErneyTranslateTool.Views.Tabs"/>
+                                                </Binding.Converter>
+                                            </Binding>
+                                        </TextBlock.Visibility>
+                                    </TextBlock>
+                                </Grid>
+                            </Border>
+                            <CheckBox Grid.Column="2" Content="{DynamicResource Strings.Main.ShowSystem}"
+                                      IsChecked="{Binding ShowHiddenWindows}"
+                                      ToolTip="{DynamicResource Strings.Main.ShowHiddenApps.Tooltip}"
+                                      Foreground="{DynamicResource TextSecondaryBrush}"
+                                      VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            <Button Grid.Column="3" Style="{StaticResource OutlineButtonStyle}" Height="36" Padding="10,0"
+                                    Margin="10,0,0,0" Command="{Binding RefreshWindowsCommand}"
+                                    ToolTip="{DynamicResource Strings.Main.RefreshList.Tooltip}"
+                                    AutomationProperties.Name="{DynamicResource Strings.Main.RefreshList}">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" FontSize="13"/>
+                            </Button>
+                        </Grid>
+
+                        <ListBox Grid.Row="1"
+                                 ItemsSource="{Binding WindowsView}"
                                  SelectedItem="{Binding SelectedWindow}"
-                                 Background="{DynamicResource InputBackgroundBrush}"
+                                 ItemContainerStyle="{StaticResource WindowListItemStyle}"
+                                 Background="Transparent" BorderThickness="0"
                                  Foreground="{DynamicResource TextPrimaryBrush}"
-                                 BorderBrush="{DynamicResource BorderBrush}"
-                                 MinHeight="240">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="2">
-                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                                        <TextBlock Text=" — " Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <TextBlock Text="{Binding ProcessName}" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ContentControl Grid.Column="0" Width="30" Height="30"
+                                                        Content="{Binding}" ContentTemplate="{StaticResource WindowIcon}"/>
+                                        <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding ProcessLabel}" Style="{StaticResource Caption}"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,16,0,0">
-                            <Button Content="{Binding ToggleButtonText}"
-                                    Command="{Binding ToggleEngineCommand}"
-                                    Style="{DynamicResource PrimaryButtonStyle}"
-                                    ToolTip="Ctrl+Shift+T"/>
-                            <Button Content="{DynamicResource Strings.Main.RefreshStats}"
-                                    Command="{Binding RefreshStatsCommand}"
-                                    Padding="14,8" Margin="12,0,0,0"/>
-                        </StackPanel>
+                        <TextBlock Grid.Row="2" Text="{DynamicResource Strings.Main.WindowModeHint}"
+                                   Style="{StaticResource Caption}" Margin="0,8,0,0"/>
                     </Grid>
-                </GroupBox>
-
-                <!-- Modern stat cards (right column) -->
-                <StackPanel Grid.Column="1">
-                    <Border Style="{DynamicResource ModernCardStyle}" Margin="0,0,0,12">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Strings.Main.CharsToday}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="11"/>
-                            <TextBlock Text="{Binding CharactersTranslatedToday, StringFormat={}{0:N0}}"
-                                       Foreground="{DynamicResource PrimaryBrush}"
-                                       FontSize="32" FontWeight="Bold"
-                                       Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{DynamicResource ModernCardStyle}" Margin="0,0,0,12">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Strings.Main.CacheHit}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="11"/>
-                            <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:F1}%}"
-                                       Foreground="{DynamicResource PrimaryBrush}"
-                                       FontSize="32" FontWeight="Bold"
-                                       Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{DynamicResource ModernCardStyle}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Strings.Main.FrameTime}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       FontSize="11"
-                                       ToolTip="{DynamicResource Strings.Main.FrameTime.Tooltip}"/>
-                            <TextBlock Text="{Binding FrameTimeText}"
-                                       Foreground="{DynamicResource PrimaryBrush}"
-                                       FontSize="22" FontWeight="SemiBold"
-                                       Margin="0,4,0,0"
-                                       TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                </Border>
             </Grid>
-        </StackPanel>
-    </ScrollViewer>
+
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource FlatCardStyle}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.Main.RecentTitle}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{DynamicResource Strings.Main.FeedEmpty}" Style="{StaticResource ShownWhenNoFeed}" Margin="0,0,0,10"/>
+                        <ItemsControl ItemsSource="{Binding RecentPreview}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,10" Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Time}" Style="{StaticResource Caption}"/>
+                                            <TextBlock Text="{Binding Original}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,2,0,2"/>
+                                            <TextBlock Text="{Binding Translated}" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock FontSize="13">
+                            <Hyperlink Command="{Binding OpenHistoryCommand}" Foreground="{DynamicResource PrimaryLightBrush}">
+                                <Run Text="{DynamicResource Strings.Main.AllHistory}"/>
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource FlatCardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.Main.TodayTitle}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                        <DockPanel Margin="0,0,0,8">
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding CharactersTranslatedToday, StringFormat={}{0:N0}}"
+                                       FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Strings.Main.CharsTodayShort}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </DockPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding CacheHitRate, StringFormat={}{0:F0}%}"
+                                       FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                            <TextBlock Text="{DynamicResource Strings.Main.FromCache}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!-- ================= RUNNING ================= -->
+        <Grid Grid.Row="1" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="14"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="14"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource FlatCardStyle}">
+                        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="44"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ContentControl Grid.Column="0" Width="44" Height="44" VerticalAlignment="Center"
+                                    Content="{Binding SelectedWindow}" ContentTemplate="{StaticResource WindowIcon}"/>
+                    <StackPanel Grid.Column="1" Margin="14,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding RunningLabel}" FontSize="12" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding SelectedWindowTitle}" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,2"/>
+                        <TextBlock Text="{Binding RunningSubtitle}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource OutlineButtonStyle}" Command="{Binding TogglePauseCommand}" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding PauseButtonText}"/>
+                        </Button>
+                        <Button Style="{StaticResource OutlineButtonStyle}" Command="{Binding ToggleOverlayCommand}" Margin="0,0,10,0">
+                            <TextBlock Text="{Binding OverlayButtonText}"/>
+                        </Button>
+                        <Button Style="{StaticResource DangerButtonStyle}" Command="{Binding ToggleEngineCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE71A;" FontSize="12"/>
+                                <TextBlock Text="{DynamicResource Strings.Main.Stop}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <UniformGrid Grid.Row="2" Columns="3">
+                <Border Style="{StaticResource FlatCardStyle}" Margin="0,0,7,0">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.Main.TranslatedToday}" Style="{StaticResource Caption}"/>
+                        <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextPrimaryBrush}">
+                            <Run Text="{Binding CharactersTranslatedToday, StringFormat={}{0:N0}, Mode=OneWay}" FontSize="26" FontWeight="Bold"/>
+                            <Run Text="{DynamicResource Strings.Main.CharsUnit}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FlatCardStyle}" Margin="7,0,7,0">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.Main.FromCacheLong}" Style="{StaticResource Caption}"/>
+                        <TextBlock Text="{Binding CacheHitRate, StringFormat={}{0:F0}%}" FontSize="26" FontWeight="Bold"
+                                   Margin="0,4,0,0" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource FlatCardStyle}" Margin="7,0,0,0"
+                        ToolTip="{DynamicResource Strings.Main.FrameTime.Tooltip}">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Strings.Main.FrameTimeShort}" Style="{StaticResource Caption}"/>
+                        <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextPrimaryBrush}">
+                            <Run Text="{Binding FrameTimeText, Mode=OneWay}" FontSize="26" FontWeight="Bold"/>
+                            <Run Text="{DynamicResource Strings.Main.MsUnit}" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Grid.Row="4" Style="{StaticResource FlatCardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding HotkeyHint}" Style="{StaticResource Caption}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Strings.Main.LiveTitle}" Style="{StaticResource CardTitle}"/>
+                    </DockPanel>
+                    <TextBlock Grid.Row="1" Text="{DynamicResource Strings.Main.FeedEmpty}" Style="{StaticResource ShownWhenNoFeed}"/>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding RecentTranslations}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,9">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="56"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Time}" Style="{StaticResource Caption}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Original}" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding Translated}" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </UserControl>

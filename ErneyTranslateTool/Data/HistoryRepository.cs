@@ -170,7 +170,60 @@ public class HistoryRepository : IDisposable
         catch (Exception ex)
         {
             _logger.Error(ex, "Failed to add translation to history");
+            return;
         }
+
+        TranslationAdded?.Invoke(this, new TranslationEntry
+        {
+            SessionId = _currentSessionId,
+            Timestamp = DateTime.UtcNow,
+            OriginalText = originalText,
+            TranslatedText = translatedText,
+            SourceLanguage = sourceLanguage,
+            IsFromCache = isFromCache,
+        });
+    }
+
+    /// <summary>
+    /// Raised after a translation is written (live feed on the Main tab).
+    /// Fires on whatever thread called <see cref="AddTranslation"/> — the
+    /// pipeline thread; subscribers marshal to the UI themselves.
+    /// </summary>
+    public event EventHandler<TranslationEntry>? TranslationAdded;
+
+    /// <summary>Newest translations across all sessions, newest first.</summary>
+    public List<TranslationEntry> GetRecentTranslations(int limit)
+    {
+        var entries = new List<TranslationEntry>();
+        try
+        {
+            using var cmd = _connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT Id, SessionId, Timestamp, OriginalText, TranslatedText, SourceLanguage, IsFromCache
+                FROM Translations
+                ORDER BY Id DESC
+                LIMIT @limit";
+            cmd.Parameters.AddWithValue("@limit", limit);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                entries.Add(new TranslationEntry
+                {
+                    Id = reader.GetInt32(0),
+                    SessionId = reader.GetInt32(1),
+                    Timestamp = DateTime.Parse(reader.GetString(2), null, System.Globalization.DateTimeStyles.RoundtripKind),
+                    OriginalText = reader.GetString(3),
+                    TranslatedText = reader.GetString(4),
+                    SourceLanguage = reader.GetString(5),
+                    IsFromCache = reader.GetInt32(6) == 1
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Failed to get recent translations");
+        }
+        return entries;
     }
 
     /// <summary>
