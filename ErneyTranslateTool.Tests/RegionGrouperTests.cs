@@ -29,6 +29,18 @@ public class RegionGrouperTests
             Group(L(437, 852, 746, 34, "But now, how and why is she here in my shop?"), L(604, 898, 84, 34, "MSG")));
 
     [Fact]
+    public void CjkMenu_StaysSeparate() =>
+        Assert.Equal(new[] { "新遊戲", "載入", "設定", "相冊", "退出" },
+            Group(L(1021, 279, 74, 28, "新遊戲"), L(1021, 342, 47, 29, "載入"), L(1021, 406, 50, 29, "設定"),
+                  L(1019, 469, 52, 29, "相冊"), L(1019, 533, 52, 27, "退出")));
+
+    [Fact]
+    public void CjkDialogueWrap_StillMerges() =>
+        Assert.Single(Group(
+            L(174, 576, 409, 25, "在人類的歷史記載中，「妖狐」不僅止是"),
+            L(174, 610, 300, 25, "一種傳說中的生物")));
+
+    [Fact]
     public void DialogueWrap_StillMerges() =>
         Assert.Single(Group(
             L(440, 854, 818, 32, "Whether she doesn't recognize me or simply doesn't deem me"),
