@@ -35,6 +35,15 @@ public class TranslationEngine : IDisposable
     private bool _disposed;
     private long _lastFrameHash;
 
+    // v1.0.33: frames are processed on a worker thread (CaptureService runs
+    // its loop via Task.Run). A frame still translating when the user hits
+    // Stop finishes later; the generation stamp makes it drop its result
+    // instead of re-showing the overlay or poisoning the next session's
+    // reuse snapshot, and the token cancels its network calls.
+    private int _runGeneration;
+    private CancellationTokenSource _runCts = new();
+    private int _threadLoggedForGeneration = -1;
+
     // v1.0.30: vanished-text handling. When the text the overlay shows is
     // gone from the screen (dialog closed, CG shown), the overlay used to
     // keep the stale translation until new text appeared. Now it's dropped
@@ -226,6 +235,13 @@ public class TranslationEngine : IDisposable
         _settings.Save();
 
         _history.StartSession(title);
+        Interlocked.Increment(ref _runGeneration);
+        _runCts = new CancellationTokenSource();
+        // The last frame of the previous run is still remembered: on a static
+        // screen the first frame of this run matched it and was skipped, and
+        // so was every frame after — Stop → Start never translated anything.
+        Interlocked.Exchange(ref _lastFrameHash, 0);
+        _vanishStreak = 0;
         await _capture.StartCaptureAsync(hwnd);
         IsRunning = true;
         StatusUpdated?.Invoke(this,
@@ -239,6 +255,8 @@ public class TranslationEngine : IDisposable
     public async Task StopAsync()
     {
         if (!IsRunning) return;
+        Interlocked.Increment(ref _runGeneration);
+        _runCts.Cancel();
         await _capture.StopCaptureAsync();
         _overlay.Hide();
         // Clear the jitter-stabilisation memory — next Start might be on a
@@ -279,7 +297,7 @@ public class TranslationEngine : IDisposable
     /// </summary>
     public void RequestOverlayRestyle()
     {
-        if (IsRunning) _lastFrameHash = 0;
+        if (IsRunning) Interlocked.Exchange(ref _lastFrameHash, 0);
     }
 
     /// <summary>True while the user has hidden the overlay with the button or hotkey.</summary>
@@ -299,7 +317,7 @@ public class TranslationEngine : IDisposable
         if (_overlay.HiddenByUser)
             _overlay.Hide();
         else
-            _lastFrameHash = 0;
+            Interlocked.Exchange(ref _lastFrameHash, 0);
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -324,7 +342,7 @@ public class TranslationEngine : IDisposable
             // Reset the dedup hash so the very next frame is treated as
             // novel — otherwise an unchanged scene would be skipped and
             // the user would see no overlay until something moves.
-            _lastFrameHash = 0;
+            Interlocked.Exchange(ref _lastFrameHash, 0);
             // Reproduce the same status string StartAsync emits — profile
             // name is shown when one's active, plain title otherwise.
             var profile = _profiles.ActiveProfile;
@@ -366,6 +384,12 @@ public class TranslationEngine : IDisposable
             return;
         }
 
+        var generation = Volatile.Read(ref _runGeneration);
+        var ct = _runCts.Token;
+        if (Interlocked.Exchange(ref _threadLoggedForGeneration, generation) != generation)
+            _logger.Debug("Frame pipeline thread {Id}, UI thread: {Ui}",
+                Environment.CurrentManagedThreadId,
+                System.Windows.Application.Current?.Dispatcher.CheckAccess() ?? false);
         var sw = Stopwatch.StartNew();
         var didWork = false;
         try
@@ -399,7 +423,7 @@ public class TranslationEngine : IDisposable
                 {
                     if (_vanishStreak == VanishConfirmFrames)
                         _logger.Debug("Frame: text gone for {N} ticks, hiding overlay", _vanishStreak);
-                    _overlay.Hide();
+                    HideIfCurrent(generation);
                 }
                 return;
             }
@@ -421,15 +445,15 @@ public class TranslationEngine : IDisposable
                 if (stillVisible!.Count == reusedRegions!.Count)
                 {
                     _vanishStreak = 0;
-                    _overlay.ShowRegions(reusedRegions, winRectShortcut);
+                    ShowIfCurrent(generation, reusedRegions, winRectShortcut);
                 }
                 else if (++_vanishStreak >= VanishConfirmFrames)
                 {
-                    _overlay.ShowRegions(stillVisible, winRectShortcut);
+                    ShowIfCurrent(generation, stillVisible, winRectShortcut);
                 }
                 else
                 {
-                    _overlay.ShowRegions(reusedRegions, winRectShortcut);
+                    ShowIfCurrent(generation, reusedRegions, winRectShortcut);
                 }
                 return;
             }
@@ -478,13 +502,15 @@ public class TranslationEngine : IDisposable
             {
                 if (string.IsNullOrEmpty(r.TranslatedText)) return;
                 if (!partial.Contains(r)) partial.Add(r);
-                _overlay.ShowRegions(partial, winRect, isPartial: true);
+                ShowIfCurrent(generation, partial, winRect, isPartial: true);
             }
 
             var translated = await _translation.TranslateRegionsAsync(
-                regions, _settings.Config.TargetLanguage, OnRegionUpdated);
+                regions, _settings.Config.TargetLanguage, OnRegionUpdated, ct);
             _logger.Debug("Frame: Translation -> {Count} regions", translated.Count);
             if (translated.Count == 0) return;
+            // Stopped (or restarted) while we were waiting on the network.
+            if (generation != Volatile.Read(ref _runGeneration)) return;
 
             // Remember what we translated this frame so the NEXT frame's
             // jitter-stabilisation pass can find it. Done after translation
@@ -501,7 +527,7 @@ public class TranslationEngine : IDisposable
             // fired) AND ensures any post-stream glossary substitution lands
             // even if it produced an identical fingerprint to the last
             // partial chunk.
-            _overlay.ShowRegions(translated, winRect);
+            ShowIfCurrent(generation, translated, winRect);
         }
         catch (Exception ex)
         {
@@ -522,6 +548,23 @@ public class TranslationEngine : IDisposable
             }
             Interlocked.Exchange(ref _processingFlag, 0);
         }
+    }
+
+    private void ShowIfCurrent(int generation, IReadOnlyList<TranslationRegion> regions,
+        System.Windows.Rect winRect, bool isPartial = false)
+    {
+        // Checked twice: here to skip the dispatcher round-trip, and again on
+        // the UI thread inside ShowRegions, where Stop / Pause / Hide run —
+        // that second check is the one that closes the race.
+        bool StillWanted() => generation == Volatile.Read(ref _runGeneration) && !IsUserPaused;
+        if (StillWanted())
+            _overlay.ShowRegions(regions, winRect, isPartial, StillWanted);
+    }
+
+    private void HideIfCurrent(int generation)
+    {
+        if (generation == Volatile.Read(ref _runGeneration))
+            _overlay.Hide();
     }
 
     /// <summary>
@@ -971,8 +1014,21 @@ public class TranslationEngine : IDisposable
         _capture.FrameCaptured -= OnFrameCaptured;
         _capture.PauseStateChanged -= OnCapturePauseChanged;
         _translation.FallbackStateChanged -= OnFallbackStateChanged;
+        // v1.0.33: never block here. Dispose runs on the UI thread from
+        // App.OnExit; waiting synchronously for the capture loop could
+        // deadlock against a frame that needs the dispatcher. MainWindow's
+        // exit path awaits StopAsync() before Shutdown, so normally we're
+        // already stopped; otherwise just cancel and record the session.
         if (IsRunning)
-            StopAsync().GetAwaiter().GetResult();
+        {
+            Interlocked.Increment(ref _runGeneration);
+            _runCts.Cancel();
+            _ = _capture.StopCaptureAsync();
+            IsRunning = false;
+            _history.EndSession(
+                _settings.Config.CharactersTranslatedToday,
+                _settings.Config.CacheHits + _settings.Config.CacheMisses);
+        }
         _disposed = true;
         GC.SuppressFinalize(this);
     }

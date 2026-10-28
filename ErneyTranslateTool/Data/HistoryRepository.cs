@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Data.Sqlite;
@@ -83,6 +84,7 @@ public class HistoryRepository : IDisposable
     /// </summary>
     /// <param name="windowTitle">Target window title.</param>
     /// <returns>New session ID.</returns>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public int StartSession(string windowTitle)
     {
         try
@@ -114,6 +116,7 @@ public class HistoryRepository : IDisposable
     /// </summary>
     /// <param name="totalCharacters">Total characters translated.</param>
     /// <param name="totalTranslations">Total translations performed.</param>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void EndSession(int totalCharacters, int totalTranslations)
     {
         if (_currentSessionId <= 0) return;
@@ -147,6 +150,7 @@ public class HistoryRepository : IDisposable
     /// <param name="translatedText">Translated text.</param>
     /// <param name="sourceLanguage">Detected source language.</param>
     /// <param name="isFromCache">Whether from cache.</param>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void AddTranslation(string originalText, string translatedText,
         string sourceLanguage, bool isFromCache)
     {
@@ -192,6 +196,7 @@ public class HistoryRepository : IDisposable
     public event EventHandler<TranslationEntry>? TranslationAdded;
 
     /// <summary>Newest translations across all sessions, newest first.</summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public List<TranslationEntry> GetRecentTranslations(int limit)
     {
         var entries = new List<TranslationEntry>();
@@ -230,6 +235,7 @@ public class HistoryRepository : IDisposable
     /// Get all sessions with their translation counts.
     /// </summary>
     /// <returns>List of sessions ordered by start time (newest first).</returns>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public List<SessionHistory> GetSessions()
     {
         var sessions = new List<SessionHistory>();
@@ -265,6 +271,7 @@ public class HistoryRepository : IDisposable
     /// </summary>
     /// <param name="sessionId">Session ID.</param>
     /// <returns>List of translation entries.</returns>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public List<TranslationEntry> GetSessionTranslations(int sessionId)
     {
         var entries = new List<TranslationEntry>();
@@ -304,6 +311,7 @@ public class HistoryRepository : IDisposable
     /// </summary>
     /// <param name="searchTerm">Search term.</param>
     /// <returns>List of matching translation entries.</returns>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public List<TranslationEntry> SearchTranslations(string searchTerm)
     {
         var entries = new List<TranslationEntry>();
@@ -342,6 +350,7 @@ public class HistoryRepository : IDisposable
     /// <summary>
     /// Clear all history.
     /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void ClearHistory()
     {
         try
@@ -363,6 +372,7 @@ public class HistoryRepository : IDisposable
     /// Delete a specific session.
     /// </summary>
     /// <param name="sessionId">Session ID to delete.</param>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void DeleteSession(int sessionId)
     {
         try
@@ -384,6 +394,7 @@ public class HistoryRepository : IDisposable
     /// <summary>
     /// Dispose database connection.
     /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Dispose()
     {
         if (!_disposed)

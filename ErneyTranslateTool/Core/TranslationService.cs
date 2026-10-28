@@ -69,11 +69,37 @@ public class TranslationService : IDisposable
     /// </summary>
     public bool Initialize()
     {
+        // v1.0.33: the pipeline translates on a worker thread while settings
+        // auto-save calls this on the UI thread. The new translators replace
+        // the old ones by plain reference swaps, and the old ones are
+        // disposed a minute later — disposing right away killed an in-flight
+        // request, which counted as a failure and could flip to the fallback.
+        var oldPrimary = _primary;
+        var oldFallback = _fallback;
         try
         {
-            _primary?.Dispose();
-            _fallback?.Dispose();
-            _primary = null;
+            return InitializeCore();
+        }
+        finally
+        {
+            DisposeLater(oldPrimary);
+            DisposeLater(oldFallback);
+        }
+    }
+
+    private static void DisposeLater(ITranslator? translator)
+    {
+        if (translator == null) return;
+        _ = Task.Delay(TimeSpan.FromMinutes(1)).ContinueWith(_ =>
+        {
+            try { translator.Dispose(); } catch { /* best effort */ }
+        }, TaskScheduler.Default);
+    }
+
+    private bool InitializeCore()
+    {
+        try
+        {
             _fallback = null;
             _consecutiveFailures = 0;
             _usingFallback = false;
@@ -153,6 +179,9 @@ public class TranslationService : IDisposable
         foreach (var region in regions)
         {
             if (ct.IsCancellationRequested) break;
+            // A settings reload can leave no translator (new one failed to
+            // build); stop instead of throwing on every region.
+            if (_primary == null) break;
 
             try
             {
@@ -200,6 +229,12 @@ public class TranslationService : IDisposable
                         region.TranslatedText = await TranslateWithFallbackAsync(
                             region.OriginalText, targetLanguage, ct);
                     }
+
+                    // Stopped while the request was in flight (a translator
+                    // that ignores ct finishes anyway): don't write this into
+                    // the cache, the stats or — after a quick Stop/Start —
+                    // the next session's history.
+                    ct.ThrowIfCancellationRequested();
 
                     if (!string.IsNullOrWhiteSpace(region.TranslatedText))
                     {
@@ -360,7 +395,10 @@ public class TranslationService : IDisposable
         }
         catch (Exception ex)
         {
-            if (active == primary)
+            // Only count failures of the translator that's still current: a
+            // request to one replaced by a settings reload must not push the
+            // new one towards the fallback.
+            if (active == primary && ReferenceEquals(primary, _primary))
             {
                 _consecutiveFailures++;
                 _logger.Information(ex, "Primary {P} failed ({N}/{Max})",
@@ -388,7 +426,7 @@ public class TranslationService : IDisposable
                     }
                 }
             }
-            else
+            else if (active != primary)
             {
                 _logger.Error(ex, "Fallback {F} failed", fallback?.Name);
             }

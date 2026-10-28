@@ -82,20 +82,25 @@ public class CacheRepository : IDisposable
     {
         try
         {
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = @"
-                SELECT TranslatedText, SourceLanguage
-                FROM TranslationCache
-                WHERE SourceText = @sourceText AND TargetLanguage = @targetLang";
-            cmd.Parameters.AddWithValue("@sourceText", sourceText);
-            cmd.Parameters.AddWithValue("@targetLang", targetLanguage);
-
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
+            // v1.0.33: reads take the connection lock too — the pipeline runs
+            // off the UI thread now and SqliteConnection isn't thread-safe.
+            lock (_writeLock)
             {
-                // Update access time
-                UpdateAccessTime(sourceText, targetLanguage);
-                return reader.GetString(0);
+                using var cmd = _connection.CreateCommand();
+                cmd.CommandText = @"
+                    SELECT TranslatedText, SourceLanguage
+                    FROM TranslationCache
+                    WHERE SourceText = @sourceText AND TargetLanguage = @targetLang";
+                cmd.Parameters.AddWithValue("@sourceText", sourceText);
+                cmd.Parameters.AddWithValue("@targetLang", targetLanguage);
+
+                using var reader = cmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    // Update access time
+                    UpdateAccessTime(sourceText, targetLanguage);
+                    return reader.GetString(0);
+                }
             }
         }
         catch (Exception ex)
@@ -197,9 +202,12 @@ public class CacheRepository : IDisposable
     {
         try
         {
-            using var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT COUNT(*) FROM TranslationCache";
-            return Convert.ToInt32(cmd.ExecuteScalar());
+            lock (_writeLock)
+            {
+                using var cmd = _connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM TranslationCache";
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
         }
         catch (Exception ex)
         {
@@ -264,6 +272,7 @@ public class CacheRepository : IDisposable
             // many rows to drop. Cheap and resilient: even if the average is
             // off by 2× we just iterate again next time around.
             int totalRows;
+            lock (_writeLock)
             using (var cmd = _connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT COUNT(*) FROM TranslationCache";
@@ -341,11 +350,14 @@ public class CacheRepository : IDisposable
     /// </summary>
     public void Dispose()
     {
-        if (!_disposed)
+        lock (_writeLock)
         {
-            _connection?.Close();
-            _connection?.Dispose();
-            _disposed = true;
+            if (!_disposed)
+            {
+                _connection?.Close();
+                _connection?.Dispose();
+                _disposed = true;
+            }
         }
         GC.SuppressFinalize(this);
     }

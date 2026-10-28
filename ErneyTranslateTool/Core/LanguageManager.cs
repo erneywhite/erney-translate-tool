@@ -78,6 +78,11 @@ public static class LanguageManager
     {
         var app = Application.Current;
         if (app == null) return key;
+        // v1.0.33: the pipeline (fallback status, pause status) asks from a
+        // worker thread; application resources belong to the UI thread.
+        if (!app.Dispatcher.CheckAccess())
+            // Null when the dispatcher has already shut down (exit).
+            return app.Dispatcher.Invoke(() => Get(key)) ?? key;
         return app.TryFindResource(key) as string ?? key;
     }
 
