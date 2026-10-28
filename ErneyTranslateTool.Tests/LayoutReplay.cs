@@ -1,5 +1,6 @@
 using System.Text;
 using ErneyTranslateTool.Core;
+using ErneyTranslateTool.Core.Ocr;
 using ErneyTranslateTool.Models;
 using Serilog;
 
@@ -19,30 +20,34 @@ public sealed class LayoutReplay
     /// <summary>Overlay layout after each frame; null while the overlay is hidden.</summary>
     public List<string?> Layouts { get; } = new();
 
-    public static LayoutReplay Run(IEnumerable<List<TranslationRegion>> frames)
+    public static LayoutReplay Run(IEnumerable<List<TranslationRegion>> frames, Action<int, string>? trace = null)
     {
         var replay = new LayoutReplay();
         var layout = new FrameLayout(new LoggerConfiguration().CreateLogger());
         string? shown = null;
         var vanish = 0;
 
+        var index = -1;
         foreach (var recorded in frames)
         {
+            index++;
             // FrameLayout rewrites regions in place; never hand it the caller's objects.
             var raw = recorded.Select(r => new TranslationRegion { Bounds = r.Bounds, OriginalText = r.OriginalText }).ToList();
+            OcrTextHelpers.DropNoise(raw);
 
             if (raw.Count == 0)
             {
                 if (++vanish >= VanishConfirmFrames) shown = null;
             }
-            else if (layout.TryReusePreviousFrame(raw, out var reused, out var stillVisible))
+            else if (layout.TryReusePreviousFrame(raw, VanishConfirmFrames, out var reused))
             {
-                if (stillVisible!.Count == reused!.Count) { vanish = 0; shown = Signature(reused); }
-                else if (++vanish >= VanishConfirmFrames) shown = Signature(stillVisible);
-                else shown = Signature(reused);
+                trace?.Invoke(index, $"reuse {reused!.Count}");
+                vanish = 0;
+                shown = Signature(reused);
             }
             else
             {
+                trace?.Invoke(index, "regroup");
                 vanish = 0;
                 var regions = layout.ApplyGroupingHysteresisOrGroup(raw);
                 layout.StabiliseAgainstRecent(regions);
@@ -51,6 +56,7 @@ public sealed class LayoutReplay
                 if (translated.Count > 0)
                 {
                     layout.RememberRecentRegions(translated);
+                    translated = layout.HoldBriefDropouts(translated, VanishConfirmFrames);
                     layout.RememberCompletedFrame(raw, translated);
                     shown = Signature(translated);
                 }

@@ -72,7 +72,8 @@ public sealed class FrameLayout
     private sealed record FrameSnapshot(
         System.Windows.Rect[] RawBounds,
         string[] RawTexts,
-        List<TranslationRegion> Translated);
+        List<TranslationRegion> Translated,
+        int[] Missed); // per Translated block: frames in a row its source text was missing
 
     /// <summary>Forget everything — a new session starts on a fresh window.</summary>
     public void Reset()
@@ -80,6 +81,38 @@ public sealed class FrameLayout
         lock (_recentRegionsLock) _recentRegions.Clear();
         lock (_recentGroupingsLock) _recentGroupings.Clear();
         lock (_lastCompletedFrameLock) _lastCompletedFrame = null;
+        lock (_heldLock) _held.Clear();
+    }
+
+    // v1.0.35: blocks shown last time, with how many frames in a row each
+    // has been missing from OCR.
+    private readonly object _heldLock = new();
+    private List<(TranslationRegion Region, int Missed)> _held = new();
+
+    /// <summary>
+    /// v1.0.35: per-block version of the engine's "text gone for N frames"
+    /// rule. OCR drops a small label ("SE") for a frame now and then; the
+    /// frame got regrouped without it and the block blinked out and back.
+    /// A block that was on screen stays for up to <paramref name="confirmFrames"/>-1
+    /// missing frames, unless something new now covers its place.
+    /// Returns <paramref name="translated"/> plus the blocks kept.
+    /// </summary>
+    public List<TranslationRegion> HoldBriefDropouts(List<TranslationRegion> translated, int confirmFrames)
+    {
+        lock (_heldLock)
+        {
+            var result = new List<TranslationRegion>(translated);
+            var next = translated.Select(r => (r, 0)).ToList();
+            foreach (var (old, missed) in _held)
+            {
+                if (missed + 1 >= confirmFrames) continue;
+                if (translated.Any(t => RectOverlapRatio(t.Bounds, old.Bounds) > 0)) continue;
+                result.Add(old);
+                next.Add((old, missed + 1));
+            }
+            _held = next;
+            return result;
+        }
     }
 
     /// <summary>
@@ -98,18 +131,19 @@ public sealed class FrameLayout
     /// tolerated — OCR can briefly miss small elements without
     /// invalidating the scene.</para>
     ///
-    /// <para>v1.0.30: <paramref name="stillVisible"/> is the subset of
-    /// <paramref name="reused"/> whose source text is still on screen (it
-    /// overlaps at least one matched snapshot region). The caller decides
-    /// when the missing ones are really gone.</para>
+    /// <para>v1.0.35: a block whose source text is missing stays in
+    /// <paramref name="shown"/> until it has been missing for
+    /// <paramref name="confirmFrames"/> frames in a row, then it is dropped
+    /// from the snapshot for good. (v1.0.30 counted this per frame in the
+    /// engine and never reset it once a block had left: from then on any
+    /// one-frame OCR miss hid a block at once, and small labels blinked.)</para>
     /// </summary>
     public bool TryReusePreviousFrame(
         List<TranslationRegion> newRawRegions,
-        out List<TranslationRegion>? reused,
-        out List<TranslationRegion>? stillVisible)
+        int confirmFrames,
+        out List<TranslationRegion>? shown)
     {
-        reused = null;
-        stillVisible = null;
+        shown = null;
 
         FrameSnapshot? snap;
         lock (_lastCompletedFrameLock) snap = _lastCompletedFrame;
@@ -139,21 +173,33 @@ public sealed class FrameLayout
             snapshotUsed[bestJ] = true;
         }
 
-        reused = snap.Translated;
-        stillVisible = new List<TranslationRegion>(reused.Count);
-        foreach (var t in reused)
+        shown = new List<TranslationRegion>(snap.Translated.Count);
+        var gone = false;
+        for (int k = 0; k < snap.Translated.Count; k++)
         {
-            for (int j = 0; j < snap.RawBounds.Length; j++)
+            var t = snap.Translated[k];
+            var visible = false;
+            for (int j = 0; j < snap.RawBounds.Length && !visible; j++)
+                visible = snapshotUsed[j] && RectOverlapRatio(t.Bounds, snap.RawBounds[j]) > 0;
+            snap.Missed[k] = visible ? 0 : snap.Missed[k] + 1;
+            if (snap.Missed[k] < confirmFrames) shown.Add(t);
+            else gone = true;
+        }
+        if (gone)
+        {
+            var keep = Enumerable.Range(0, snap.Translated.Count).Where(k => snap.Missed[k] < confirmFrames).ToList();
+            lock (_lastCompletedFrameLock)
             {
-                if (snapshotUsed[j] && RectOverlapRatio(t.Bounds, snap.RawBounds[j]) > 0)
-                {
-                    stillVisible.Add(t);
-                    break;
-                }
+                if (ReferenceEquals(_lastCompletedFrame, snap))
+                    _lastCompletedFrame = snap with
+                    {
+                        Translated = keep.Select(k => snap.Translated[k]).ToList(),
+                        Missed = keep.Select(k => snap.Missed[k]).ToArray(),
+                    };
             }
         }
-        _logger.Debug("Frame: reused previous translation ({N} regions, {V} still on screen)",
-            reused.Count, stillVisible.Count);
+        _logger.Debug("Frame: reused previous translation ({N} regions, {V} shown)",
+            snap.Translated.Count, shown.Count);
         return true;
     }
 
@@ -183,7 +229,7 @@ public sealed class FrameLayout
         var translatedCopy = new List<TranslationRegion>(translated);
 
         lock (_lastCompletedFrameLock)
-            _lastCompletedFrame = new FrameSnapshot(bounds, texts, translatedCopy);
+            _lastCompletedFrame = new FrameSnapshot(bounds, texts, translatedCopy, new int[translatedCopy.Count]);
     }
 
     /// <summary>

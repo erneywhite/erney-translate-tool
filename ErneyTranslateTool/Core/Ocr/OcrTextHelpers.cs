@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
+using ErneyTranslateTool.Models;
 
 namespace ErneyTranslateTool.Core.Ocr;
 
-internal static class OcrTextHelpers
+public static class OcrTextHelpers
 {
     public static bool ContainsJapanese(string text) => text.Any(c =>
         (c >= 0x3040 && c <= 0x30FF) ||  // Hiragana, Katakana
@@ -22,6 +24,28 @@ internal static class OcrTextHelpers
         var letters = text.Where(char.IsLetter).ToArray();
         return letters.Length > 0 && letters.All(c => c >= 0x0400 && c <= 0x04FF);
     }
+
+    /// <summary>
+    /// v1.0.35: true when OCR "text" is really a picture — a wallpaper
+    /// pattern read as "*", "$3", "C", "x($)". Real text has at least two
+    /// letters in a row; CJK is exempt, one character there is a word.
+    /// Tesseract has stricter checks of its own on top of this.
+    /// </summary>
+    public static bool LooksLikeNoise(string text)
+    {
+        int run = 0;
+        foreach (var c in text)
+        {
+            if (!char.IsLetter(c)) { run = 0; continue; }
+            if (c >= 0x3040) return false; // kana, CJK, hangul
+            if (++run >= 2) return false;
+        }
+        return true;
+    }
+
+    /// <summary>Remove <see cref="LooksLikeNoise"/> regions in place; returns how many were dropped.</summary>
+    public static int DropNoise(List<TranslationRegion> regions) =>
+        regions.RemoveAll(r => LooksLikeNoise(r.OriginalText ?? string.Empty));
 
     public static string DetectLanguage(string text)
     {
