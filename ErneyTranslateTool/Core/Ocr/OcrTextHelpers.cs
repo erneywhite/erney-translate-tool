@@ -47,6 +47,26 @@ public static class OcrTextHelpers
     public static int DropNoise(List<TranslationRegion> regions) =>
         regions.RemoveAll(r => LooksLikeNoise(r.OriginalText ?? string.Empty));
 
+    /// <summary>
+    /// v1.0.35: lines this many times taller than the frame's typical line
+    /// are logos and titles drawn as pictures ("妖狐的戀愛學程" on a title
+    /// screen). Translating them covered the art with a plain box.
+    /// </summary>
+    public const double OversizedLineFactor = 1.8;
+
+    /// <summary>
+    /// Remove lines much taller than the median line of the frame, in place;
+    /// returns how many were dropped. Needs a few lines to know what
+    /// "typical" is — a screen with one or two lines is left alone.
+    /// </summary>
+    public static int DropOversized(List<TranslationRegion> regions)
+    {
+        if (regions.Count < 3) return 0;
+        var heights = regions.Select(r => r.Bounds.Height).OrderBy(h => h).ToList();
+        var median = heights[heights.Count / 2];
+        return regions.RemoveAll(r => r.Bounds.Height > median * OversizedLineFactor);
+    }
+
     public static string DetectLanguage(string text)
     {
         if (ContainsJapanese(text)) return "ja";

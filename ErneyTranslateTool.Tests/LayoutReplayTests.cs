@@ -67,6 +67,27 @@ public class LayoutReplayTests
     }
 
     [Fact]
+    public void TitleScreenLogo_IsLeftAlone()
+    {
+        // Kon's Lesson title screen, as OCR saw it.
+        var lines = new List<TranslationRegion>
+        {
+            Line(999, 85, 146, 85, "妖狐"), Line(1146, 153, 85, 17, "Kon's Lesson!"), Line(1011, 169, 227, 59, "戀愛學程"),
+            Line(1021, 279, 74, 28, "新遊戲"), Line(1021, 342, 47, 29, "載入"), Line(1021, 406, 50, 29, "設定"),
+            Line(1019, 469, 52, 29, "相冊"), Line(1019, 533, 52, 27, "退出"),
+        };
+        Assert.Equal(2, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.DropOversized(lines));
+        Assert.Equal(new[] { "Kon's Lesson!", "新遊戲", "載入", "設定", "相冊", "退出" }, lines.Select(l => l.OriginalText));
+    }
+
+    [Fact]
+    public void FewLines_AreNeverDroppedAsOversized()
+    {
+        var lines = new List<TranslationRegion> { Line(100, 100, 400, 80, "CHAPTER 1"), Line(100, 300, 600, 30, "The morning after.") };
+        Assert.Equal(0, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.DropOversized(lines));
+    }
+
+    [Fact]
     public void StaticSceneWithJitter_KeepsOneLayout()
     {
         // Two-line dialogue, OCR wobbling by a pixel and misreading a letter now and then.
