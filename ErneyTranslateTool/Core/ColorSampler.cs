@@ -34,6 +34,7 @@ public static class ColorSampler
                 var (bg, text) = SampleBlock(image, b.Bounds);
                 b.SampledBackground = bg;
                 b.SampledText = text;
+                b.TextPixelShare = text is { } t ? TextShare(image, b.Bounds, t) : 0;
                 b.SourceLineHeight = LineHeight(b, raw);
             }
         }
@@ -67,6 +68,36 @@ public static class ColorSampler
     {
         var (bg, text) = SampleBlock(img, box);
         return bg != null && text == null;
+    }
+
+    /// <summary>Share of the box (every other pixel) within a small distance of the letter colour.</summary>
+    public static double TextShare(Pixels img, System.Windows.Rect box, MediaColor letter)
+    {
+        int l = Math.Max(0, (int)Math.Floor(box.Left)), t = Math.Max(0, (int)Math.Floor(box.Top));
+        int r = Math.Min(img.Width, (int)Math.Ceiling(box.Right)), b = Math.Min(img.Height, (int)Math.Ceiling(box.Bottom));
+        int hit = 0, all = 0;
+        for (int y = t; y < b; y += 2)
+        for (int x = l; x < r; x += 2)
+        {
+            var c = img.At(x, y);
+            all++;
+            if (Math.Abs(((c >> 16) & 255) - letter.R) + Math.Abs(((c >> 8) & 255) - letter.G) + Math.Abs((c & 255) - letter.B) <= 60)
+                hit++;
+        }
+        return all == 0 ? 0 : (double)hit / all;
+    }
+
+    /// <summary>
+    /// v1.0.39: the text of <paramref name="block"/> has left the frame. With a
+    /// known letter colour: under a third of its letter pixels remain — shading
+    /// or line art in a busy picture doesn't count as letters any more. Without
+    /// one, nothing in the box stands out from the background.
+    /// </summary>
+    public static bool TextGone(Pixels img, TranslationRegion block)
+    {
+        if (block.SampledText is { } letter && block.TextPixelShare > 0.002)
+            return TextShare(img, block.Bounds, letter) < block.TextPixelShare * 0.35;
+        return LooksBlank(img, block.Bounds);
     }
 
     public readonly record struct Pixels(int[] Argb, int Stride, int Width, int Height)

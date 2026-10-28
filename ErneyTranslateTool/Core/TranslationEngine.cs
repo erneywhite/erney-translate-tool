@@ -441,10 +441,10 @@ public class TranslationEngine : IDisposable
             // recomputing the output.
             // Pixels are copied only if a block went missing and is checked.
             ColorSampler.Pixels? framePixels = null;
-            bool IsBlank(System.Windows.Rect r)
+            bool IsBlank(TranslationRegion block)
             {
                 framePixels ??= ColorSampler.Snapshot(bitmap);
-                return ColorSampler.LooksBlank(framePixels.Value, r);
+                return ColorSampler.TextGone(framePixels.Value, block);
             }
 
             if (_layout.TryReusePreviousFrame(rawRegions, FrameLayout.BlockVanishFrames, out var reusedRegions, IsBlank)

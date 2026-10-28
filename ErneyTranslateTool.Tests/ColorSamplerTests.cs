@@ -41,6 +41,28 @@ public class ColorSamplerTests
     }
 
     [Fact]
+    public void TextGone_IgnoresShadingOfAnotherColour()
+    {
+        var box = new Rect(20, 10, 60, 20);
+        var block = new ErneyTranslateTool.Models.TranslationRegion { Bounds = box };
+        var withText = Frame(true);
+        var (_, letter) = ColorSampler.SampleBlock(withText, box);
+        block.SampledText = letter;
+        block.TextPixelShare = ColorSampler.TextShare(withText, box, letter!.Value);
+
+        Assert.False(ColorSampler.TextGone(withText, block));
+
+        // Text gone, but brown shading lines run through the box: enough
+        // contrast to fool the plain check, not the letter colour.
+        var shaded = Frame(false);
+        for (int y = 10; y < 30; y++)
+        for (int x = 20; x < 80; x += 7)
+            shaded.Argb[y * 100 + x] = unchecked((int)0xFF805030);
+        Assert.False(ColorSampler.LooksBlank(shaded, box));
+        Assert.True(ColorSampler.TextGone(shaded, block));
+    }
+
+    [Fact]
     public void BoxAtFrameEdge_DoesNotThrow()
     {
         var (bg, _) = ColorSampler.SampleBlock(Frame(true), new Rect(-5, -5, 30, 20));

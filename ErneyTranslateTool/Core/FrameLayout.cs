@@ -112,7 +112,7 @@ public sealed class FrameLayout
     /// <param name="isBlank">v1.0.38: true when the frame shows no letters in a
     /// rect; such a block really left and is not held.</param>
     public List<TranslationRegion> HoldBriefDropouts(List<TranslationRegion> translated, int confirmFrames,
-        Func<System.Windows.Rect, bool>? isBlank = null)
+        Func<TranslationRegion, bool>? isBlank = null)
     {
         lock (_heldLock)
         {
@@ -131,7 +131,7 @@ public sealed class FrameLayout
             foreach (var (old, missed) in sceneChange ? new() : missing)
             {
                 if (missed + 1 >= confirmFrames) continue;
-                if (isBlank?.Invoke(old.Bounds) == true) continue;
+                if (isBlank?.Invoke(old) == true) continue;
                 result.Add(old);
                 next.Add((old, missed + 1));
                 _lastHeld[old] = missed + 1;
@@ -168,7 +168,7 @@ public sealed class FrameLayout
         List<TranslationRegion> newRawRegions,
         int confirmFrames,
         out List<TranslationRegion>? shown,
-        Func<System.Windows.Rect, bool>? isBlank = null)
+        Func<TranslationRegion, bool>? isBlank = null)
     {
         shown = null;
 
@@ -211,7 +211,7 @@ public sealed class FrameLayout
             snap.Missed[k] = visible ? 0 : snap.Missed[k] + 1;
             // v1.0.38: no letters left where the block was — the text is
             // gone, not missed by OCR: take it off now, don't wait.
-            if (!visible && isBlank?.Invoke(t.Bounds) == true) snap.Missed[k] = confirmFrames;
+            if (!visible && isBlank?.Invoke(t) == true) snap.Missed[k] = confirmFrames;
             if (snap.Missed[k] < confirmFrames) shown.Add(t);
             else gone = true;
         }

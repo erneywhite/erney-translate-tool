@@ -98,7 +98,7 @@ public class LayoutReplayTests
             Line(100, 200, 100, 30, "S.HARD"), Line(300, 500, 40, 30, "SE"),
         };
         layout.HoldBriefDropouts(lines, 3);
-        var held = layout.HoldBriefDropouts(lines.Take(3).ToList(), 3, isBlank: r => r.Top >= 500);
+        var held = layout.HoldBriefDropouts(lines.Take(3).ToList(), 3, isBlank: r => r.Bounds.Top >= 500);
         Assert.DoesNotContain(held, r => r.OriginalText == "SE");
     }
 

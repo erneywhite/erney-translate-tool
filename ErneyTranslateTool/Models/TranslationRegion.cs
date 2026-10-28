@@ -61,4 +61,7 @@ public class TranslationRegion
 
     /// <summary>v1.0.35: height of one source line in pixels — caps the font size in "replace text" mode.</summary>
     public double SourceLineHeight { get; set; }
+
+    /// <summary>v1.0.39: share of the box covered by letters of <see cref="SampledText"/>'s colour when it was read.</summary>
+    public double TextPixelShare { get; set; }
 }
