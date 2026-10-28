@@ -92,6 +92,9 @@ public partial class MainWindow : Window
         // visible content panel.
         if (NavList.Items.Count > 0) NavList.SelectedIndex = 0;
 
+        // "Вся история" on the Main tab.
+        MainVM.OpenHistoryRequested += (_, _) => SelectNavTag("History");
+
         // Background update check on startup. Failures are silent.
         if (_settings.Config.CheckForUpdatesOnStartup)
             _ = CheckForUpdatesAsync(showAlways: false);
@@ -117,6 +120,18 @@ public partial class MainWindow : Window
         ProfilesTabHost.Visibility    = tag == "Profiles"    ? Visibility.Visible : Visibility.Collapsed;
         AppSettingsTabHost.Visibility = tag == "AppSettings" ? Visibility.Visible : Visibility.Collapsed;
         AboutTabHost.Visibility       = tag == "About"       ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void SelectNavTag(string tag)
+    {
+        foreach (var obj in NavList.Items)
+        {
+            if (obj is System.Windows.Controls.ListBoxItem item && item.Tag as string == tag)
+            {
+                NavList.SelectedItem = item;
+                return;
+            }
+        }
     }
 
     /// <summary>

@@ -27,6 +27,14 @@ namespace ErneyTranslateTool.Core
         public bool IsVisible => _overlayWindow?.IsVisible ?? false;
 
         /// <summary>
+        /// v1.0.31: the user hid the overlay (button / hotkey). Every render
+        /// path funnels through <see cref="ShowRegions"/>, so the gate here
+        /// keeps it hidden until the user shows it again — before, the next
+        /// frame with new text silently brought it back.
+        /// </summary>
+        public bool HiddenByUser { get; set; }
+
+        /// <summary>
         /// Draw a translation label on top of every detected region.
         /// <paramref name="isPartial"/> marks an in-progress update (streaming
         /// or per-region network translation): <paramref name="regions"/> is
@@ -35,6 +43,7 @@ namespace ErneyTranslateTool.Core
         /// </summary>
         public void ShowRegions(IReadOnlyList<TranslationRegion> regions, Rect targetRect, bool isPartial = false)
         {
+            if (HiddenByUser) return;
             Application.Current.Dispatcher.Invoke(() =>
             {
                 EnsureWindow();
