@@ -14,6 +14,7 @@ public static class TranslatorFactory
     public const string ProviderAnthropic = "Anthropic";
     public const string ProviderGemini = "Gemini";
     public const string ProviderGroq = "Groq";
+    public const string ProviderCustomLlm = "OpenAICompatible";
 
     public static readonly string[] AllProviders =
     {
@@ -26,6 +27,7 @@ public static class TranslatorFactory
         // options to find them.
         ProviderGemini,
         ProviderGroq,
+        ProviderCustomLlm,
         ProviderOpenAI,
         ProviderAnthropic,
     };
@@ -38,6 +40,7 @@ public static class TranslatorFactory
         ProviderLibreTranslate => "LibreTranslate (open source)",
         ProviderGemini => "Google Gemini (LLM, бесплатный free tier)",
         ProviderGroq => "Groq (LLM, бесплатно, очень быстро)",
+        ProviderCustomLlm => "Свой сервер: Ollama, LM Studio, OpenRouter (LLM, локально бесплатно)",
         ProviderOpenAI => "OpenAI (LLM, лучшее качество, нужен платный API-ключ)",
         ProviderAnthropic => "Anthropic Claude (LLM, лучшее качество, нужен платный API-ключ)",
         _ => provider
@@ -153,6 +156,31 @@ public static class TranslatorFactory
                     settings.Config.LlmContextSize,
                     settings.Config.LlmUseContext,
                     logger);
+            }
+
+            case ProviderCustomLlm:
+            {
+                var url = settings.Config.CustomLlmBaseUrl;
+                var model = settings.Config.CustomLlmModel;
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    error = "Свой сервер: не указан адрес";
+                    return null;
+                }
+                if (string.IsNullOrWhiteSpace(model))
+                {
+                    error = "Свой сервер: не указана модель";
+                    return null;
+                }
+                return new OpenAITranslator(
+                    settings.GetCustomLlmKey(),
+                    model,
+                    settings.Config.LlmTemperature,
+                    settings.Config.LlmContextSize,
+                    settings.Config.LlmUseContext,
+                    logger,
+                    baseUrl: url,
+                    name: "Свой сервер");
             }
 
             default:

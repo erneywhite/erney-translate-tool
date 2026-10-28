@@ -285,6 +285,7 @@ public class SettingsViewModel : BaseViewModel
         nameof(OpenAIApiKey), nameof(AnthropicApiKey), nameof(GeminiApiKey), nameof(GroqApiKey), nameof(DeepLApiKey),
         nameof(MyMemoryEmail), nameof(LibreUrl), nameof(LibreApiKey),
         nameof(OpenAIModel), nameof(AnthropicModel), nameof(GeminiModel), nameof(GroqModel),
+        nameof(CustomLlmBaseUrl), nameof(CustomLlmModel), nameof(CustomLlmApiKey),
         nameof(LlmTemperature), nameof(LlmUseContext), nameof(LlmContextSize), nameof(UseStreamingLlm),
         nameof(SelectedTargetLanguage),
         nameof(SelectedOcrEngine), nameof(SelectedOcrLanguage), nameof(UseBestTessdata),
@@ -345,6 +346,7 @@ public class SettingsViewModel : BaseViewModel
                 OnPropertyChanged(nameof(IsAnthropic));
                 OnPropertyChanged(nameof(IsGemini));
                 OnPropertyChanged(nameof(IsGroq));
+                OnPropertyChanged(nameof(IsCustomLlm));
                 OnPropertyChanged(nameof(IsLlm));
                 OnPropertyChanged(nameof(ProviderHelpText));
             }
@@ -371,7 +373,8 @@ public class SettingsViewModel : BaseViewModel
     public bool IsGemini => _selectedProvider == TranslatorFactory.ProviderGemini;
     public bool IsGroq => _selectedProvider == TranslatorFactory.ProviderGroq;
     /// <summary>True for any LLM-backed provider — drives the visibility of the shared "LLM settings" group (temperature, context, streaming).</summary>
-    public bool IsLlm => IsOpenAI || IsAnthropic || IsGemini || IsGroq;
+    public bool IsCustomLlm => _selectedProvider == TranslatorFactory.ProviderCustomLlm;
+    public bool IsLlm => IsOpenAI || IsAnthropic || IsGemini || IsGroq || IsCustomLlm;
 
     public string ProviderHelpText => _selectedProvider switch
     {
@@ -399,8 +402,11 @@ public class SettingsViewModel : BaseViewModel
             "Качество сравнимо с gpt-4o-mini, особенно хорош на RU/EN/JP. Поддерживается стриминг и контекст.",
         TranslatorFactory.ProviderGroq =>
             "Groq: бесплатный API с очень быстрым инференсом (250-400 токенов/сек, в разы быстрее остальных LLM). " +
-            "Ключ — на console.groq.com (вход через Google или GitHub). По умолчанию llama-3.3-70b-versatile — " +
-            "лучшая free-модель Groq, перевод хороший. Free tier ~30 запросов/мин. Поддерживается стриминг и контекст.",
+            "Ключ — на console.groq.com (вход через Google или GitHub). По умолчанию openai/gpt-oss-120b. " +
+            "Бесплатный тариф с лимитом запросов в минуту. Поддерживается стриминг и контекст.",
+        TranslatorFactory.ProviderCustomLlm =>
+            "Любой сервер с OpenAI-совместимым API: Ollama и LM Studio на своём компьютере (бесплатно, без интернета), " +
+            "OpenRouter, DeepSeek и другие. Укажи адрес сервера и модель. Ключ нужен только облачным сервисам.",
         _ => string.Empty
     };
 
@@ -837,6 +843,84 @@ public class SettingsViewModel : BaseViewModel
         catch { return fallback; }
     }
 
+    // ---- v1.0.34 OpenAI-compatible server (Ollama, LM Studio, OpenRouter) ----
+
+    private string _customLlmBaseUrl = "http://localhost:11434/v1";
+    private string _customLlmModel = string.Empty;
+    private string _customLlmApiKey = string.Empty;
+    private string _customLlmModelsStatus = string.Empty;
+    private bool _isFetchingCustomModels;
+
+    public string CustomLlmBaseUrl
+    {
+        get => _customLlmBaseUrl;
+        set => SetProperty(ref _customLlmBaseUrl, value);
+    }
+
+    public string CustomLlmModel
+    {
+        get => _customLlmModel;
+        set => SetProperty(ref _customLlmModel, value);
+    }
+
+    public string CustomLlmApiKey
+    {
+        get => _customLlmApiKey;
+        set => SetProperty(ref _customLlmApiKey, value);
+    }
+
+    /// <summary>Models reported by the server's /models endpoint ("Get model list").</summary>
+    public ObservableCollection<string> CustomLlmModels { get; } = new();
+
+    public string CustomLlmModelsStatus
+    {
+        get => _customLlmModelsStatus;
+        private set => SetProperty(ref _customLlmModelsStatus, value);
+    }
+
+    /// <summary>One-click addresses for the common servers (button parameter = base URL).</summary>
+    public ICommand SetCustomLlmUrlCommand => _setCustomLlmUrlCommand ??= new RelayCommand(p =>
+    {
+        if (p is string url) CustomLlmBaseUrl = url;
+    });
+    private ICommand? _setCustomLlmUrlCommand;
+
+    public ICommand FetchCustomLlmModelsCommand => _fetchCustomLlmModelsCommand ??=
+        new RelayCommand(async _ => await FetchCustomLlmModelsAsync(), _ => !_isFetchingCustomModels);
+    private ICommand? _fetchCustomLlmModelsCommand;
+
+    private async Task FetchCustomLlmModelsAsync()
+    {
+        _isFetchingCustomModels = true;
+        CustomLlmModelsStatus = LanguageManager.Get("Strings.TS.Custom.Fetching");
+        try
+        {
+            var models = await OpenAITranslator.ListModelsAsync(CustomLlmBaseUrl, CustomLlmApiKey);
+            CustomLlmModels.Clear();
+            foreach (var m in models) CustomLlmModels.Add(m);
+            CustomLlmModelsStatus = models.Count == 0
+                ? LanguageManager.Get("Strings.TS.Custom.NoModels")
+                : LanguageManager.Format("Strings.TS.Custom.FoundFmt", models.Count);
+            if (string.IsNullOrWhiteSpace(CustomLlmModel) && models.Count > 0)
+                CustomLlmModel = models[0];
+        }
+        catch (Exception ex)
+        {
+            _logger.Information(ex, "Custom LLM model list failed");
+            // Nothing listening (server not started, wrong port) is the
+            // common case — say that instead of the raw socket error.
+            CustomLlmModelsStatus = ex is System.Net.Http.HttpRequestException { StatusCode: null }
+                                       or TaskCanceledException
+                ? LanguageManager.Get("Strings.TS.Custom.Unreachable")
+                : LanguageManager.Format("Strings.TS.Custom.FetchErrorFmt", ex.Message);
+        }
+        finally
+        {
+            _isFetchingCustomModels = false;
+            CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
     private void ApplyOverlayPreset(OverlayPreset? preset)
     {
         if (preset == null) return;
@@ -862,6 +946,9 @@ public class SettingsViewModel : BaseViewModel
         GeminiModel = string.IsNullOrWhiteSpace(c.GeminiModel) ? ModelCatalog.DefaultGemini : c.GeminiModel;
         GroqApiKey = _appSettings.GetGroqKey() ?? string.Empty;
         GroqModel = string.IsNullOrWhiteSpace(c.GroqModel) ? ModelCatalog.DefaultGroq : c.GroqModel;
+        CustomLlmApiKey = _appSettings.GetCustomLlmKey() ?? string.Empty;
+        CustomLlmBaseUrl = c.CustomLlmBaseUrl ?? string.Empty;
+        CustomLlmModel = c.CustomLlmModel ?? string.Empty;
         LlmTemperature = c.LlmTemperature;
         LlmUseContext = c.LlmUseContext;
         LlmContextSize = c.LlmContextSize;
@@ -1046,6 +1133,7 @@ public class SettingsViewModel : BaseViewModel
             if (IsAnthropic) _appSettings.SetAnthropicKey(AnthropicApiKey ?? string.Empty);
             if (IsGemini) _appSettings.SetGeminiKey(GeminiApiKey ?? string.Empty);
             if (IsGroq) _appSettings.SetGroqKey(GroqApiKey ?? string.Empty);
+            if (IsCustomLlm) _appSettings.SetCustomLlmKey(CustomLlmApiKey ?? string.Empty);
             _appSettings.Save();
 
             _translationService.Reload();
@@ -1078,6 +1166,8 @@ public class SettingsViewModel : BaseViewModel
         c.AnthropicModel = string.IsNullOrWhiteSpace(AnthropicModel) ? ModelCatalog.DefaultAnthropic : AnthropicModel;
         c.GeminiModel = string.IsNullOrWhiteSpace(GeminiModel) ? ModelCatalog.DefaultGemini : GeminiModel;
         c.GroqModel = string.IsNullOrWhiteSpace(GroqModel) ? ModelCatalog.DefaultGroq : GroqModel;
+        c.CustomLlmBaseUrl = (CustomLlmBaseUrl ?? string.Empty).Trim();
+        c.CustomLlmModel = (CustomLlmModel ?? string.Empty).Trim();
         c.LlmTemperature = LlmTemperature;
         c.LlmUseContext = LlmUseContext;
         c.LlmContextSize = LlmContextSize;
@@ -1127,6 +1217,7 @@ public class SettingsViewModel : BaseViewModel
             _appSettings.SetAnthropicKey(AnthropicApiKey ?? string.Empty);
             _appSettings.SetGeminiKey(GeminiApiKey ?? string.Empty);
             _appSettings.SetGroqKey(GroqApiKey ?? string.Empty);
+            _appSettings.SetCustomLlmKey(CustomLlmApiKey ?? string.Empty);
             _appSettings.Save();
             _translationService.Reload();
             if (ocrChanged) _ocrService.Reload();
