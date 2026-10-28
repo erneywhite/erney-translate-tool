@@ -74,6 +74,20 @@ public class RegionGrouperTests
             Group(L(72, 470, 175, 36, "< ENGLISH"), L(103, 541, 54, 35, "BGM"), L(263, 542, 36, 32, "SE")));
 
     [Fact]
+    public void ThirdLineAtTheSamePitch_JoinsEvenAfterAPeriod() =>
+        // OCR read "sofa," as "sofa." in a three-line reply.
+        Assert.Single(Group(
+            L(437, 825, 830, 27, "Whether she doesn't recognize me or simply doesn't deem me"),
+            L(437, 879, 855, 25, "worthy of acknowledgment, Dana sits on the waiting room sofa."),
+            L(437, 932, 420, 26, "casually awaiting her massage.")));
+
+    [Fact]
+    public void ChoiceButtons_StaySeparate() =>
+        Assert.Equal(2, Group(
+            L(427, 433, 1025, 33, "No problem! I like Dana with her self-indulgent habits.."),
+            L(700, 621, 480, 35, "Hmm... I prefer pink ones..")).Count);
+
+    [Fact]
     public void DialogueWrap_StillMerges() =>
         Assert.Single(Group(
             L(440, 854, 818, 32, "Whether she doesn't recognize me or simply doesn't deem me"),

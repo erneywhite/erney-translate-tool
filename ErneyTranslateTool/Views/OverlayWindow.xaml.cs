@@ -127,7 +127,7 @@ public partial class OverlayWindow : Window
                 Snap(r.Bounds.Height));
 
             if (_lastByOriginal.TryGetValue(r.OriginalText, out var prev)
-                && RectsOverlap(prev, rect))
+                && IsJitter(prev, rect))
             {
                 // Stick to previous position — kills re-segmentation jitter.
                 rect = prev;
@@ -476,6 +476,19 @@ public partial class OverlayWindow : Window
         Canvas.GetTop(b),
         b.ActualWidth > 0 ? b.ActualWidth : b.MinWidth,
         b.ActualHeight > 0 ? b.ActualHeight : b.MinHeight);
+
+    /// <summary>
+    /// v1.0.38: the same text a few pixels off is OCR jitter; moved further,
+    /// it's the text moving (a panel sliding in). Any overlap used to count
+    /// as jitter, so a translation stayed where the first frame of the
+    /// animation caught it, a line below its text.
+    /// </summary>
+    private static bool IsJitter(Rect prev, Rect now)
+    {
+        var tolerance = Math.Max(SnapGrid * 2, Math.Min(prev.Height, now.Height) * 0.25);
+        return Math.Abs(prev.X - now.X) <= tolerance && Math.Abs(prev.Y - now.Y) <= tolerance
+               && Math.Abs(prev.Width - now.Width) <= tolerance * 2 && Math.Abs(prev.Height - now.Height) <= tolerance;
+    }
 
     private static bool RectsOverlap(Rect a, Rect b)
     {

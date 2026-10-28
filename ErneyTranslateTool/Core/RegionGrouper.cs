@@ -195,6 +195,20 @@ public static class RegionGrouper
         if (signal == LineEndSignal.WeakContinuation && LooksLikeLabel(last.OriginalText))
             signal = LineEndSignal.Unknown;
 
+        // v1.0.38: a paragraph keeps its line pitch. Once two lines are in,
+        // a third at the same spacing and left edge continues it even after a
+        // sentence end — OCR read "sofa," as "sofa." and split a three-line
+        // reply. Two sentences in one dialogue box translate fine together;
+        // separate buttons stand much further apart than a text line.
+        if (signal == LineEndSignal.Terminator && group.Count >= 2)
+        {
+            var prev = group[^2].Bounds;
+            var pitchGap = lb.Top - prev.Bottom;
+            if (Math.Abs(gap - pitchGap) <= Math.Max(4, lb.Height * 0.25)
+                && Math.Abs(cb.Left - lb.Left) <= lb.Height)
+                signal = LineEndSignal.StrongContinuation;
+        }
+
         // v1.0.22: bumped again. The v1.0.21 values (2.2 / 2.5) caught
         // most of the Yankee Massage VN's dialog wraps but still missed
         // some frames — OCR's per-frame bounding-box jitter would push
