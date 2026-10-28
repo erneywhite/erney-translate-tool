@@ -185,15 +185,25 @@ namespace ErneyTranslateTool.Core
                     graphics.ReleaseHdc(hdcDest);
                 }
 
+                // v1.0.35: keep only the client area — the title bar and menu
+                // bar were OCR'd and translated like game text.
+                var client = new Rectangle(0, 0, width, height);
+                if (WindowGeometry.TryGetClientOffset(hWnd, out var c))
+                    client = Rectangle.Intersect(client, c);
+
                 if (!_capturePathLogged)
                 {
-                    _logger.Information("Capture path: {Path} ({Width}x{Height})",
+                    _logger.Information("Capture path: {Path} ({Width}x{Height}, content {Client})",
                         printOk ? "PrintWindow(RENDERFULLCONTENT)" : "BitBlt fallback",
-                        width, height);
+                        width, height, client);
                     _capturePathLogged = true;
                 }
 
-                return bitmap;
+                if (client.Width <= 0 || client.Height <= 0 || client.Size == bitmap.Size)
+                    return bitmap;
+                var cropped = bitmap.Clone(client, PixelFormat.Format32bppArgb);
+                bitmap.Dispose();
+                return cropped;
             }
             catch (Exception ex)
             {

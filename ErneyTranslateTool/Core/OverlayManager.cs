@@ -10,11 +10,6 @@ namespace ErneyTranslateTool.Core
 {
     public class OverlayManager : IDisposable
     {
-        [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct RECT { public int Left, Top, Right, Bottom; }
-
         private readonly AppSettings _settings;
         private OverlayWindow? _overlayWindow;
         private bool _disposed;
@@ -69,10 +64,8 @@ namespace ErneyTranslateTool.Core
 
         public void UpdatePosition(IntPtr windowHandle)
         {
-            if (windowHandle == IntPtr.Zero || !GetWindowRect(windowHandle, out RECT rect)) return;
-            Application.Current.Dispatcher.Invoke(() =>
-                _overlayWindow?.UpdateBounds(
-                    new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top)));
+            if (!WindowGeometry.TryGetClientRect(windowHandle, out var rect)) return;
+            Application.Current.Dispatcher.Invoke(() => _overlayWindow?.UpdateBounds(rect));
         }
 
         private void EnsureWindow()

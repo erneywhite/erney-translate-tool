@@ -467,13 +467,11 @@ public class TranslationEngine : IDisposable
             // callback can re-render the overlay without repeatedly calling
             // back into Win32. If the window vanished between capture and
             // here, bail before kicking off any translation work.
-            if (!GetWindowRect(TargetWindowHandle, out var rect))
+            if (!TryGetTargetRect(out var winRect))
             {
-                _logger.Warning("Frame: GetWindowRect failed for handle {Handle}", TargetWindowHandle);
+                _logger.Warning("Frame: window rect unavailable for handle {Handle}", TargetWindowHandle);
                 return;
             }
-            var winRect = new System.Windows.Rect(
-                rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
 
             // For streaming-capable LLM providers (OpenAI / Anthropic with
             // UseStreamingLlm = true) the service feeds us partial text per
@@ -570,13 +568,9 @@ public class TranslationEngine : IDisposable
     }
 
     /// <summary>Current target window rect in screen pixels; false if the window is gone.</summary>
-    private bool TryGetTargetRect(out System.Windows.Rect winRect)
-    {
-        winRect = default;
-        if (!GetWindowRect(TargetWindowHandle, out var rect)) return false;
-        winRect = new System.Windows.Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
-        return true;
-    }
+    private bool TryGetTargetRect(out System.Windows.Rect winRect) =>
+        // v1.0.35: the client area — that's what CaptureService crops to.
+        WindowGeometry.TryGetClientRect(TargetWindowHandle, out winRect);
 
     private static string Truncate(string s, int max) =>
         string.IsNullOrEmpty(s) || s.Length <= max ? (s ?? string.Empty) : s.Substring(0, max) + "…";
@@ -604,12 +598,6 @@ public class TranslationEngine : IDisposable
         }
         return hash;
     }
-
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT { public int Left, Top, Right, Bottom; }
 
     public void Dispose()
     {
