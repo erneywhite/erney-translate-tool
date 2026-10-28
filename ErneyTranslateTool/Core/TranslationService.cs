@@ -47,6 +47,8 @@ public class TranslationService : IDisposable
     private int _consecutiveFailures;
     private bool _usingFallback;
     private DateTime _lastPrimaryProbeAt = DateTime.MinValue;
+    // v1.0.35: guards the fallback state machine — requests run in parallel.
+    private readonly object _stateLock = new();
 
     /// <summary>True when we've fallen back to the secondary translator.</summary>
     public bool IsUsingFallback => _usingFallback;
@@ -70,6 +72,13 @@ public class TranslationService : IDisposable
     /// "using fallback" flag — settings just changed, last session's
     /// state isn't meaningful any more.
     /// </summary>
+    /// <summary>Tests: use these translators instead of building them from settings.</summary>
+    internal void UseTranslatorsForTests(ITranslator primary, ITranslator? fallback)
+    {
+        _primary = primary;
+        _fallback = fallback;
+    }
+
     public bool Initialize()
     {
         // v1.0.33: the pipeline translates on a worker thread while settings
@@ -171,114 +180,160 @@ public class TranslationService : IDisposable
             return regions;
         }
 
-        var translatedRegions = new List<TranslationRegion>();
         // Streaming is only worth the SSE plumbing for actual LLM providers;
         // cache/glossary hits return instantly so chunked delivery would be
         // pointless. The active-translator check happens per-region inside
-        // the loop because the fallback machinery may swap providers
-        // mid-frame.
+        // TranslateOneAsync because the fallback machinery may swap
+        // providers mid-frame.
         var streamingEnabled = _settings.Config.UseStreamingLlm && onRegionUpdated != null;
 
-        foreach (var region in regions)
+        // v1.0.35: blocks go out in parallel, MaxParallelRequests at a time.
+        // One by one, a new scene with six lines waited for six round trips
+        // (seconds on MyMemory) before the last line showed. Results keep
+        // the input order.
+        var added = new bool[regions.Count];
+        using var gate = new SemaphoreSlim(MaxParallelRequests);
+        var tasks = new List<Task>(regions.Count);
+        for (int i = 0; i < regions.Count; i++)
         {
-            if (ct.IsCancellationRequested) break;
-            // A settings reload can leave no translator (new one failed to
-            // build); stop instead of throwing on every region.
-            if (_primary == null) break;
-
-            try
+            var index = i;
+            tasks.Add(Task.Run(async () =>
             {
-                // Step 1 (highest priority): exact glossary match — bypasses
-                // both cache and translator entirely. See v1.0.8 notes.
-                if (_glossary.TryGetExactMatch(region.OriginalText, targetLanguage, out var glossaryHit))
+                try
                 {
-                    region.TranslatedText = glossaryHit;
-                    region.IsFromCache = false;
-                    _history.AddTranslation(
-                        region.OriginalText,
-                        region.TranslatedText,
-                        "glossary",
-                        false);
-                    if (!string.IsNullOrWhiteSpace(region.TranslatedText))
-                    {
-                        translatedRegions.Add(region);
-                        onRegionUpdated?.Invoke(region);
-                    }
-                    continue;
+                    await gate.WaitAsync(ct);
                 }
-
-                var cached = _cache.GetTranslation(region.OriginalText, targetLanguage);
-                if (!string.IsNullOrEmpty(cached))
+                catch (OperationCanceledException) { return; }
+                try
                 {
-                    region.TranslatedText = cached;
-                    region.IsFromCache = true;
-                    _settings.UpdateStats(region.OriginalText.Length, true);
+                    added[index] = await TranslateOneAsync(regions[index], targetLanguage, streamingEnabled, onRegionUpdated, ct);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }, CancellationToken.None));
+        }
+        await Task.WhenAll(tasks);
+
+        var translatedRegions = new List<TranslationRegion>();
+        for (int i = 0; i < regions.Count; i++)
+            if (added[i]) translatedRegions.Add(regions[i]);
+        return translatedRegions;
+    }
+
+    /// <summary>How many translation requests of one frame run at once.</summary>
+    private const int MaxParallelRequests = 3;
+
+    /// <summary>
+    /// One block: glossary, cache, then the translator. True when the block
+    /// got a translation to show. Runs in parallel with the frame's other
+    /// blocks.
+    /// </summary>
+    private async Task<bool> TranslateOneAsync(TranslationRegion region, string targetLanguage,
+        bool streamingEnabled, Action<TranslationRegion>? onRegionUpdated, CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested) return false;
+        // A settings reload can leave no translator (new one failed to
+        // build); skip instead of throwing on every region.
+        if (_primary == null) return false;
+
+        var added = false;
+        try
+        {
+            // Step 1 (highest priority): exact glossary match — bypasses
+            // both cache and translator entirely. See v1.0.8 notes.
+            if (_glossary.TryGetExactMatch(region.OriginalText, targetLanguage, out var glossaryHit))
+            {
+                region.TranslatedText = glossaryHit;
+                region.IsFromCache = false;
+                _history.AddTranslation(
+                    region.OriginalText,
+                    region.TranslatedText,
+                    "glossary",
+                    false);
+                if (!string.IsNullOrWhiteSpace(region.TranslatedText))
+                {
+                    added = true;
+                    onRegionUpdated?.Invoke(region);
+                }
+                return added;
+            }
+
+            var cached = _cache.GetTranslation(region.OriginalText, targetLanguage);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                region.TranslatedText = cached;
+                region.IsFromCache = true;
+                _settings.UpdateStats(region.OriginalText.Length, true);
+            }
+            else
+            {
+                // Pick streaming path only when it's actually useful:
+                // - user toggle is on
+                // - the active translator implements IStreamingTranslator
+                // - the engine gave us a per-region callback
+                // Otherwise fall through to the regular round-trip call.
+                var active = ResolveActiveForStreamingHint();
+                if (streamingEnabled && active is IStreamingTranslator streamer)
+                {
+                    region.TranslatedText = await TranslateStreamWithFallbackAsync(
+                        streamer, region, targetLanguage, onRegionUpdated!, ct);
                 }
                 else
                 {
-                    // Pick streaming path only when it's actually useful:
-                    // - user toggle is on
-                    // - the active translator implements IStreamingTranslator
-                    // - the engine gave us a per-region callback
-                    // Otherwise fall through to the regular round-trip call.
-                    var active = ResolveActiveForStreamingHint();
-                    if (streamingEnabled && active is IStreamingTranslator streamer)
-                    {
-                        region.TranslatedText = await TranslateStreamWithFallbackAsync(
-                            streamer, region, targetLanguage, onRegionUpdated!, ct);
-                    }
-                    else
-                    {
-                        region.TranslatedText = await TranslateWithFallbackAsync(
-                            region.OriginalText, targetLanguage, ct);
-                    }
-
-                    // Stopped while the request was in flight (a translator
-                    // that ignores ct finishes anyway): don't write this into
-                    // the cache, the stats or — after a quick Stop/Start —
-                    // the next session's history.
-                    ct.ThrowIfCancellationRequested();
-
-                    if (!string.IsNullOrWhiteSpace(region.TranslatedText))
-                    {
-                        _cache.SaveTranslation(
-                            region.OriginalText,
-                            region.TranslatedText,
-                            targetLanguage,
-                            region.SourceLanguage);
-
-                        var maxBytes = _settings.Config.MaxCacheSizeMb > 0
-                            ? (long)_settings.Config.MaxCacheSizeMb * 1024 * 1024
-                            : 0L;
-                        if (maxBytes > 0)
-                            _cache.EnforceSizeLimitInBackground(maxBytes);
-
-                        region.IsFromCache = false;
-                        _settings.UpdateStats(region.OriginalText.Length, false);
-                        _history.AddTranslation(
-                            region.OriginalText,
-                            region.TranslatedText,
-                            region.SourceLanguage ?? "unknown",
-                            false);
-                    }
+                    region.TranslatedText = await TranslateWithFallbackAsync(
+                        region.OriginalText, targetLanguage, ct);
                 }
+
+                // Stopped while the request was in flight (a translator
+                // that ignores ct finishes anyway): don't write this into
+                // the cache, the stats or — after a quick Stop/Start —
+                // the next session's history.
+                ct.ThrowIfCancellationRequested();
 
                 if (!string.IsNullOrWhiteSpace(region.TranslatedText))
                 {
-                    // Step 4 (post-process): glossary word-boundary replace.
-                    region.TranslatedText = _glossary.Apply(region.TranslatedText, targetLanguage);
-                    translatedRegions.Add(region);
-                    // Final notify so the overlay shows the post-glossary
-                    // text. For streaming this overrides the last partial
-                    // chunk; for non-streaming this is the only notify.
-                    onRegionUpdated?.Invoke(region);
+                    _cache.SaveTranslation(
+                        region.OriginalText,
+                        region.TranslatedText,
+                        targetLanguage,
+                        region.SourceLanguage);
+
+                    var maxBytes = _settings.Config.MaxCacheSizeMb > 0
+                        ? (long)_settings.Config.MaxCacheSizeMb * 1024 * 1024
+                        : 0L;
+                    if (maxBytes > 0)
+                        _cache.EnforceSizeLimitInBackground(maxBytes);
+
+                    region.IsFromCache = false;
+                    _settings.UpdateStats(region.OriginalText.Length, false);
+                    _history.AddTranslation(
+                        region.OriginalText,
+                        region.TranslatedText,
+                        region.SourceLanguage ?? "unknown",
+                        false);
                 }
             }
-            catch (OperationCanceledException) { break; }
-            catch (Exception ex)
+
+            if (!string.IsNullOrWhiteSpace(region.TranslatedText))
             {
-                _logger.Error(ex, "Translation failed for: {Text}", region.OriginalText);
-                if (_consecutiveFailures >= FailureThreshold)
+                // Step 4 (post-process): glossary word-boundary replace.
+                region.TranslatedText = _glossary.Apply(region.TranslatedText, targetLanguage);
+                added = true;
+                // Final notify so the overlay shows the post-glossary
+                // text. For streaming this overrides the last partial
+                // chunk; for non-streaming this is the only notify.
+                onRegionUpdated?.Invoke(region);
+            }
+        }
+        catch (OperationCanceledException) { return false; }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "Translation failed for: {Text}", region.OriginalText);
+            if (Volatile.Read(ref _consecutiveFailures) >= FailureThreshold)
+            {
+                lock (_stateLock)
                 {
                     var now = DateTime.UtcNow;
                     if ((now - _lastRateLimitWarning).TotalMinutes >= 5)
@@ -289,8 +344,7 @@ public class TranslationService : IDisposable
                 }
             }
         }
-
-        return translatedRegions;
+        return added;
     }
 
     /// <summary>
@@ -338,7 +392,7 @@ public class TranslationService : IDisposable
             }
             // Reset failure counter on success of an active-primary stream
             // so the existing fallback machinery's invariants hold.
-            if (!_usingFallback) _consecutiveFailures = 0;
+            if (!_usingFallback) Volatile.Write(ref _consecutiveFailures, 0);
             return final;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -377,17 +431,26 @@ public class TranslationService : IDisposable
         // whether the upstream came back. We do this on the actual user's
         // request (not a separate background task) so a recovered primary
         // is observed naturally without burning idle cycles.
-        if (_usingFallback && fallback != null
-            && DateTime.UtcNow - _lastPrimaryProbeAt > PrimaryRecoveryProbeInterval)
+        bool probeNow;
+        lock (_stateLock)
         {
-            _lastPrimaryProbeAt = DateTime.UtcNow;
+            // Only one of the parallel requests probes.
+            probeNow = _usingFallback && fallback != null
+                       && DateTime.UtcNow - _lastPrimaryProbeAt > PrimaryRecoveryProbeInterval;
+            if (probeNow) _lastPrimaryProbeAt = DateTime.UtcNow;
+        }
+        if (probeNow)
+        {
             try
             {
                 var probe = await primary.TranslateAsync(text, targetLanguage, ct);
                 if (!string.IsNullOrWhiteSpace(probe))
                 {
-                    _usingFallback = false;
-                    _consecutiveFailures = 0;
+                    lock (_stateLock)
+                    {
+                        _usingFallback = false;
+                        _consecutiveFailures = 0;
+                    }
                     _logger.Information("Primary {P} recovered, switching back from fallback", primary.Name);
                     FallbackStateChanged?.Invoke(this,
                         LanguageManager.Format("Strings.Engine.FallbackOff", primary.Name));
@@ -407,7 +470,7 @@ public class TranslationService : IDisposable
         try
         {
             var result = await active.TranslateAsync(text, targetLanguage, ct);
-            if (active == primary) _consecutiveFailures = 0;
+            if (active == primary) Volatile.Write(ref _consecutiveFailures, 0);
             return result;
         }
         catch (Exception ex)
@@ -417,14 +480,24 @@ public class TranslationService : IDisposable
             // new one towards the fallback.
             if (active == primary && ReferenceEquals(primary, _primary))
             {
-                _consecutiveFailures++;
-                _logger.Information(ex, "Primary {P} failed ({N}/{Max})",
-                    primary.Name, _consecutiveFailures, FailureThreshold);
-
-                if (_consecutiveFailures >= FailureThreshold && fallback != null && !_usingFallback)
+                int failures;
+                bool switchNow;
+                lock (_stateLock)
                 {
-                    _usingFallback = true;
-                    _lastPrimaryProbeAt = DateTime.UtcNow; // throttle next probe
+                    failures = ++_consecutiveFailures;
+                    // Parallel failures cross the threshold together; one switches.
+                    switchNow = failures >= FailureThreshold && fallback != null && !_usingFallback;
+                    if (switchNow)
+                    {
+                        _usingFallback = true;
+                        _lastPrimaryProbeAt = DateTime.UtcNow; // throttle next probe
+                    }
+                }
+                _logger.Information(ex, "Primary {P} failed ({N}/{Max})",
+                    primary.Name, failures, FailureThreshold);
+
+                if (switchNow)
+                {
                     _logger.Warning("Primary {P} hit failure threshold — switching to fallback {F}",
                         primary.Name, fallback.Name);
                     FallbackStateChanged?.Invoke(this,
