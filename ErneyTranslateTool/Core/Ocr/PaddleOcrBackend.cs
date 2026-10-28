@@ -39,7 +39,19 @@ public class PaddleOcrBackend : IOcrBackend
     private static readonly string[] AutoBundle = { "en", "ja", "cyrillic" };
 
     private static readonly TimeSpan InitTimeout = TimeSpan.FromMinutes(5);
-    private const int MaxOcrWidth = 1600;
+    // v1.0.37: small text (a web page, a UI at 2560 px) was read in pieces:
+    // the frame was scaled to 1600 px here and then again, smaller, inside
+    // the detector, and recognition ran on the shrunken image. Measured on a
+    // 2560 px page with 14 px text (OcrBenchmark): 18% of words read before,
+    // 99% now, 228 -> 442 ms; 18 px game text stays at ~99%, +70 ms.
+    // Recognition now reads the full-size frame; only the detector looks at
+    // a copy up to 1600 px.
+
+    /// <summary>Frames wider than this are scaled down before OCR.</summary>
+    internal int MaxOcrWidth { get; set; } = 4096;
+
+    /// <summary>Detector's own resize limit (Sdcb's default is far smaller).</summary>
+    internal int? DetectorMaxSize { get; set; } = 1600;
 
     private readonly ILogger _logger;
     private readonly List<PaddleOcrAll> _engines = new();
@@ -205,6 +217,8 @@ public class PaddleOcrBackend : IOcrBackend
         var regions = new List<TranslationRegion>();
         var engines = _ready ? _engines.ToArray() : Array.Empty<PaddleOcrAll>();
         if (engines.Length == 0) return regions;
+        if (DetectorMaxSize is int maxSize)
+            foreach (var e in engines) e.Detector.MaxSize = maxSize;
 
         try
         {
