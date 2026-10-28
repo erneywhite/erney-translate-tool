@@ -170,11 +170,7 @@ public class GroqTranslator : IStreamingTranslator
             {
                 Role = "system",
                 Content =
-                    $"You are a professional game and visual novel translator. " +
-                    $"Translate the user's text into {targetLanguageEnglishName}. " +
-                    "Preserve tone, register, and stylistic features (formal/casual, slang, " +
-                    "honorifics). Don't explain, don't add notes — output only the translation. " +
-                    "If the text is already in the target language, return it unchanged.",
+                    LlmPrompt.System(targetLanguageEnglishName),
             },
         };
 

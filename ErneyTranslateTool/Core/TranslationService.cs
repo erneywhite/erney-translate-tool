@@ -320,6 +320,15 @@ public class TranslationService : IDisposable
                         region.OriginalText, targetLanguage, ct);
                 }
 
+                // v1.0.38: an LLM may refuse a line of an adult game even with
+                // the prompt saying it's fiction. Don't draw or cache the
+                // refusal: ask another translator for this one line.
+                if (LlmPrompt.IsRefusal(region.TranslatedText, region.OriginalText))
+                {
+                    _logger.Information("Translator refused, retrying with another one: {Text}", region.OriginalText);
+                    region.TranslatedText = await TranslateRefusedAsync(region.OriginalText, targetLanguage, ct);
+                }
+
                 // Stopped while the request was in flight (a translator
                 // that ignores ct finishes anyway): don't write this into
                 // the cache, the stats or — after a quick Stop/Start —
@@ -381,6 +390,31 @@ public class TranslationService : IDisposable
             }
         }
         return added;
+    }
+
+    private ITranslator? _refusalBackup;
+
+    /// <summary>
+    /// A line the active translator refused: the fallback if there is one and
+    /// it isn't the one that refused, else free Google. Empty if that refuses
+    /// or fails too, so nothing is drawn.
+    /// </summary>
+    private async Task<string> TranslateRefusedAsync(string text, string targetLanguage, CancellationToken ct)
+    {
+        var refused = _usingFallback ? _fallback : _primary;
+        var other = _fallback != null && !ReferenceEquals(_fallback, refused) ? _fallback
+                  : _refusalBackup ??= new GoogleFreeTranslator(_logger);
+        try
+        {
+            var result = await other.TranslateAsync(text, targetLanguage, ct);
+            return LlmPrompt.IsRefusal(result, text) ? string.Empty : result;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logger.Information(ex, "Second translator failed on a refused line");
+            return string.Empty;
+        }
     }
 
     /// <summary>

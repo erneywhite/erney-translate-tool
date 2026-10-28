@@ -85,6 +85,23 @@ public sealed class ParallelTranslationTests : IDisposable
         Assert.True(sw.ElapsedMilliseconds < 1500, $"took {sw.ElapsedMilliseconds} ms"); // one by one: 1800+
     }
 
+    private sealed class RefusingTranslator : ITranslator
+    {
+        public string Name => "refuser";
+        public Task<string> TranslateAsync(string text, string targetLanguage, CancellationToken ct = default) =>
+            Task.FromResult("I'm sorry, but I can't help with that.");
+        public Task<(bool Ok, string Message)> VerifyAsync(CancellationToken ct = default) => Task.FromResult((true, ""));
+        public void Dispose() { }
+    }
+
+    [Fact]
+    public async Task RefusedLine_IsTranslatedByTheFallback()
+    {
+        _service.UseTranslatorsForTests(new RefusingTranslator(), new SlowTranslator("f", 10));
+        var result = await _service.TranslateRegionsAsync(Lines(2), "RU");
+        Assert.All(result, r => Assert.StartsWith("[f]", r.TranslatedText));
+    }
+
     [Fact]
     public async Task FailedTranslation_IsReported_AndClearedAfterSuccess()
     {
