@@ -61,6 +61,14 @@ public class RegionGrouperTests
                   L(101, 877, 491, 47, "Flash news, emergency")));
 
     [Fact]
+    public void CapsHeadingAndTag_StayOffTheText() =>
+        Assert.Equal(new[] { "BREAKING NEWS", "The government is about to implement martial law Flash news, emergency announcement.", "RIGHT NOW" },
+            Group(L(158, 693, 437, 52, "BREAKING NEWS"),
+                  L(154, 772, 1348, 54, "The government is about to implement martial law"),
+                  L(128, 838, 929, 55, "Flash news, emergency announcement."),
+                  L(122, 920, 218, 40, "RIGHT NOW")));
+
+    [Fact]
     public void ButtonsOnOneRow_StaySeparate() =>
         Assert.Equal(new[] { "< ENGLISH", "BGM", "SE" },
             Group(L(72, 470, 175, 36, "< ENGLISH"), L(103, 541, 54, 35, "BGM"), L(263, 542, 36, 32, "SE")));

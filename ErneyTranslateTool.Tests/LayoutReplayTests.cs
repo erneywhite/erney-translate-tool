@@ -179,7 +179,9 @@ public class LayoutReplayTests
                            (flicker.Count > 0 ? $" at #{string.Join(", #", flicker.Take(20))}" : ""));
             // One per hundred frames is allowed: OCR noise that shows up
             // for a single frame ("Oo") can't be told from new text in advance.
-            if (flicker.Count > replay.Layouts.Count / 100)
+            // At least one even for a short recording: animated text such as
+            // "Loading..." really changes on screen.
+            if (flicker.Count > Math.Max(1, replay.Layouts.Count / 100))
             {
                 _out.WriteLine(replay.Describe());
                 failed.Add(Path.GetFileName(file));
