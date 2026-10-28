@@ -152,6 +152,16 @@ public static class RegionGrouper
 
         var signal = ClassifyLineEnd(last.OriginalText);
 
+        // v1.0.35: short caps lines stacked together are a menu, not a
+        // paragraph: "NORMAL / HARD / S.HARD" (7 px apart, under even the
+        // 0.7×H default), "< ENGLISH / BGM". And a caps word right under a
+        // finished sentence is a separate sign — "...in my shop? / MSG"
+        // was the clipboard behind a see-through dialogue box. All-caps
+        // paragraphs still merge: their upper lines are long.
+        if (IsShortCaps(candidate.OriginalText)
+            && (IsShortCaps(last.OriginalText) || signal == LineEndSignal.Terminator))
+            return false;
+
         // v1.0.19 Bug A fix: WeakContinuation was too eager for vertical
         // menu stacks. A button list like "NORMAL\nHARD\nS.HARD" is three
         // single-word labels with no punctuation — pre-v1.0.19 my new
@@ -283,6 +293,25 @@ public static class RegionGrouper
             if (IsUpperLatinCyrillic(c)) hasUpperLatinCyrillic = true;
         }
         return hasUpperLatinCyrillic;
+    }
+
+    /// <summary>
+    /// v1.0.35: a short line with capitals and no lowercase letters, any
+    /// number of words — "BGM", "< ENGLISH", "SUPER HARD". Wider than
+    /// <see cref="LooksLikeLabel"/>, which wants a single token.
+    /// </summary>
+    private static bool IsShortCaps(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var trimmed = text.Trim();
+        if (trimmed.Length > 20) return false;
+        var hasUpper = false;
+        foreach (var c in trimmed)
+        {
+            if (IsLowerLatinCyrillic(c)) return false;
+            if (IsUpperLatinCyrillic(c)) hasUpper = true;
+        }
+        return hasUpper;
     }
 
     private static bool IsLowerLatinCyrillic(char c)
