@@ -111,7 +111,10 @@ public sealed class FrameLayout
                 .ToList();
             // Most of the screen changed: a new scene, not an OCR hiccup.
             // Holding the old blocks only kept stale text up for seconds.
-            var sceneChange = missing.Count * 2 > _held.Count;
+            // Judged by text, not position: a new menu can sit exactly where
+            // the old screen's buttons were (gallery -> title in Night Adventure).
+            var gone = _held.Count(h => !translated.Any(t => t.OriginalText == h.Region.OriginalText));
+            var sceneChange = gone * 2 > _held.Count;
             _lastHeld.Clear();
             foreach (var (old, missed) in sceneChange ? new() : missing)
             {

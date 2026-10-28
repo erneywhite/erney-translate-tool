@@ -162,6 +162,12 @@ public static class RegionGrouper
             && (IsShortCaps(last.OriginalText) || signal == LineEndSignal.Terminator))
             return false;
 
+        // Same for title-case menus: "Continue / New Game / Gallery /
+        // Settings / Exit". A paragraph's upper line is long, so two short
+        // capitalised lines in a row are items, not a wrap.
+        if (IsMenuItem(last.OriginalText) && IsMenuItem(candidate.OriginalText))
+            return false;
+
         // v1.0.19 Bug A fix: WeakContinuation was too eager for vertical
         // menu stacks. A button list like "NORMAL\nHARD\nS.HARD" is three
         // single-word labels with no punctuation — pre-v1.0.19 my new
@@ -317,6 +323,24 @@ public static class RegionGrouper
             if (IsUpperLatinCyrillic(c)) hasUpper = true;
         }
         return hasUpper;
+    }
+
+    /// <summary>
+    /// v1.0.35: a menu item in any case — up to 20 chars and 3 words,
+    /// starting with a capital (or CJK), not ending a sentence or a clause.
+    /// "New Game", "Settings", "Load Game"; not "Welcome to the", "Hey!".
+    /// </summary>
+    private static bool IsMenuItem(string? text)
+    {
+        if (IsShortCaps(text)) return true;
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var trimmed = text.Trim();
+        if (trimmed.Length > 20) return false;
+        if (trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 3) return false;
+        var first = trimmed.FirstOrDefault(char.IsLetter);
+        if (first == default || !char.IsUpper(first)) return false;
+        var lastChar = trimmed[^1];
+        return !IsTerminator(lastChar) && !IsStrongContinuation(lastChar) && lastChar != '-';
     }
 
     /// <summary>Kana, CJK ideographs and hangul — letters, not punctuation.</summary>

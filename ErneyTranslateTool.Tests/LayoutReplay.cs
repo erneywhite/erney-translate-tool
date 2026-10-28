@@ -80,12 +80,14 @@ public sealed class LayoutReplay
     /// <summary>
     /// Flicker: the layout changes and then goes back to one it showed
     /// within the last <paramref name="window"/> frames (A → B → A). A
-    /// scene change only moves forward, so it isn't counted.
+    /// scene change only moves forward, so it isn't counted. The window is
+    /// short on purpose: B lasting a few seconds and then A again is the
+    /// player opening a screen and going back (gallery → title), not flicker.
     /// </summary>
-    public static int CountFlicker(IReadOnlyList<string?> layouts, int window = 10) =>
+    public static int CountFlicker(IReadOnlyList<string?> layouts, int window = 4) =>
         FlickerFrames(layouts, window).Count;
 
-    public static List<int> FlickerFrames(IReadOnlyList<string?> layouts, int window = 10)
+    public static List<int> FlickerFrames(IReadOnlyList<string?> layouts, int window = 4)
     {
         var result = new List<int>();
         string? lastShown = null;
