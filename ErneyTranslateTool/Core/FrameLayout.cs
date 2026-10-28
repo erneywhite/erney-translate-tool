@@ -109,7 +109,10 @@ public sealed class FrameLayout
     /// missing frames, unless something new now covers its place.
     /// Returns <paramref name="translated"/> plus the blocks kept.
     /// </summary>
-    public List<TranslationRegion> HoldBriefDropouts(List<TranslationRegion> translated, int confirmFrames)
+    /// <param name="isBlank">v1.0.38: true when the frame shows no letters in a
+    /// rect; such a block really left and is not held.</param>
+    public List<TranslationRegion> HoldBriefDropouts(List<TranslationRegion> translated, int confirmFrames,
+        Func<System.Windows.Rect, bool>? isBlank = null)
     {
         lock (_heldLock)
         {
@@ -128,6 +131,7 @@ public sealed class FrameLayout
             foreach (var (old, missed) in sceneChange ? new() : missing)
             {
                 if (missed + 1 >= confirmFrames) continue;
+                if (isBlank?.Invoke(old.Bounds) == true) continue;
                 result.Add(old);
                 next.Add((old, missed + 1));
                 _lastHeld[old] = missed + 1;
@@ -163,7 +167,8 @@ public sealed class FrameLayout
     public bool TryReusePreviousFrame(
         List<TranslationRegion> newRawRegions,
         int confirmFrames,
-        out List<TranslationRegion>? shown)
+        out List<TranslationRegion>? shown,
+        Func<System.Windows.Rect, bool>? isBlank = null)
     {
         shown = null;
 
@@ -204,6 +209,9 @@ public sealed class FrameLayout
             for (int j = 0; j < snap.RawBounds.Length && !visible; j++)
                 visible = snapshotUsed[j] && RectOverlapRatio(t.Bounds, snap.RawBounds[j]) > 0;
             snap.Missed[k] = visible ? 0 : snap.Missed[k] + 1;
+            // v1.0.38: no letters left where the block was — the text is
+            // gone, not missed by OCR: take it off now, don't wait.
+            if (!visible && isBlank?.Invoke(t.Bounds) == true) snap.Missed[k] = confirmFrames;
             if (snap.Missed[k] < confirmFrames) shown.Add(t);
             else gone = true;
         }

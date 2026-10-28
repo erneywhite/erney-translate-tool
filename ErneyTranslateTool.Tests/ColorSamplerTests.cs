@@ -34,6 +34,13 @@ public class ColorSamplerTests
     }
 
     [Fact]
+    public void Blank_OnlyWhereNoLettersAre()
+    {
+        Assert.True(ColorSampler.LooksBlank(Frame(false), new Rect(20, 10, 60, 20)));
+        Assert.False(ColorSampler.LooksBlank(Frame(true), new Rect(20, 10, 60, 20)));
+    }
+
+    [Fact]
     public void BoxAtFrameEdge_DoesNotThrow()
     {
         var (bg, _) = ColorSampler.SampleBlock(Frame(true), new Rect(-5, -5, 30, 20));

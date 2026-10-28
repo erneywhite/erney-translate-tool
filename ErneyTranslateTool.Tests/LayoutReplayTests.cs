@@ -67,6 +67,20 @@ public class LayoutReplayTests
     }
 
     [Fact]
+    public void HoldBriefDropouts_DoesNotHoldABlockWhoseTextIsGone()
+    {
+        var layout = new FrameLayout(new LoggerConfiguration().CreateLogger());
+        var lines = new List<TranslationRegion>
+        {
+            Line(100, 100, 100, 30, "NORMAL"), Line(100, 150, 100, 30, "HARD"),
+            Line(100, 200, 100, 30, "S.HARD"), Line(300, 500, 40, 30, "SE"),
+        };
+        layout.HoldBriefDropouts(lines, 3);
+        var held = layout.HoldBriefDropouts(lines.Take(3).ToList(), 3, isBlank: r => r.Top >= 500);
+        Assert.DoesNotContain(held, r => r.OriginalText == "SE");
+    }
+
+    [Fact]
     public void TitleScreenLogo_IsLeftAlone()
     {
         // Kon's Lesson title screen, as OCR saw it.

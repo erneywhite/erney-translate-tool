@@ -439,7 +439,15 @@ public class TranslationEngine : IDisposable
             // This is what stops the merged-vs-split flicker: when the
             // source hasn't meaningfully changed, we literally stop
             // recomputing the output.
-            if (_layout.TryReusePreviousFrame(rawRegions, FrameLayout.BlockVanishFrames, out var reusedRegions)
+            // Pixels are copied only if a block went missing and is checked.
+            ColorSampler.Pixels? framePixels = null;
+            bool IsBlank(System.Windows.Rect r)
+            {
+                framePixels ??= ColorSampler.Snapshot(bitmap);
+                return ColorSampler.LooksBlank(framePixels.Value, r);
+            }
+
+            if (_layout.TryReusePreviousFrame(rawRegions, FrameLayout.BlockVanishFrames, out var reusedRegions, IsBlank)
                 && TryGetTargetRect(out var winRectShortcut))
             {
                 // Blocks whose text left the screen are dropped per block,
@@ -524,7 +532,7 @@ public class TranslationEngine : IDisposable
             _layout.RememberRecentRegions(translated);
 
             // v1.0.35: a block OCR missed for just this frame stays up.
-            translated = _layout.HoldBriefDropouts(translated, FrameLayout.BlockVanishFrames);
+            translated = _layout.HoldBriefDropouts(translated, FrameLayout.BlockVanishFrames, IsBlank);
 
             // v1.0.25: also store this frame's full snapshot so the next
             // frame's reuse-shortcut at the top of OnFrameCaptured can

@@ -43,6 +43,32 @@ public static class ColorSampler
         }
     }
 
+    /// <summary>Copy of a frame's pixels for repeated sampling.</summary>
+    public static Pixels Snapshot(Bitmap frame)
+    {
+        var data = frame.LockBits(new Rectangle(0, 0, frame.Width, frame.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            var pixels = new int[data.Stride / 4 * data.Height];
+            Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+            return new Pixels(pixels, data.Stride / 4, frame.Width, frame.Height);
+        }
+        finally
+        {
+            frame.UnlockBits(data);
+        }
+    }
+
+    /// <summary>
+    /// v1.0.38: nothing in the box stands out from its background — the
+    /// text that was there is gone.
+    /// </summary>
+    public static bool LooksBlank(Pixels img, System.Windows.Rect box)
+    {
+        var (bg, text) = SampleBlock(img, box);
+        return bg != null && text == null;
+    }
+
     public readonly record struct Pixels(int[] Argb, int Stride, int Width, int Height)
     {
         public int At(int x, int y) => Argb[y * Stride + x];
