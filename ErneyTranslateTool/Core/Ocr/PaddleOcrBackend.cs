@@ -189,9 +189,21 @@ public class PaddleOcrBackend : IOcrBackend
 
     public List<TranslationRegion> ProcessFrame(byte[] pngBytes)
     {
+        // v1.0.33: the whole recognition runs under _swapLock. It used to
+        // snapshot the engine list under the lock and Run() outside it, so a
+        // language switch finishing mid-frame disposed the native engine
+        // while Run() was still inside it (use-after-free, process crash —
+        // reachable now that frames are processed off the UI thread). The
+        // init path only takes the lock for the final swap, so it waits at
+        // most one frame.
+        lock (_swapLock)
+            return ProcessFrameLocked(pngBytes);
+    }
+
+    private List<TranslationRegion> ProcessFrameLocked(byte[] pngBytes)
+    {
         var regions = new List<TranslationRegion>();
-        PaddleOcrAll[] engines;
-        lock (_swapLock) { engines = _ready ? _engines.ToArray() : Array.Empty<PaddleOcrAll>(); }
+        var engines = _ready ? _engines.ToArray() : Array.Empty<PaddleOcrAll>();
         if (engines.Length == 0) return regions;
 
         try

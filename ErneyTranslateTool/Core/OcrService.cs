@@ -43,13 +43,42 @@ public class OcrService : IDisposable
     /// or when Reload() swaps in a new backend.</summary>
     public event EventHandler? StatusChanged;
 
+    // v1.0.33: the pipeline calls ProcessFrame from a worker thread while
+    // Reload (settings auto-save, profile switch) runs on the UI thread.
+    // The lock only guards the backend REFERENCE and its lifetime, never an
+    // OCR pass: a frame takes the current backend and runs without the lock,
+    // so Reload swaps instantly instead of freezing the UI for a whole
+    // inference. A backend replaced while a frame is still running on it is
+    // disposed by that frame when it finishes (_retireInUse).
+    private readonly object _backendLock = new();
+    private IOcrBackend? _inUse;
+    private bool _retireInUse;
+
+    /// <summary>Drop a backend that's no longer current. Call under _backendLock.</summary>
+    private void Retire(IOcrBackend? old)
+    {
+        if (old == null) return;
+        old.StatusChanged -= OnBackendStatusChanged;
+        if (ReferenceEquals(old, _inUse)) _retireInUse = true;
+        else old.Dispose();
+    }
+
     /// <summary>Rebuild the active backend from current settings.</summary>
     public void Reload()
     {
+        lock (_backendLock)
+            ReloadLocked();
+        // Outside the lock: subscribers marshal to the UI thread.
+        StatusChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ReloadLocked()
+    {
         try
         {
-            if (_backend != null) _backend.StatusChanged -= OnBackendStatusChanged;
-            _backend?.Dispose();
+            if (_disposed) return;
+            Retire(_backend);
+            _backend = null;
 
             var engine = _settings.Config.OcrEngine;
             if (string.IsNullOrWhiteSpace(engine)) engine = EnginePaddle;
@@ -76,7 +105,6 @@ public class OcrService : IDisposable
             _backend.StatusChanged += OnBackendStatusChanged;
             _logger.Information("OCR backend active: {Name} / {Lang}",
                 _backend.Name, _backend.CurrentLanguageTag);
-            StatusChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {
@@ -90,16 +118,42 @@ public class OcrService : IDisposable
     public List<(string Tag, string DisplayName)> GetAvailableLanguages() =>
         _backend?.GetAvailableLanguages() ?? new List<(string, string)>();
 
-    public bool SetLanguage(string tag) => _backend?.SetLanguage(tag) ?? false;
-
-    public List<TranslationRegion> ProcessFrame(byte[] pngBytes) =>
-        _backend?.ProcessFrame(pngBytes) ?? new List<TranslationRegion>();
+    public List<TranslationRegion> ProcessFrame(byte[] pngBytes)
+    {
+        IOcrBackend? backend;
+        lock (_backendLock)
+        {
+            if (_disposed || _backend == null) return new List<TranslationRegion>();
+            backend = _backend;
+            _inUse = backend;
+        }
+        try
+        {
+            return backend.ProcessFrame(pngBytes);
+        }
+        finally
+        {
+            lock (_backendLock)
+            {
+                _inUse = null;
+                if (_retireInUse)
+                {
+                    _retireInUse = false;
+                    backend.Dispose();
+                }
+            }
+        }
+    }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        _backend?.Dispose();
-        _disposed = true;
+        lock (_backendLock)
+        {
+            if (_disposed) return;
+            Retire(_backend);
+            _backend = null;
+            _disposed = true;
+        }
         GC.SuppressFinalize(this);
     }
 }

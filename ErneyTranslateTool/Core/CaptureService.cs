@@ -58,7 +58,13 @@ namespace ErneyTranslateTool.Core
                 _debugFrameSaved = false;
                 _capturePathLogged = false;
                 _captureCts = new CancellationTokenSource();
-                _captureTask = CaptureLoopAsync(_captureCts.Token);
+                // v1.0.33 (review 1.1): run the loop on the thread pool. Called
+                // straight from the UI thread it captured the dispatcher's
+                // context, so every await resumed on the UI thread and
+                // PrintWindow, the pixel hash, PNG encoding and OCR inference
+                // all ran there — the main window and the overlay stuttered.
+                var ct = _captureCts.Token;
+                _captureTask = Task.Run(() => CaptureLoopAsync(ct), ct);
                 _logger.Information("Capture started for handle: {Handle}", windowHandle);
             }
             catch (Exception ex)

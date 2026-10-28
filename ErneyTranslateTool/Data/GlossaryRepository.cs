@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.IO;
 using ErneyTranslateTool.Models;
@@ -56,6 +57,7 @@ public class GlossaryRepository : IDisposable
     /// the more specific one wins — replacing "Geralt of Rivia" before a
     /// plain "Geralt" rule would have a chance to mangle it.
     /// </summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public List<GlossaryEntry> GetForLanguage(string targetLanguage)
     {
         var list = new List<GlossaryEntry>();
@@ -80,6 +82,7 @@ public class GlossaryRepository : IDisposable
         return list;
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public List<GlossaryEntry> GetAll()
     {
         var list = new List<GlossaryEntry>();
@@ -103,6 +106,7 @@ public class GlossaryRepository : IDisposable
     }
 
     /// <summary>Insert a new rule and return its assigned Id (or 0 on failure).</summary>
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public long Add(GlossaryEntry entry)
     {
         try
@@ -125,6 +129,7 @@ public class GlossaryRepository : IDisposable
         }
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public bool Update(GlossaryEntry entry)
     {
         try
@@ -146,6 +151,7 @@ public class GlossaryRepository : IDisposable
         }
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public bool Delete(long id)
     {
         try
@@ -162,6 +168,7 @@ public class GlossaryRepository : IDisposable
         }
     }
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public int Count()
     {
         try
@@ -198,6 +205,7 @@ public class GlossaryRepository : IDisposable
         Notes = r.IsDBNull(6) ? string.Empty : r.GetString(6),
     };
 
+    [MethodImpl(MethodImplOptions.Synchronized)]
     public void Dispose()
     {
         if (_disposed) return;

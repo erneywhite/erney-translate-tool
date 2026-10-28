@@ -41,11 +41,18 @@ namespace ErneyTranslateTool.Core
         /// only what's been translated so far, so labels missing from it must
         /// not be treated as gone.
         /// </summary>
-        public void ShowRegions(IReadOnlyList<TranslationRegion> regions, Rect targetRect, bool isPartial = false)
+        /// <param name="stillWanted">Re-checked on the UI thread right before
+        /// showing. The pipeline calls this from a worker thread; by the time
+        /// the dispatcher runs the lambda the user may have hidden the
+        /// overlay, paused or stopped — a check done before Invoke would
+        /// bring the overlay back over a hidden/paused/stopped engine.</param>
+        public void ShowRegions(IReadOnlyList<TranslationRegion> regions, Rect targetRect, bool isPartial = false,
+            Func<bool>? stillWanted = null)
         {
             if (HiddenByUser) return;
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current?.Dispatcher.Invoke(() =>
             {
+                if (HiddenByUser || (stillWanted != null && !stillWanted())) return;
                 EnsureWindow();
                 _overlayWindow!.SetRegions(regions, targetRect, _settings.Config, isPartial);
             });

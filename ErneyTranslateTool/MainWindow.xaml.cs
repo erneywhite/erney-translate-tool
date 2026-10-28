@@ -221,11 +221,36 @@ public partial class MainWindow : Window
                 _settings.Save();
             }
         }
+        else if (_engine.IsRunning && !_exitInProgress)
+        {
+            // Real close while translating: stop the engine first (see RealExit).
+            e.Cancel = true;
+            RealExit();
+        }
     }
 
-    private void RealExit()
+    private bool _exitInProgress;
+
+    /// <summary>
+    /// v1.0.33 (review 1.2): stop the engine asynchronously BEFORE shutting
+    /// down. Shutting down with the engine running left App.OnExit to stop
+    /// it, and that waited synchronously on the UI thread for a capture loop
+    /// whose continuation needed the same thread — the process hung after
+    /// "Exit" and blocked the updater from replacing files.
+    /// </summary>
+    private async void RealExit()
     {
+        if (_exitInProgress) return;
+        _exitInProgress = true;
         _allowRealClose = true;
+        try
+        {
+            if (_engine.IsRunning) await _engine.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning(ex, "Engine stop on exit failed");
+        }
         Application.Current.Shutdown();
     }
 

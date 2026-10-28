@@ -159,7 +159,10 @@ public class TrayIconManager : IDisposable
 
     private void RefreshIconAndTooltip()
     {
-        Application.Current?.Dispatcher.Invoke(() =>
+        // BeginInvoke: engine events now arrive from the pipeline thread, and
+        // a synchronous Invoke could block it against a UI thread busy
+        // shutting down.
+        Application.Current?.Dispatcher.BeginInvoke(() =>
         {
             var state = ComputeState();
             // Highlight sticky attention/error in the tooltip so a glance
