@@ -77,8 +77,8 @@ public class PaddleOcrBackend : IOcrBackend
     {
         (AutoTag,   "Авто (English + Japanese + Cyrillic; в 2-3 раза медленнее)", null!),
         ("en",      "Английский",                                OnlineFullModels.EnglishV4),
-        ("zh",      "Китайский (упрощённый)",                    OnlineFullModels.ChineseV5),
-        ("zh-tra",  "Китайский (традиционный)",                  OnlineFullModels.TraditionalChineseV3),
+        ("zh",      "Китайский: упрощённый и традиционный (PP-OCRv5, читает и английский)", OnlineFullModels.ChineseV5),
+        ("zh-tra",  "Китайский традиционный (старая модель v3)", OnlineFullModels.TraditionalChineseV3),
         ("ja",      "Японский",                                  OnlineFullModels.JapanV4),
         ("ko",      "Корейский",                                 OnlineFullModels.KoreanV4),
         ("latin",   "Латинский шрифт (DE / FR / ES / IT / PT / PL / NL / …)", OnlineFullModels.LatinV3),

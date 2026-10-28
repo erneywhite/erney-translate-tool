@@ -304,6 +304,11 @@ public static class RegionGrouper
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
         var trimmed = text.Trim();
+        // CJK has no case: a menu item there is a few characters with no
+        // punctuation ("新遊戲", "載入"); a wrapped dialogue line is longer
+        // or carries 、。「」.
+        if (trimmed.All(c => IsCjk(c) || char.IsWhiteSpace(c)))
+            return trimmed.Count(IsCjk) <= 6;
         if (trimmed.Length > 20) return false;
         var hasUpper = false;
         foreach (var c in trimmed)
@@ -313,6 +318,10 @@ public static class RegionGrouper
         }
         return hasUpper;
     }
+
+    /// <summary>Kana, CJK ideographs and hangul — letters, not punctuation.</summary>
+    private static bool IsCjk(char c) =>
+        (c >= 0x3040 && c <= 0x30FF) || (c >= 0x3400 && c <= 0x9FFF) || (c >= 0xAC00 && c <= 0xD7AF) || (c >= 0xF900 && c <= 0xFAFF);
 
     private static bool IsLowerLatinCyrillic(char c)
         => (c >= 'a' && c <= 'z') || (c >= 'а' && c <= 'я') || c == 'ё';
