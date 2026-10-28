@@ -375,6 +375,7 @@ public class TranslationEngine : IDisposable
             if (hash == _lastFrameHash && !VanishPending)
             {
                 bitmap.Dispose();
+                FollowWindowMove();
                 return;
             }
             _lastFrameHash = hash;
@@ -543,6 +544,7 @@ public class TranslationEngine : IDisposable
         // the UI thread inside ShowRegions, where Stop / Pause / Hide run —
         // that second check is the one that closes the race.
         bool StillWanted() => generation == Volatile.Read(ref _runGeneration) && !IsUserPaused;
+        _lastOverlayRect = winRect;
         if (StillWanted())
             _overlay.ShowRegions(regions, winRect, isPartial, StillWanted);
     }
@@ -551,6 +553,20 @@ public class TranslationEngine : IDisposable
     {
         if (generation == Volatile.Read(ref _runGeneration))
             _overlay.Hide();
+    }
+
+    private System.Windows.Rect _lastOverlayRect;
+
+    /// <summary>
+    /// v1.0.35: the overlay is positioned when a frame is rendered, but a
+    /// window dragged over a static scene produces only hash-skipped frames,
+    /// and the translation stayed where the window used to be.
+    /// </summary>
+    private void FollowWindowMove()
+    {
+        if (!TryGetTargetRect(out var rect) || rect == _lastOverlayRect) return;
+        _lastOverlayRect = rect;
+        _overlay.UpdatePosition(TargetWindowHandle);
     }
 
     /// <summary>Current target window rect in screen pixels; false if the window is gone.</summary>

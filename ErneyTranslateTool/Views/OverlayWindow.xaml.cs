@@ -344,10 +344,34 @@ public partial class OverlayWindow : Window
                : Luminance(bg) > 0.4 ? Colors.Black : Colors.White;
 
         var padding = new Thickness(ReplaceInflateX, 0, ReplaceInflateX, 0);
-        var textWidth = Math.Max(10, rect.Width - padding.Left - padding.Right);
         var lineHeight = s.LineHeight > 0 ? s.LineHeight : s.Rect.Height;
-        var fontSize = FitFontSize(s.Text, fontFamily, textWidth, rect.Height,
-            Math.Max(MinReplaceFont, lineHeight * 0.8));
+        var cap = Math.Max(MinReplaceFont, lineHeight * 0.8);
+        var textWidth = Math.Max(10, rect.Width - padding.Left - padding.Right);
+        double fontSize;
+        if (s.Rect.Height < lineHeight * 1.6)
+        {
+            // One source line (a label, a menu item, a short line): keep it
+            // one line. Shrink a little; if that's not enough, widen the box
+            // around the original's centre rather than break the line.
+            fontSize = cap;
+            var natural = Measure(s.Text, fontFamily, cap, double.PositiveInfinity).Width;
+            if (natural > textWidth)
+            {
+                fontSize = Math.Max(cap * 0.85, Math.Floor(cap * textWidth / natural * 2) / 2);
+                natural = Measure(s.Text, fontFamily, fontSize, double.PositiveInfinity).Width;
+            }
+            if (natural > textWidth)
+            {
+                var w = Math.Min(Width, Math.Ceiling(natural) + padding.Left + padding.Right + 2);
+                var x = Math.Clamp(rect.X + rect.Width / 2 - w / 2, 0, Math.Max(0, Width - w));
+                rect = new Rect(x, rect.Y, w, rect.Height);
+                textWidth = Math.Max(10, w - padding.Left - padding.Right);
+            }
+        }
+        else
+        {
+            fontSize = FitFontSize(s.Text, fontFamily, textWidth, rect.Height, cap);
+        }
 
         if (!_activeBorders.TryGetValue(s.Original, out var border))
         {
@@ -383,17 +407,31 @@ public partial class OverlayWindow : Window
         if (tb.Text != s.Text) tb.Text = s.Text;
     }
 
-    /// <summary>Largest font size (step 0.5) whose wrapped text fits width × height; never below the minimum.</summary>
+    /// <summary>
+    /// Size of <paramref name="text"/> as the overlay draws it. The window
+    /// uses TextFormattingMode=Display, whose glyphs are wider than Ideal at
+    /// small sizes: measuring in Ideal let lines overflow the box.
+    /// </summary>
+    private Size Measure(string text, FontFamily family, double size, double maxWidth)
+    {
+        var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture,
+            FlowDirection.LeftToRight, new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+            size, Brushes.White, null, TextFormattingMode.Display, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        if (!double.IsInfinity(maxWidth)) ft.MaxTextWidth = maxWidth;
+        return new Size(ft.WidthIncludingTrailingWhitespace, ft.Height);
+    }
+
+    /// <summary>
+    /// Largest font size (step 0.5) whose wrapped text fits width × height
+    /// without breaking inside a word; never below the minimum.
+    /// </summary>
     private double FitFontSize(string text, FontFamily family, double width, double height, double max)
     {
-        var dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var typeface = new Typeface(family, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        bool Fits(double size)
-        {
-            var ft = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight, typeface, size, Brushes.White, dip) { MaxTextWidth = width };
-            return ft.Height <= height && ft.WidthIncludingTrailingWhitespace <= width + 0.5;
-        }
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var longest = words.Length == 0 ? text : words.MaxBy(w => w.Length)!;
+        bool Fits(double size) =>
+            Measure(longest, family, size, double.PositiveInfinity).Width <= width
+            && Measure(text, family, size, width).Height <= height;
         double lo = MinReplaceFont, hi = Math.Max(MinReplaceFont, max);
         if (Fits(hi)) return hi;
         if (!Fits(lo)) return lo;
