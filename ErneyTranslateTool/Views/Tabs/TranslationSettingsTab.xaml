@@ -168,14 +168,15 @@
                         <WrapPanel Margin="0,0,0,10">
                             <TextBlock Text="{DynamicResource Strings.TS.Custom.Quick}" Foreground="{DynamicResource TextSecondaryBrush}"
                                        VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <Button Content="Ollama" Padding="10,4" Margin="0,0,6,0"
-                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="http://localhost:11434/v1"/>
-                            <Button Content="LM Studio" Padding="10,4" Margin="0,0,6,0"
-                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="http://localhost:1234/v1"/>
+                            <!-- Cloud first: nothing to install. -->
                             <Button Content="OpenRouter" Padding="10,4" Margin="0,0,6,0"
                                     Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="https://openrouter.ai/api/v1"/>
-                            <Button Content="DeepSeek" Padding="10,4"
+                            <Button Content="DeepSeek" Padding="10,4" Margin="0,0,6,0"
                                     Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="https://api.deepseek.com/v1"/>
+                            <Button Content="Ollama" Padding="10,4" Margin="0,0,6,0"
+                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="http://localhost:11434/v1"/>
+                            <Button Content="LM Studio" Padding="10,4"
+                                    Command="{Binding SetCustomLlmUrlCommand}" CommandParameter="http://localhost:1234/v1"/>
                         </WrapPanel>
                         <TextBlock Text="{DynamicResource Strings.TS.Custom.Key}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <controls:MaskedSecretBox Secret="{Binding CustomLlmApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"

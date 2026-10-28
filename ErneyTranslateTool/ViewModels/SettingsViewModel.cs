@@ -405,8 +405,9 @@ public class SettingsViewModel : BaseViewModel
             "Ключ — на console.groq.com (вход через Google или GitHub). По умолчанию openai/gpt-oss-120b. " +
             "Бесплатный тариф с лимитом запросов в минуту. Поддерживается стриминг и контекст.",
         TranslatorFactory.ProviderCustomLlm =>
-            "Любой сервер с OpenAI-совместимым API: Ollama и LM Studio на своём компьютере (бесплатно, без интернета), " +
-            "OpenRouter, DeepSeek и другие. Укажи адрес сервера и модель. Ключ нужен только облачным сервисам.",
+            "Для опытных: подключение к любому сервису с OpenAI-совместимым API. OpenRouter и DeepSeek работают " +
+            "через интернет по ключу. Ollama и LM Studio запускают модели на твоём компьютере — их нужно " +
+            "установить и запустить отдельно и заранее скачать в них модель.",
         _ => string.Empty
     };
 
@@ -845,7 +846,7 @@ public class SettingsViewModel : BaseViewModel
 
     // ---- v1.0.34 OpenAI-compatible server (Ollama, LM Studio, OpenRouter) ----
 
-    private string _customLlmBaseUrl = "http://localhost:11434/v1";
+    private string _customLlmBaseUrl = "https://openrouter.ai/api/v1";
     private string _customLlmModel = string.Empty;
     private string _customLlmApiKey = string.Empty;
     private string _customLlmModelsStatus = string.Empty;

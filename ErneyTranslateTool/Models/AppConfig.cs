@@ -45,7 +45,7 @@ public class AppConfig
     /// v1.0.34: any OpenAI-compatible server — Ollama, LM Studio, OpenRouter,
     /// DeepSeek. Base URL as the server's docs give it (".../v1" or not).
     /// </summary>
-    public string CustomLlmBaseUrl { get; set; } = "http://localhost:11434/v1";
+    public string CustomLlmBaseUrl { get; set; } = "https://openrouter.ai/api/v1";
 
     /// <summary>Model id on that server, e.g. "qwen2.5:7b". No default — it depends on what the user has.</summary>
     public string CustomLlmModel { get; set; } = string.Empty;
