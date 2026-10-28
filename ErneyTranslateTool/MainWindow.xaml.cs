@@ -109,11 +109,19 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnNavSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
-        if (NavList.SelectedItem is not System.Windows.Controls.ListBoxItem item) return;
+        if (sender is not System.Windows.Controls.ListBox list
+            || list.SelectedItem is not System.Windows.Controls.ListBoxItem item) return;
+
+        // v1.0.31: the sidebar is three lists (work / settings group / app);
+        // keep exactly one selection across them.
+        foreach (var other in NavLists())
+            if (!ReferenceEquals(other, list)) other.SelectedIndex = -1;
+
         var tag = item.Tag as string ?? string.Empty;
 
         MainTabHost.Visibility        = tag == "Main"        ? Visibility.Visible : Visibility.Collapsed;
         TranslationTabHost.Visibility = tag == "Translation" ? Visibility.Visible : Visibility.Collapsed;
+        RecognitionTabHost.Visibility = tag == "Recognition" ? Visibility.Visible : Visibility.Collapsed;
         OverlayTabHost.Visibility     = tag == "Overlay"     ? Visibility.Visible : Visibility.Collapsed;
         HistoryTabHost.Visibility     = tag == "History"     ? Visibility.Visible : Visibility.Collapsed;
         GlossaryTabHost.Visibility    = tag == "Glossary"    ? Visibility.Visible : Visibility.Collapsed;
@@ -122,14 +130,19 @@ public partial class MainWindow : Window
         AboutTabHost.Visibility       = tag == "About"       ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private System.Windows.Controls.ListBox[] NavLists() => new[] { NavList, NavListSettings, NavListBottom };
+
     private void SelectNavTag(string tag)
     {
-        foreach (var obj in NavList.Items)
+        foreach (var list in NavLists())
         {
-            if (obj is System.Windows.Controls.ListBoxItem item && item.Tag as string == tag)
+            foreach (var obj in list.Items)
             {
-                NavList.SelectedItem = item;
-                return;
+                if (obj is System.Windows.Controls.ListBoxItem item && item.Tag as string == tag)
+                {
+                    list.SelectedItem = item;
+                    return;
+                }
             }
         }
     }
