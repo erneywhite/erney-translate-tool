@@ -256,6 +256,11 @@ public class TranslationEngine : IDisposable
         // completely different game/scene, no point biasing it with last
         // session's text fragments.
         _layout.Reset();
+        lock (_shownLock)
+        {
+            _shown = new();
+            _vanishedAt.Clear();
+        }
         // (and the grouping-hysteresis memory and the reuse snapshot —
         // FrameLayout.Reset clears all three).
         _vanishStreak = 0;
@@ -368,10 +373,13 @@ public class TranslationEngine : IDisposable
         // Single-flight: drop frames if previous still being processed.
         if (Interlocked.Exchange(ref _processingFlag, 1) == 1)
         {
+            // v1.0.39: a dropped frame still tells whether shown text left.
+            QuickVanishCheck(bitmap);
             bitmap.Dispose();
             return;
         }
 
+        _pipelineFrameTime = DateTime.UtcNow;
         var generation = Volatile.Read(ref _runGeneration);
         var ct = _runCts.Token;
         if (Interlocked.Exchange(ref _threadLoggedForGeneration, generation) != generation)
@@ -575,14 +583,91 @@ public class TranslationEngine : IDisposable
         // that second check is the one that closes the race.
         bool StillWanted() => generation == Volatile.Read(ref _runGeneration) && !IsUserPaused;
         _lastOverlayRect = winRect;
+        regions = WithoutVanished(regions);
+        if (!isPartial)
+            lock (_shownLock)
+            {
+                _shown = regions.ToList();
+                _shownRect = winRect;
+            }
         if (StillWanted())
             _overlay.ShowRegions(regions, winRect, isPartial, StillWanted);
+    }
+
+    // ---- v1.0.39: quick vanish check on dropped frames ----
+    //
+    // A frame is processed only after the previous one is done (OCR at full
+    // size plus translation: a second or more), and every frame captured in
+    // between was thrown away, so text that left the screen was noticed late.
+    // Dropped frames are now checked against the blocks on screen: if a
+    // block's letters are gone from its place (ColorSampler.TextGone, pixels
+    // only, a few ms), it is taken off right away. A render from a frame
+    // captured before that moment doesn't bring it back.
+
+    private readonly object _shownLock = new();
+    private List<TranslationRegion> _shown = new();
+    private System.Windows.Rect _shownRect;
+    private readonly Dictionary<string, DateTime> _vanishedAt = new(StringComparer.Ordinal);
+    private DateTime _pipelineFrameTime;
+    private int _quickCheckBusy;
+
+    private void QuickVanishCheck(Bitmap frame)
+    {
+        if (IsUserPaused || Interlocked.Exchange(ref _quickCheckBusy, 1) == 1) return;
+        try
+        {
+            List<TranslationRegion> shown;
+            System.Windows.Rect rect;
+            lock (_shownLock)
+            {
+                shown = _shown;
+                rect = _shownRect;
+            }
+            if (!shown.Any(r => r.SampledText != null && r.TextPixelShare > 0.002)) return;
+
+            var pixels = ColorSampler.Snapshot(frame);
+            var gone = shown.Where(r => r.SampledText != null && ColorSampler.TextGone(pixels, r)).ToList();
+            if (gone.Count == 0) return;
+
+            var now = DateTime.UtcNow;
+            lock (_shownLock)
+                foreach (var g in gone) _vanishedAt[g.OriginalText] = now;
+            _logger.Debug("Quick check: {N} block(s) left the screen", gone.Count);
+            ShowIfCurrent(Volatile.Read(ref _runGeneration), shown.Except(gone).ToList(), rect);
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex, "Quick vanish check failed");
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _quickCheckBusy, 0);
+        }
+    }
+
+    /// <summary>
+    /// Drop blocks the quick check saw leave after the frame being rendered
+    /// was captured; forget the ones a newer frame has already judged.
+    /// </summary>
+    private IReadOnlyList<TranslationRegion> WithoutVanished(IReadOnlyList<TranslationRegion> regions)
+    {
+        lock (_shownLock)
+        {
+            if (_vanishedAt.Count == 0) return regions;
+            var frameTime = _pipelineFrameTime;
+            foreach (var key in _vanishedAt.Where(kv => kv.Value < frameTime).Select(kv => kv.Key).ToList())
+                _vanishedAt.Remove(key);
+            return _vanishedAt.Count == 0 ? regions : regions.Where(r => !_vanishedAt.ContainsKey(r.OriginalText)).ToList();
+        }
     }
 
     private void HideIfCurrent(int generation)
     {
         if (generation == Volatile.Read(ref _runGeneration))
+        {
+            lock (_shownLock) _shown = new();
             _overlay.Hide();
+        }
     }
 
     private System.Windows.Rect _lastOverlayRect;
