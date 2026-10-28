@@ -216,7 +216,7 @@
     <sys:String x:Key="Strings.Profiles.DefaultLockedTooltip">The "Default" profile cannot be deleted</sys:String>
 
     <!-- About -->
-    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.31 · MIT License</sys:String>
+    <sys:String x:Key="Strings.About.Subtitle">Version 1.0.32 · MIT License</sys:String>
     <sys:String x:Key="Strings.About.CheckUpdates">Check for updates</sys:String>
     <sys:String x:Key="Strings.About.GitHub">GitHub repository</sys:String>
     <sys:String x:Key="Strings.About.WhatIs">What is it</sys:String>
@@ -236,7 +236,7 @@
     <sys:String x:Key="Strings.About.HotkeyOverlay">Toggle overlay:</sys:String>
     <sys:String x:Key="Strings.About.WhatInside">What's inside</sys:String>
     <sys:String x:Key="Strings.About.OcrInside">Text recognition (OCR): three engines — PaddleOCR (neural network, default, best accuracy), Tesseract (faster, decent accuracy), Windows OCR (requires system language packs). Tesseract supports 30+ languages (all of Europe, Cyrillic, Japanese, Chinese, Korean). PaddleOCR — 12 model families including an "Auto" mode (English+Japanese+Cyrillic in parallel).</sys:String>
-    <sys:String x:Key="Strings.About.TranslateInside">Translation: eight services — MyMemory (free), Google Translate (free, no key), DeepL (key + card required), LibreTranslate (open source), Google Gemini (LLM, free tier), Groq · Llama 3.3 (LLM, free, ultra-fast inference), OpenAI (LLM, paid), Anthropic Claude (LLM, paid). A fallback provider can be set so the app keeps working when the primary fails.</sys:String>
+    <sys:String x:Key="Strings.About.TranslateInside">Translation: eight services — MyMemory (free), Google Translate (free, no key), DeepL (key + card required), LibreTranslate (open source), Google Gemini (LLM, free tier), Groq (LLM, free, ultra-fast inference), OpenAI (LLM, paid), Anthropic Claude (LLM, paid). A fallback provider can be set so the app keeps working when the primary fails.</sys:String>
     <sys:String x:Key="Strings.About.CaptureInside">Window capture: Windows API PrintWindow with the RENDERFULLCONTENT flag — works with modern games, Chromium-based browsers and UWP apps.</sys:String>
     <sys:String x:Key="Strings.About.FilesGroup">Where data is stored</sys:String>
     <sys:String x:Key="Strings.About.FilesIntro">All data lives next to the app (or in %AppData%\ErneyTranslateTool if the install folder is read-only):</sys:String>

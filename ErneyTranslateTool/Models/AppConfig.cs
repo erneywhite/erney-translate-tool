@@ -22,7 +22,7 @@ public class AppConfig
     /// <summary>Encrypted Google Gemini API key. Free tier on Google AI Studio is generous (~15 RPM, 1M tokens/day on Flash models).</summary>
     public string? EncryptedGeminiKey { get; set; }
 
-    /// <summary>Encrypted Groq API key. Free tier ~30 RPM on Llama-family models with very high tokens/sec.</summary>
+    /// <summary>Encrypted Groq API key. Free tier on GPT-OSS models with very high tokens/sec.</summary>
     public string? EncryptedGroqKey { get; set; }
 
     // LLM model ids. Defaults, presets and retired ids live in

@@ -37,7 +37,7 @@ public static class TranslatorFactory
         ProviderGoogleFree => "Google Translate (бесплатно, без регистрации)",
         ProviderLibreTranslate => "LibreTranslate (open source)",
         ProviderGemini => "Google Gemini (LLM, бесплатный free tier)",
-        ProviderGroq => "Groq · Llama 3.3 (LLM, бесплатно, очень быстро)",
+        ProviderGroq => "Groq (LLM, бесплатно, очень быстро)",
         ProviderOpenAI => "OpenAI (LLM, лучшее качество, нужен платный API-ключ)",
         ProviderAnthropic => "Anthropic Claude (LLM, лучшее качество, нужен платный API-ключ)",
         _ => provider

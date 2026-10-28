@@ -13,10 +13,18 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="28,20,28,20">
         <StackPanel>
-            <TextBlock Text="{DynamicResource Strings.TS.Title}"
-                       FontSize="24" FontWeight="Bold"
-                       Foreground="{DynamicResource TextPrimaryBrush}"
-                       Margin="0,0,0,20"/>
+            <DockPanel Margin="0,0,0,20" LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" Text="{DynamicResource Strings.TS.Title}"
+                           FontSize="24" FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimaryBrush}"/>
+                <!-- v1.0.32: no Save button — SettingsViewModel auto-saves. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,0,4">
+                    <TextBlock Text="{Binding SaveStatus}" FontSize="12" Margin="0,0,12,0"
+                               Foreground="{DynamicResource SuccessBrush}"/>
+                    <TextBlock Text="{DynamicResource Strings.OS.AppliedInstantly}" FontSize="12"
+                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                </StackPanel>
+            </DockPanel>
 
             <GroupBox Header="{DynamicResource Strings.TS.Service}" Style="{DynamicResource DarkGroupBoxStyle}" Margin="0,0,0,15">
                 <StackPanel Margin="5">
@@ -127,7 +135,7 @@
                         </Grid>
                     </StackPanel>
 
-                    <!-- v1.0.18: Groq section — Llama 3.3 70B as default. -->
+                    <!-- v1.0.18: Groq section (GPT-OSS by default since v1.0.30). -->
                     <StackPanel Visibility="{Binding IsGroq, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="{DynamicResource Strings.TS.GroqKey}" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,5"/>
                         <controls:MaskedSecretBox Secret="{Binding GroqApiKey, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
@@ -259,18 +267,6 @@
                 </StackPanel>
             </GroupBox>
 
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="{DynamicResource Strings.TS.SaveBtn}"
-                        Command="{Binding SaveCommand}"
-                        Padding="20,10" FontWeight="SemiBold"
-                        Background="{DynamicResource PrimaryBrush}"
-                        Foreground="{DynamicResource PrimaryForegroundBrush}"/>
-                <TextBlock Text="{Binding SaveStatus}"
-                           Foreground="{DynamicResource SuccessBrush}"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center"
-                           Margin="15,0,0,0"/>
-            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
