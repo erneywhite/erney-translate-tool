@@ -303,12 +303,13 @@ public class MainViewModel : BaseViewModel
         }
 
         var cfg = _settings.Config;
-        ProviderChipText = LanguageManager.Format("Strings.Main.Chip.ProviderFmt", cfg.TranslationProvider);
+        ProviderChipText = LanguageManager.Format("Strings.Main.Chip.ProviderFmt",
+            Core.Translators.TranslatorFactory.ShortName(cfg.TranslationProvider));
         FallbackChipText = string.IsNullOrEmpty(cfg.FallbackProvider)
             ? LanguageManager.Get("Strings.Main.Chip.FallbackNone")
             : LanguageManager.Format(_translation.IsUsingFallback
                 ? "Strings.Main.Chip.FallbackActiveFmt"
-                : "Strings.Main.Chip.FallbackFmt", cfg.FallbackProvider);
+                : "Strings.Main.Chip.FallbackFmt", Core.Translators.TranslatorFactory.ShortName(cfg.FallbackProvider));
     }
 
     private string OcrLanguageName()

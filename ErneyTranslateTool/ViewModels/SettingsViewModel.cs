@@ -420,7 +420,7 @@ public class SettingsViewModel : BaseViewModel
     public string OpenAIModel
     {
         get => _openAIModel;
-        set => SetProperty(ref _openAIModel, value);
+        set { if (value != null) SetProperty(ref _openAIModel, value); }
     }
 
     public string AnthropicApiKey
@@ -432,7 +432,7 @@ public class SettingsViewModel : BaseViewModel
     public string AnthropicModel
     {
         get => _anthropicModel;
-        set => SetProperty(ref _anthropicModel, value);
+        set { if (value != null) SetProperty(ref _anthropicModel, value); }
     }
 
     public string GeminiApiKey
@@ -444,7 +444,7 @@ public class SettingsViewModel : BaseViewModel
     public string GeminiModel
     {
         get => _geminiModel;
-        set => SetProperty(ref _geminiModel, value);
+        set { if (value != null) SetProperty(ref _geminiModel, value); }
     }
 
     public string GroqApiKey
@@ -456,7 +456,7 @@ public class SettingsViewModel : BaseViewModel
     public string GroqModel
     {
         get => _groqModel;
-        set => SetProperty(ref _groqModel, value);
+        set { if (value != null) SetProperty(ref _groqModel, value); }
     }
 
     /// <summary>Suggested Gemini models — Flash variants are the only ones with sustainable free tier.</summary>
@@ -861,7 +861,7 @@ public class SettingsViewModel : BaseViewModel
     public string CustomLlmModel
     {
         get => _customLlmModel;
-        set => SetProperty(ref _customLlmModel, value);
+        set { if (value != null) SetProperty(ref _customLlmModel, value); }
     }
 
     public string CustomLlmApiKey
@@ -890,6 +890,13 @@ public class SettingsViewModel : BaseViewModel
         new RelayCommand(async _ => await FetchCustomLlmModelsAsync(), _ => !_isFetchingCustomModels);
     private ICommand? _fetchCustomLlmModelsCommand;
 
+    // v1.0.34: model properties ignore null. The preset dropdown next to each
+    // model field binds SelectedItem OneWayToSource; when the tab is built it
+    // pushes its initial null into the property, overwriting the model just
+    // loaded from settings — and auto-save then wrote it to disk on every
+    // start (a custom model fell back to the default, the custom server's
+    // model was wiped). A user clearing the text box sends "", not null.
+
     private async Task FetchCustomLlmModelsAsync()
     {
         _isFetchingCustomModels = true;
@@ -902,8 +909,11 @@ public class SettingsViewModel : BaseViewModel
             CustomLlmModelsStatus = models.Count == 0
                 ? LanguageManager.Get("Strings.TS.Custom.NoModels")
                 : LanguageManager.Format("Strings.TS.Custom.FoundFmt", models.Count);
+            // Prefer a free model as the starting point: OpenRouter's list is
+            // alphabetical and its first entries are paid.
             if (string.IsNullOrWhiteSpace(CustomLlmModel) && models.Count > 0)
-                CustomLlmModel = models[0];
+                CustomLlmModel = models.FirstOrDefault(m => m.EndsWith(":free", StringComparison.OrdinalIgnoreCase))
+                                 ?? models[0];
         }
         catch (Exception ex)
         {
@@ -1148,6 +1158,9 @@ public class SettingsViewModel : BaseViewModel
         finally
         {
             IsTesting = false;
+            // RelayCommand re-evaluates CanExecute only on UI events; without
+            // this the button stayed grey until the next click anywhere.
+            CommandManager.InvalidateRequerySuggested();
         }
     }
 

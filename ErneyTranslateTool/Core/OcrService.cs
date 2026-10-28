@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using ErneyTranslateTool.Core.Ocr;
 using ErneyTranslateTool.Data;
 using ErneyTranslateTool.Models;
@@ -25,12 +28,45 @@ public class OcrService : IDisposable
     private IOcrBackend? _backend;
     private bool _disposed;
 
+    // v1.0.34: every OCR pass runs on this one long-lived thread. Since
+    // v1.0.33 frames are processed on thread-pool threads, and the pool
+    // retires threads idle for ~20 s; PaddleOCR (MKLDNN) keeps per-thread
+    // state, so after any pause longer than that — a static screen, a slow
+    // LLM reply — the next recognition ran on a fresh thread and failed
+    // ("PaddlePredictor(Detector) run failed") on every frame until restart.
+    // Before v1.0.33 all OCR ran on the UI thread, which never goes away.
+    private readonly BlockingCollection<Action> _ocrQueue = new();
+    private readonly Thread _ocrThread;
+
     public OcrService(ILogger logger, AppSettings settings, TessdataManager tessdata)
     {
         _logger = logger;
         _settings = settings;
         _tessdata = tessdata;
+        _ocrThread = new Thread(() =>
+        {
+            foreach (var work in _ocrQueue.GetConsumingEnumerable())
+                work();
+        })
+        {
+            IsBackground = true,
+            Name = "OCR",
+        };
+        _ocrThread.Start();
         Reload();
+    }
+
+    /// <summary>Run <paramref name="work"/> on the OCR thread and wait for its result.</summary>
+    private T RunOnOcrThread<T>(Func<T> work)
+    {
+        if (Thread.CurrentThread == _ocrThread) return work();
+        var done = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _ocrQueue.Add(() =>
+        {
+            try { done.SetResult(work()); }
+            catch (Exception ex) { done.SetException(ex); }
+        });
+        return done.Task.GetAwaiter().GetResult();
     }
 
     public string CurrentEngine => _backend?.Name ?? "(none)";
@@ -129,7 +165,7 @@ public class OcrService : IDisposable
         }
         try
         {
-            return backend.ProcessFrame(pngBytes);
+            return RunOnOcrThread(() => backend.ProcessFrame(pngBytes));
         }
         finally
         {
@@ -154,6 +190,7 @@ public class OcrService : IDisposable
             _backend = null;
             _disposed = true;
         }
+        _ocrQueue.CompleteAdding();
         GC.SuppressFinalize(this);
     }
 }
