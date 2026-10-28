@@ -185,6 +185,7 @@ public class TranslationEngine : IDisposable
 
         TargetWindowHandle = hwnd;
         TargetWindowTitle = title;
+        _overlay.TargetWindow = hwnd;
 
         // Pick + apply the right profile for this window BEFORE we kick off
         // any backend so OCR/translator/overlay all read the right settings.
@@ -396,6 +397,9 @@ public class TranslationEngine : IDisposable
                     _recorder.Start(TargetWindowTitle, _settings.Config.OcrEngine, _settings.Config.SourceLanguage);
                 _recorder.Record(rawRegions, frameWidth, frameHeight);
             }
+            // After recording, so recordings keep what OCR really saw.
+            var noise = OcrTextHelpers.DropNoise(rawRegions);
+            if (noise > 0) _logger.Debug("Frame: dropped {N} noise regions", noise);
             if (rawRegions.Count == 0)
             {
                 if (++_vanishStreak >= VanishConfirmFrames)
@@ -416,25 +420,13 @@ public class TranslationEngine : IDisposable
             // This is what stops the merged-vs-split flicker: when the
             // source hasn't meaningfully changed, we literally stop
             // recomputing the output.
-            if (_layout.TryReusePreviousFrame(rawRegions, out var reusedRegions, out var stillVisible)
+            if (_layout.TryReusePreviousFrame(rawRegions, VanishConfirmFrames, out var reusedRegions)
                 && TryGetTargetRect(out var winRectShortcut))
             {
-                // Snapshot regions whose text left the screen are dropped
-                // only after the vanish is confirmed (see VanishConfirmFrames);
-                // until then the full snapshot keeps rendering.
-                if (stillVisible!.Count == reusedRegions!.Count)
-                {
-                    _vanishStreak = 0;
-                    ShowIfCurrent(generation, reusedRegions, winRectShortcut);
-                }
-                else if (++_vanishStreak >= VanishConfirmFrames)
-                {
-                    ShowIfCurrent(generation, stillVisible, winRectShortcut);
-                }
-                else
-                {
-                    ShowIfCurrent(generation, reusedRegions, winRectShortcut);
-                }
+                // Blocks whose text left the screen are dropped per block,
+                // after VanishConfirmFrames misses (FrameLayout counts them).
+                _vanishStreak = 0;
+                ShowIfCurrent(generation, reusedRegions!, winRectShortcut);
                 return;
             }
             _vanishStreak = 0;
@@ -497,6 +489,9 @@ public class TranslationEngine : IDisposable
             // (not before) so we only memorise text that actually produced
             // a translation.
             _layout.RememberRecentRegions(translated);
+
+            // v1.0.35: a block OCR missed for just this frame stays up.
+            translated = _layout.HoldBriefDropouts(translated, VanishConfirmFrames);
 
             // v1.0.25: also store this frame's full snapshot so the next
             // frame's reuse-shortcut at the top of OnFrameCaptured can

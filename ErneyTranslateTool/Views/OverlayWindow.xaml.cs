@@ -27,6 +27,34 @@ public partial class OverlayWindow : Window
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+    private const int GWLP_HWNDPARENT = -8;
+    private const uint GW_OWNER = 4;
+
+    private IntPtr _owner;
+
+    /// <summary>
+    /// v1.0.35: make the overlay an owned window of the translated one.
+    /// Windows keeps an owned window right above its owner, so a window
+    /// dragged over the game now covers the translation too (before, the
+    /// overlay was Topmost and showed through everything), and it hides
+    /// with the game when that is minimised. If ownership can't be set —
+    /// e.g. the game runs elevated — stay Topmost as before, so the
+    /// translation never ends up under the game.
+    /// </summary>
+    public void AttachTo(IntPtr target)
+    {
+        if (target == _owner) return;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, target);
+        var attached = target != IntPtr.Zero && GetWindow(hwnd, GW_OWNER) == target;
+        Topmost = !attached;
+        _owner = attached ? target : IntPtr.Zero;
+    }
 
     private string _lastFingerprint = string.Empty;
     private string _lastStyleFingerprint = string.Empty;

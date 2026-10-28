@@ -34,6 +34,9 @@ namespace ErneyTranslateTool.Core
         /// </summary>
         public bool HiddenByUser { get; set; }
 
+        /// <summary>The translated window; the overlay is kept just above it (see OverlayWindow.AttachTo).</summary>
+        public IntPtr TargetWindow { get; set; }
+
         /// <summary>
         /// Draw a translation label on top of every detected region.
         /// <paramref name="isPartial"/> marks an in-progress update (streaming
@@ -83,6 +86,7 @@ namespace ErneyTranslateTool.Core
             {
                 _overlayWindow.Show();
             }
+            _overlayWindow.AttachTo(TargetWindow);
         }
 
         public void Dispose()
