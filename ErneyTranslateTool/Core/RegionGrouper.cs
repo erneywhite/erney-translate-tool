@@ -119,6 +119,15 @@ public static class RegionGrouper
         var lb = last.Bounds;
         var cb = candidate.Bounds;
 
+        // v1.0.36: OCR sometimes cuts one line into pieces whose tops differ
+        // by a few pixels ("Flash news, emergency" at y=877 and "...ut to be
+        // blocked" at y=867, right next to it). Sorted by top, the right
+        // piece came first and was compared as if it were the line above.
+        // A piece on the same row as a member and close to it horizontally
+        // is the same line; Merge puts it back in reading order.
+        foreach (var m in group)
+            if (SameRowNeighbours(m.Bounds, cb)) return true;
+
         // Same approximate font height (within ±35%).
         var hRatio = Math.Min(lb.Height, cb.Height) / Math.Max(lb.Height, cb.Height);
         if (hRatio < 0.65) return false;
@@ -370,9 +379,35 @@ public static class RegionGrouper
         WeakContinuation,     // letter/digit without terminator — probably continues
     }
 
+    /// <summary>Same text row (vertical overlap over half the shorter box) and at most 1.5 line heights apart.</summary>
+    private static bool SameRowNeighbours(Rect a, Rect b)
+    {
+        var h = Math.Min(a.Height, b.Height);
+        var overlap = Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top);
+        if (overlap < h * 0.5) return false;
+        var gapX = Math.Max(a.Left, b.Left) - Math.Min(a.Right, b.Right);
+        return gapX < h * 1.5;
+    }
+
+    /// <summary>Reading order: rows top to bottom (same-row pieces grouped), left to right inside a row.</summary>
+    private static List<TranslationRegion> ReadingOrder(List<TranslationRegion> group)
+    {
+        var rows = new List<List<TranslationRegion>>();
+        foreach (var r in group.OrderBy(r => r.Bounds.Top + r.Bounds.Height / 2))
+        {
+            var row = rows.FirstOrDefault(row => row.Any(m => SameRowNeighbours(m.Bounds, r.Bounds)
+                || Math.Abs((m.Bounds.Top + m.Bounds.Height / 2) - (r.Bounds.Top + r.Bounds.Height / 2))
+                   < Math.Min(m.Bounds.Height, r.Bounds.Height) * 0.5));
+            if (row == null) rows.Add(new List<TranslationRegion> { r });
+            else row.Add(r);
+        }
+        return rows.SelectMany(row => row.OrderBy(r => r.Bounds.Left)).ToList();
+    }
+
     private static TranslationRegion Merge(List<TranslationRegion> group)
     {
         if (group.Count == 1) return group[0];
+        group = ReadingOrder(group);
 
         var minX = group.Min(r => r.Bounds.Left);
         var minY = group.Min(r => r.Bounds.Top);

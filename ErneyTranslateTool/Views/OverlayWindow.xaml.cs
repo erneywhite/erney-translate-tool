@@ -323,7 +323,9 @@ public partial class OverlayWindow : Window
 
     // Grow the box past the OCR rect: glyph edges and antialiasing reach a
     // pixel or two outside it, and Snap() may have moved the rect by 2 px.
-    private const double ReplaceInflateX = 4, ReplaceInflateY = 3;
+    // Vertically more: OCR boxes clip the tops of tall letters (T, h, b),
+    // which peeked out above the box — a fifth of the line height.
+    private const double ReplaceInflateX = 4, ReplaceInflateY = 3, ReplaceInflateLine = 0.2;
     private const double MinReplaceFont = 9;
 
     /// <summary>
@@ -335,8 +337,10 @@ public partial class OverlayWindow : Window
     /// </summary>
     private void PlaceReplacement(SnappedRegion s, AppConfig cfg, FontFamily fontFamily)
     {
-        var rect = new Rect(s.Rect.X - ReplaceInflateX, s.Rect.Y - ReplaceInflateY,
-            s.Rect.Width + 2 * ReplaceInflateX, s.Rect.Height + 2 * ReplaceInflateY);
+        var lineHeight = s.LineHeight > 0 ? s.LineHeight : s.Rect.Height;
+        var inflateY = Math.Max(ReplaceInflateY, lineHeight * ReplaceInflateLine);
+        var rect = new Rect(s.Rect.X - ReplaceInflateX, s.Rect.Y - inflateY,
+            s.Rect.Width + 2 * ReplaceInflateX, s.Rect.Height + 2 * inflateY);
 
         var bg = s.Background ?? ParseColor(cfg.BackgroundColor, Colors.Black);
         bg.A = 255;
@@ -344,7 +348,6 @@ public partial class OverlayWindow : Window
                : Luminance(bg) > 0.4 ? Colors.Black : Colors.White;
 
         var padding = new Thickness(ReplaceInflateX, 0, ReplaceInflateX, 0);
-        var lineHeight = s.LineHeight > 0 ? s.LineHeight : s.Rect.Height;
         var cap = Math.Max(MinReplaceFont, lineHeight * 0.8);
         var textWidth = Math.Max(10, rect.Width - padding.Left - padding.Right);
         double fontSize;
