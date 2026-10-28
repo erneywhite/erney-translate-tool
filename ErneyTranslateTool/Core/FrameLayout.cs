@@ -88,6 +88,9 @@ public sealed class FrameLayout
     // has been missing from OCR.
     private readonly object _heldLock = new();
     private List<(TranslationRegion Region, int Missed)> _held = new();
+    // Blocks the last HoldBriefDropouts added, with their miss count, so the
+    // reuse snapshot keeps counting instead of starting them again from 0.
+    private readonly Dictionary<TranslationRegion, int> _lastHeld = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>
     /// v1.0.35: per-block version of the engine's "text gone for N frames"
@@ -103,12 +106,19 @@ public sealed class FrameLayout
         {
             var result = new List<TranslationRegion>(translated);
             var next = translated.Select(r => (r, 0)).ToList();
-            foreach (var (old, missed) in _held)
+            var missing = _held
+                .Where(h => !translated.Any(t => RectOverlapRatio(t.Bounds, h.Region.Bounds) > 0))
+                .ToList();
+            // Most of the screen changed: a new scene, not an OCR hiccup.
+            // Holding the old blocks only kept stale text up for seconds.
+            var sceneChange = missing.Count * 2 > _held.Count;
+            _lastHeld.Clear();
+            foreach (var (old, missed) in sceneChange ? new() : missing)
             {
                 if (missed + 1 >= confirmFrames) continue;
-                if (translated.Any(t => RectOverlapRatio(t.Bounds, old.Bounds) > 0)) continue;
                 result.Add(old);
                 next.Add((old, missed + 1));
+                _lastHeld[old] = missed + 1;
             }
             _held = next;
             return result;
@@ -229,7 +239,12 @@ public sealed class FrameLayout
         var translatedCopy = new List<TranslationRegion>(translated);
 
         lock (_lastCompletedFrameLock)
-            _lastCompletedFrame = new FrameSnapshot(bounds, texts, translatedCopy, new int[translatedCopy.Count]);
+        {
+            int[] missed;
+            lock (_heldLock)
+                missed = translatedCopy.Select(t => _lastHeld.TryGetValue(t, out var m) ? m : 0).ToArray();
+            _lastCompletedFrame = new FrameSnapshot(bounds, texts, translatedCopy, missed);
+        }
     }
 
     /// <summary>

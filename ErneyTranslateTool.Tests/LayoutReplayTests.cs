@@ -47,6 +47,26 @@ public class LayoutReplayTests
         Assert.Equal(noise, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.LooksLikeNoise(text));
 
     [Fact]
+    public void HoldBriefDropouts_KeepsOneMissingBlock_ButNotAWholeOldScene()
+    {
+        var layout = new FrameLayout(new LoggerConfiguration().CreateLogger());
+        var menu = new List<TranslationRegion>
+        {
+            Line(100, 100, 100, 30, "NORMAL"), Line(100, 150, 100, 30, "HARD"),
+            Line(100, 200, 100, 30, "S.HARD"), Line(300, 500, 40, 30, "SE"),
+        };
+        layout.HoldBriefDropouts(menu, 2);
+
+        // OCR missed "SE" this frame: it stays.
+        var held = layout.HoldBriefDropouts(menu.Take(3).ToList(), 2);
+        Assert.Contains(held, r => r.OriginalText == "SE");
+
+        // A new scene elsewhere on screen: the old menu goes at once.
+        var dialogue = new List<TranslationRegion> { Line(400, 800, 900, 40, "Hmm... I prefer pink ones.") };
+        Assert.Single(layout.HoldBriefDropouts(dialogue, 2));
+    }
+
+    [Fact]
     public void StaticSceneWithJitter_KeepsOneLayout()
     {
         // Two-line dialogue, OCR wobbling by a pixel and misreading a letter now and then.
