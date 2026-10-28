@@ -53,6 +53,19 @@ public class RegionGrouperTests
             L(100, 140, 200, 30, "these years")));
 
     [Fact]
+    public void LineCutIntoPieces_ComesBackInReadingOrder() =>
+        // Fatal Countdown news: OCR split the second line, its right piece 10 px higher.
+        Assert.Equal(new[] { "The government is about to implement martial law Flash news, emergency Internet to be blocked" },
+            Group(L(125, 800, 1393, 52, "The government is about to implement martial law"),
+                  L(604, 868, 448, 49, "Internet to be blocked"),
+                  L(101, 877, 491, 47, "Flash news, emergency")));
+
+    [Fact]
+    public void ButtonsOnOneRow_StaySeparate() =>
+        Assert.Equal(new[] { "< ENGLISH", "BGM", "SE" },
+            Group(L(72, 470, 175, 36, "< ENGLISH"), L(103, 541, 54, 35, "BGM"), L(263, 542, 36, 32, "SE")));
+
+    [Fact]
     public void DialogueWrap_StillMerges() =>
         Assert.Single(Group(
             L(440, 854, 818, 32, "Whether she doesn't recognize me or simply doesn't deem me"),
