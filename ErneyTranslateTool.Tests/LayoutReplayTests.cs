@@ -110,6 +110,17 @@ public class LayoutReplayTests
         Assert.Equal(0, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.DropOversized(lines));
     }
 
+    [Theory]
+    [InlineData("JELLYCAT", "JELLYCAT", true)]
+    [InlineData("HP 50", "HP 50", true)]
+    [InlineData("ORCAMAD", "ORCA MAD", true)]
+    [InlineData("SSR", "ssr.", true)]
+    [InlineData("MERKOTA", "Меркота", false)]
+    [InlineData("EXIT", "Выход", false)]
+    [InlineData("", "", false)]
+    public void UntranslatedText_IsDetected(string original, string translated, bool same) =>
+        Assert.Equal(same, ErneyTranslateTool.Core.Ocr.OcrTextHelpers.IsUntranslated(original, translated));
+
     [Fact]
     public void StaticSceneWithJitter_KeepsOneLayout()
     {

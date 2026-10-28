@@ -95,6 +95,20 @@ public static class OcrTextHelpers
         return a.IntersectsWith(b);
     }
 
+    /// <summary>
+    /// v1.0.36: the translator gave the text back as it was — a name
+    /// ("JELLYCAT"), a stat ("HP 50"), a rank ("SSR"). Drawing it over the
+    /// original only swapped the game's lettering for a plain font, often
+    /// with OCR errors in it. Compared on letters and digits, ignoring case,
+    /// spaces and punctuation ("ORCA MAD" = "ORCAMAD").
+    /// </summary>
+    public static bool IsUntranslated(string? original, string? translated)
+    {
+        static string Key(string? s) => new string((s ?? "").Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+        var o = Key(original);
+        return o.Length > 0 && o == Key(translated);
+    }
+
     public static string DetectLanguage(string text)
     {
         if (ContainsJapanese(text)) return "ja";
