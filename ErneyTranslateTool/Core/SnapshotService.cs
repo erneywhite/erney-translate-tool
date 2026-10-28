@@ -137,6 +137,7 @@ public sealed class SnapshotService
             png = ms.ToArray();
         }
         var raw = _ocr.ProcessFrame(png);
+        _engine.RecordSnapshotFrame(raw, frame.Width, frame.Height, target.Title);
         OcrTextHelpers.DropNoise(raw);
         OcrTextHelpers.DropOversized(raw);
         if (raw.Count == 0)

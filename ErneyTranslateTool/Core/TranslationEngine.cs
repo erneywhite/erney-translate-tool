@@ -49,6 +49,18 @@ public class TranslationEngine : IDisposable
     /// </summary>
     public string OcrRecordingsFolder => _recorder.Directory;
 
+    /// <summary>
+    /// Snapshot translations go into the same recording when it is on, so a
+    /// page that came out wrong can be replayed too.
+    /// </summary>
+    public void RecordSnapshotFrame(IReadOnlyList<TranslationRegion> raw, int width, int height, string windowTitle)
+    {
+        if (!_recordOcr) return;
+        if (!_recorder.IsRecording)
+            _recorder.Start(windowTitle, _settings.Config.OcrEngine, _settings.Config.SourceLanguage);
+        _recorder.Record(raw, width, height);
+    }
+
     public bool RecordOcr
     {
         get => _recordOcr;
