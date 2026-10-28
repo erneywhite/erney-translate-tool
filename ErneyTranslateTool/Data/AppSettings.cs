@@ -42,24 +42,22 @@ public class AppSettings
     {
         try
         {
-            if (File.Exists(_settingsPath))
+            var loadedConfig = TryRead(_settingsPath) ?? TryRead(BackupPath);
+            if (loadedConfig == null && (File.Exists(_settingsPath) || File.Exists(BackupPath)))
+                _logger.Error("settings.json and its backup are unreadable — starting with defaults");
+            if (loadedConfig != null)
             {
-                var json = File.ReadAllText(_settingsPath);
-                var loadedConfig = JsonSerializer.Deserialize<AppConfig>(json);
-                if (loadedConfig != null)
-                {
-                    _config = loadedConfig;
-                    _logger.Information("Settings loaded from {Path}", _settingsPath);
+                _config = loadedConfig;
+                _logger.Information("Settings loaded from {Path}", _settingsPath);
 
-                    // Providers shut models down; a saved dead id would make
-                    // every request fail until the user noticed and changed it.
-                    var migrated = ModelCatalog.MigrateRetired(_config);
-                    if (migrated.Count > 0)
-                    {
-                        foreach (var change in migrated)
-                            _logger.Information("Retired model replaced: {Change}", change);
-                        Save();
-                    }
+                // Providers shut models down; a saved dead id would make
+                // every request fail until the user noticed and changed it.
+                var migrated = ModelCatalog.MigrateRetired(_config);
+                if (migrated.Count > 0)
+                {
+                    foreach (var change in migrated)
+                        _logger.Information("Retired model replaced: {Change}", change);
+                    Save();
                 }
             }
             else
@@ -82,37 +80,70 @@ public class AppSettings
         }
     }
 
-    /// <summary>
-    /// Save settings to disk.
-    /// </summary>
-    public void Save()
+    private string BackupPath => _settingsPath + ".bak";
+    private readonly object _saveLock = new();
+
+    private AppConfig? TryRead(string path)
     {
+        if (!File.Exists(path)) return null;
         try
         {
-            var json = JsonSerializer.Serialize(_config, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            File.WriteAllText(_settingsPath, json);
-            _logger.Debug("Settings saved");
+            var config = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(path));
+            if (config != null && path == BackupPath)
+                _logger.Warning("settings.json unreadable, restored from {Path}", path);
+            return config;
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Failed to save settings");
+            _logger.Error(ex, "Failed to read {Path}", path);
+            return null;
         }
     }
 
     /// <summary>
-    /// Set DeepL API key (encrypts before storing).
+    /// Save settings to disk. v1.0.32: atomic — written to a temp file and
+    /// swapped in with File.Replace, the previous file kept as .bak. A crash
+    /// mid-write used to leave a truncated settings.json; Load then fell back
+    /// to defaults and the next Save wiped every setting and stored key.
+    /// Locked because stats updates save from the pipeline too.
+    /// </summary>
+    public void Save()
+    {
+        lock (_saveLock)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(_config, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                var tmp = _settingsPath + ".tmp";
+                File.WriteAllText(tmp, json);
+                if (File.Exists(_settingsPath))
+                    File.Replace(tmp, _settingsPath, BackupPath);
+                else
+                    File.Move(tmp, _settingsPath);
+                _logger.Debug("Settings saved");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to save settings");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Set DeepL API key (encrypts before storing). Like the other key
+    /// setters it doesn't write the file — callers Save() once afterwards.
     /// </summary>
     /// <param name="apiKey">Plain text API key.</param>
     public void SetApiKey(string apiKey)
     {
         try
         {
+            if (apiKey == GetApiKey()) return;
             var encrypted = Protect(apiKey);
             _config.EncryptedApiKey = Convert.ToBase64String(encrypted);
-            Save();
             _logger.Information("API key updated");
         }
         catch (Exception ex)
@@ -154,6 +185,9 @@ public class AppSettings
     {
         try
         {
+            // DPAPI output differs on every call — only touch the config when
+            // the key really changed, or every auto-save rewrites it.
+            if ((string.IsNullOrWhiteSpace(apiKey) ? null : apiKey) == GetOpenAIKey()) return;
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 _config.EncryptedOpenAIKey = null;
@@ -162,7 +196,6 @@ public class AppSettings
             {
                 _config.EncryptedOpenAIKey = Convert.ToBase64String(Protect(apiKey));
             }
-            Save();
             _logger.Information("OpenAI key updated");
         }
         catch (Exception ex)
@@ -180,6 +213,9 @@ public class AppSettings
     {
         try
         {
+            // DPAPI output differs on every call — only touch the config when
+            // the key really changed, or every auto-save rewrites it.
+            if ((string.IsNullOrWhiteSpace(apiKey) ? null : apiKey) == GetAnthropicKey()) return;
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 _config.EncryptedAnthropicKey = null;
@@ -188,7 +224,6 @@ public class AppSettings
             {
                 _config.EncryptedAnthropicKey = Convert.ToBase64String(Protect(apiKey));
             }
-            Save();
             _logger.Information("Anthropic key updated");
         }
         catch (Exception ex)
@@ -206,11 +241,13 @@ public class AppSettings
     {
         try
         {
+            // DPAPI output differs on every call — only touch the config when
+            // the key really changed, or every auto-save rewrites it.
+            if ((string.IsNullOrWhiteSpace(apiKey) ? null : apiKey) == GetGeminiKey()) return;
             if (string.IsNullOrWhiteSpace(apiKey))
                 _config.EncryptedGeminiKey = null;
             else
                 _config.EncryptedGeminiKey = Convert.ToBase64String(Protect(apiKey));
-            Save();
             _logger.Information("Gemini key updated");
         }
         catch (Exception ex)
@@ -228,11 +265,13 @@ public class AppSettings
     {
         try
         {
+            // DPAPI output differs on every call — only touch the config when
+            // the key really changed, or every auto-save rewrites it.
+            if ((string.IsNullOrWhiteSpace(apiKey) ? null : apiKey) == GetGroqKey()) return;
             if (string.IsNullOrWhiteSpace(apiKey))
                 _config.EncryptedGroqKey = null;
             else
                 _config.EncryptedGroqKey = Convert.ToBase64String(Protect(apiKey));
-            Save();
             _logger.Information("Groq key updated");
         }
         catch (Exception ex)

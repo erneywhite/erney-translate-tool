@@ -241,6 +241,69 @@ public class SettingsViewModel : BaseViewModel
         _ocrService.StatusChanged += (_, _) =>
             System.Windows.Application.Current?.Dispatcher.Invoke(UpdateOcrStatus);
         UpdateOcrStatus();
+
+        // v1.0.32: no Save buttons. Hooked after the initial load so loading
+        // doesn't save itself.
+        _autoSaveTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(700) };
+        _autoSaveTimer.Tick += (_, _) => { _autoSaveTimer.Stop(); Save(); };
+        PropertyChanged += (_, e) =>
+        {
+            if (_suppressAutoSave || e.PropertyName == null || !AutoSavedProperties.Contains(e.PropertyName)) return;
+            _autoSaveTimer.Stop();
+            _autoSaveTimer.Start();
+        };
+
+        // Start applies the game's profile to AppConfig. Without re-reading
+        // it here the tabs kept showing the previous values — and the next
+        // save wrote those stale values into the profile.
+        // The event also fires after every save (to refresh the Profiles
+        // list), so react only when a different profile became active.
+        _loadedProfileId = _profiles.ActiveProfile.Id;
+        _profiles.ActiveProfileChanged += (_, p) =>
+        {
+            if (p.Id == _loadedProfileId) return;
+            _loadedProfileId = p.Id;
+            System.Windows.Application.Current?.Dispatcher.BeginInvoke(ReloadFromConfig);
+        };
+    }
+
+    // ---- v1.0.32 auto-save ----
+
+    private readonly System.Windows.Threading.DispatcherTimer _autoSaveTimer = null!;
+    private bool _suppressAutoSave;
+    private long _loadedProfileId;
+
+    /// <summary>
+    /// Settings written by Save(). Debounced: typing an API key or dragging
+    /// the temperature slider saves once, 0.7 s after the last change.
+    /// Overlay fields have their own lighter path (SaveOverlayStyle); hotkeys,
+    /// cache size and close-to-tray already save in their setters.
+    /// </summary>
+    private static readonly HashSet<string> AutoSavedProperties = new()
+    {
+        nameof(SelectedProvider), nameof(SelectedFallbackProvider),
+        nameof(OpenAIApiKey), nameof(AnthropicApiKey), nameof(GeminiApiKey), nameof(GroqApiKey), nameof(DeepLApiKey),
+        nameof(MyMemoryEmail), nameof(LibreUrl), nameof(LibreApiKey),
+        nameof(OpenAIModel), nameof(AnthropicModel), nameof(GeminiModel), nameof(GroqModel),
+        nameof(LlmTemperature), nameof(LlmUseContext), nameof(LlmContextSize), nameof(UseStreamingLlm),
+        nameof(SelectedTargetLanguage),
+        nameof(SelectedOcrEngine), nameof(SelectedOcrLanguage), nameof(UseBestTessdata),
+        nameof(SelectedAppTheme), nameof(SelectedAppLanguage), nameof(CheckForUpdatesOnStartup),
+    };
+
+    /// <summary>Re-read every field from AppConfig without triggering an auto-save.</summary>
+    private void ReloadFromConfig()
+    {
+        _suppressAutoSave = true;
+        try
+        {
+            LoadFromConfig();
+            RefreshOcrLanguages();
+        }
+        finally
+        {
+            _suppressAutoSave = false;
+        }
     }
 
     public string OcrStatus
@@ -1049,7 +1112,13 @@ public class SettingsViewModel : BaseViewModel
     {
         try
         {
+            // OCR reload re-initialises the backend — seconds for PaddleOCR —
+            // so only do it when an OCR setting actually changed. The
+            // translator is cheap to rebuild and is always reloaded.
+            var cfg = _appSettings.Config;
+            var ocrBefore = (cfg.OcrEngine, cfg.TesseractLanguage, cfg.PaddleLanguage, cfg.SourceLanguage, cfg.UseBestTessdata);
             ApplyToConfig();
+            var ocrChanged = ocrBefore != (cfg.OcrEngine, cfg.TesseractLanguage, cfg.PaddleLanguage, cfg.SourceLanguage, cfg.UseBestTessdata);
             if (!string.IsNullOrWhiteSpace(DeepLApiKey))
                 _appSettings.SetApiKey(DeepLApiKey);
             // Always pass through to the setter — empty string clears the
@@ -1060,7 +1129,7 @@ public class SettingsViewModel : BaseViewModel
             _appSettings.SetGroqKey(GroqApiKey ?? string.Empty);
             _appSettings.Save();
             _translationService.Reload();
-            _ocrService.Reload();
+            if (ocrChanged) _ocrService.Reload();
 
             // Mirror the profile-affecting subset of AppConfig back into
             // the active profile so the user's tweaks "stick" to the game
