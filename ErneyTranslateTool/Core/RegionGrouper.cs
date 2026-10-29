@@ -195,6 +195,13 @@ public static class RegionGrouper
         if (signal == LineEndSignal.WeakContinuation && LooksLikeLabel(last.OriginalText))
             signal = LineEndSignal.Unknown;
 
+        // v1.0.40: a short line ending with a colon is a settings field
+        // label ("Drawing quality:", "Screen mode:"), not a clause leading
+        // into the next line. A whole column of them glued into one block
+        // at the 3×H colon allowance. Only ordinary leading joins it now.
+        if (signal == LineEndSignal.StrongContinuation && IsFieldLabel(last.OriginalText))
+            signal = LineEndSignal.Unknown;
+
         // v1.0.38: a paragraph keeps its line pitch. Once two lines are in,
         // a third at the same spacing and left edge continues it even after a
         // sentence end — OCR read "sofa," as "sofa." and split a three-line
@@ -372,6 +379,16 @@ public static class RegionGrouper
         if (first == default || !char.IsUpper(first)) return false;
         var lastChar = trimmed[^1];
         return !IsTerminator(lastChar) && !IsStrongContinuation(lastChar) && lastChar != '-';
+    }
+
+    /// <summary>v1.0.40: "Screen size:", "By: Cat 3" is not one — up to 30 chars and 4 words, ending with a colon.</summary>
+    private static bool IsFieldLabel(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var trimmed = text.Trim();
+        return trimmed.Length <= 30
+            && trimmed[^1] is ':' or '：'
+            && trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 4;
     }
 
     private static bool HasLowercase(string? text) =>

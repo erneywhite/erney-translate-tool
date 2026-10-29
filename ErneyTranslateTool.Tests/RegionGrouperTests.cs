@@ -14,6 +14,18 @@ public class RegionGrouperTests
         RegionGrouper.Group(lines.ToList()).Select(r => r.OriginalText).ToList();
 
     [Fact]
+    public void SettingsLabelsWithColons_StaySeparate() =>
+        Assert.Equal(new[] { "Drawing quality:", "Screen mode:", "Screen size:", "Maximum frame rate:", "Only works when Vsync is disabled." },
+            Group(L(160, 486, 230, 33, "Drawing quality:"), L(160, 566, 180, 30, "Screen mode:"), L(160, 643, 165, 30, "Screen size:"),
+                  L(160, 846, 295, 31, "Maximum frame rate:"), L(196, 904, 340, 25, "Only works when Vsync is disabled.")));
+
+    [Fact]
+    public void ColonInsideAParagraph_StillMerges() =>
+        Assert.Single(Group(
+            L(100, 400, 700, 30, "Before you go, there is one more thing to remember:"),
+            L(100, 445, 520, 30, "never open the door after midnight.")));
+
+    [Fact]
     public void StackedMenuButtons_StaySeparate() =>
         Assert.Equal(new[] { "NORMAL", "HARD", "S.HARD" },
             Group(L(152, 77, 92, 25, "NORMAL"), L(155, 109, 88, 25, "HARD"), L(154, 142, 92, 26, "S.HARD")));
